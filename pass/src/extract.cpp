@@ -77,9 +77,8 @@ namespace pass {
         return functions2extract;
     }
 
-    Function* AddJITHookDefinition(Module* M) {
+    void AddJITHookDefinition(Module* M) {
         Function* jit_hook = M->getFunction("easy_jit_hook");
-
         if(!jit_hook) {
             Type* i8ptr = Type::getInt8PtrTy(M->getContext());
             Type* i64 = Type::getInt64Ty(M->getContext());
@@ -89,7 +88,14 @@ namespace pass {
             jit_hook = Function::Create(hook_ty, Function::ExternalLinkage, "easy_jit_hook", M);
         }
 
-        return jit_hook;
+        Function* jit_hook_end = M->getFunction("easy_jit_hook_end");
+        if(!jit_hook_end) {
+            Type* voidty = Type::getVoidTy(M->getContext());
+            Type* i8ptr = Type::getInt8PtrTy(M->getContext());
+            FunctionType* hook_end_ty = FunctionType::get(voidty, std::vector<Type*>({i8ptr}), false);
+
+            jit_hook_end = Function::Create(hook_end_ty, Function::ExternalLinkage, "easy_jit_hook_end", M);
+        }
     }
 
     bool addGlobalIfUsedByExtracted(GlobalValue& gv, const std::set<Function*> functions2extract, std::set<GlobalValue*>* globals) {
@@ -157,7 +163,8 @@ namespace pass {
         
         //get the hook function to the runtime
         Function* easy_jit_hook = M->getFunction("easy_jit_hook");
-        assert(easy_jit_hook);
+        Function* easy_jit_hook_end = M->getFunction("easy_jit_hook_end");
+        assert(easy_jit_hook && easy_jit_hook_end);
         
         //create a single block
         BasicBlock* entry = BasicBlock::Create(context, "entry", hook);
@@ -177,10 +184,7 @@ namespace pass {
         ir_variable = ConstantExpr::getPointerCast(cast<Constant>(ir_variable), i8ptr);
         
         //create the call
-        std::vector<Value*> hook_args;
-        hook_args.push_back(function_name_global);
-        hook_args.push_back(ir_variable);
-        hook_args.push_back(size);
+        std::vector<Value*> hook_args = {function_name_global, ir_variable, size};
         
         Value* jitResult = CallInst::Create(easy_jit_hook, hook_args, "jitted_function", entry);
         Value* cast = CastInst::CreatePointerCast(jitResult, hook->getType(), "jitted_function_cast", entry);
@@ -190,6 +194,9 @@ namespace pass {
             fun_args.push_back(&arg);
 
         Value* call = CallInst::Create(cast, fun_args, "", entry);
+
+        std::vector<Value*> hook_end_args = {jitResult};
+        CallInst::Create(easy_jit_hook_end, hook_end_args, "", entry);
 
         if(call->getType()->isVoidTy())
             ReturnInst::Create(context, entry); else {
