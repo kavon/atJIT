@@ -16,6 +16,10 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 
+//TODO: fix this correct include, should link to lib, not incldue cpp files
+#include "lib/Transforms/IPO/ExtractGV.cpp"
+#include "lib/Transforms/Utils/CloneModule.cpp"
+
 #include <set>
 #include <vector>
 #include <string>
@@ -50,14 +54,22 @@ std::set<Function*> getFunctionsToExtract(Function* easy_jit_enabled) {
     assert(easy_jit_enabled);
     std::set<Function*> functions2extract;
     
+    std::vector<CallInst*> calls;
+
+    //collect the functions where the function is used
     for(User* use : easy_jit_enabled->users()) {
         CallInst* use_as_call = dyn_cast<CallInst>(use);
-        if(use_as_call) {
-            Function* parentFun = use_as_call->getParent()->getParent();
-            assert(parentFun);
-            functions2extract.insert(parentFun);
-        }
+        assert(use_as_call);
+
+        Function* parentFun = use_as_call->getParent()->getParent();
+        assert(parentFun);
+        functions2extract.insert(parentFun);
+        calls.push_back(use_as_call);
     }
+
+    //remove all the uses
+    for(CallInst* call : calls)
+        call->eraseFromParent();
 
     if(debug) {
         for(Function* f : functions2extract) {
@@ -127,7 +139,7 @@ Module* getModuleForJITCompilation(const std::set<Function*> &functions2extract,
         globalsToKeep.push_back(gv_in_clone);
     }
 
-    size_t number_of_globals_to_keep = referencedGlobals.size();
+    size_t number_of_globals_to_keep = globalsToKeep.size();
 
     //add the functions to the globalsToKeep
     for(Function* fun : functions2extract) {
@@ -162,8 +174,11 @@ Module* getModuleForJITCompilation(const std::set<Function*> &functions2extract,
     //drop extracted functions
     for(Function* f : functions2extract) {
         f->setLinkage(GlobalValue::ExternalLinkage);
-        f->getBasicBlockList().clear();
+        errs() << "TODO! I have to erase the body!\n";
+        //f->getBasicBlockList().clear();
     }
+
+    return Clone;
 }
 
 std::string ModuleToString(Module* M) {
@@ -180,7 +195,7 @@ GlobalVariable* WriteModuleToGlobal(Module *M, Module *jitM) {
     LLVMContext &context = M->getContext();
     ArrayType* type = ArrayType::get(cast<IntegerType>(Type::getInt8Ty(context)), module_as_string.size()+1);
 
-    Constant* initializer = ConstantDataArray::getString(context, module_as_string.c_str(), true);
+    Constant* initializer = ConstantDataArray::getString(context, module_as_string, true);
     GlobalVariable* bitcode_string = 
         new GlobalVariable(*M, initializer->getType(), true, GlobalValue::ExternalLinkage, initializer, "easy_jit_module"); 
 

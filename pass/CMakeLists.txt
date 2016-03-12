@@ -15,6 +15,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ./bin)
 add_definitions(${LLVM_DEFINITIONS})
 link_directories(${LLVM_LIBRARY_DIRS})
 include_directories(${LLVM_INCLUDE_DIRS} include)
+include_directories(/home/jmmartinez/etc/phd/code/llvm include)
 
 llvm_map_components_to_libnames(llvm_libs )
 
