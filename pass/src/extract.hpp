@@ -6,19 +6,19 @@ class FunctionPass;
 
 namespace pass {
 
-struct ExtractFunctionToIR : public llvm::ModulePass {
-	
-	static char ID;
+    struct ExtractFunctionToIR : public llvm::ModulePass {
 
-	ExtractFunctionToIR();
-	virtual ~ExtractFunctionToIR();
+        static char ID;
 
-	virtual bool doInitialization(llvm::Module &);
-	virtual bool doFinalization(llvm::Module &);
+        ExtractFunctionToIR();
+        virtual ~ExtractFunctionToIR();
 
-	virtual void getAnalysisUsage(llvm::AnalysisUsage &) const; 
+        virtual bool doInitialization(llvm::Module&);
+        virtual bool doFinalization(llvm::Module&);
 
-	virtual bool runOnModule(llvm::Module &); 
-};
+        virtual void getAnalysisUsage(llvm::AnalysisUsage&) const;
+
+        virtual bool runOnModule(llvm::Module&);
+    };
 
 }
