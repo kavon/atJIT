@@ -254,6 +254,14 @@ namespace pass {
             } else assert(false);
         }
 
+        for(size_t i = number_of_globals_to_keep; i < globalsToKeep.size(); ++i) {
+            GlobalValue* gv_in_clone = globalsToKeep[i];
+            Function* gv_as_fun = cast<Function>(gv_in_clone);
+            std::string name = gv_as_fun->getName();
+            std::string new_name = name + "__";
+            gv_as_fun->setName(new_name);
+        }
+
         return Clone;
     }
 
