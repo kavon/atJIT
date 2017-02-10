@@ -1,5 +1,9 @@
 
-add_library(easy_jit_cc MODULE
-	src/extract.cpp)
+llvm_map_components_to_libnames(LLVM_LIBS all)
 
-target_link_libraries(easy_jit_cc ${llvm_libs})
+add_llvm_loadable_module(easy_jit_pass src/extract.cpp)
+
+target_link_libraries(easy_jit_pass PUBLIC ${LLVM_LIBS})
+
+get_property(PASS_TARGET_FILE TARGET easy_jit_pass PROPERTY LOCATION)
+set(EASY_JIT_PASS ${PASS_TARGET_FILE} PARENT_SCOPE)

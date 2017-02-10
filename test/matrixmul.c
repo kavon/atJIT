@@ -1,9 +1,14 @@
+// RUN: clang -I%includepath -S -emit-llvm %s -o %t.orig.ll
+// RUN: opt -S %load_static_lib %t.orig.ll -o %t.jit.ll
+// RUN: clang %t.jit.ll -O3 %ldflags -o %t.jit.exe
+// RUN: %t.jit.exe
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <math.h>
 
-#include "../include/easyjit.h"
+#include "easyjit.h"
 
 #define N 400
 
@@ -18,7 +23,7 @@ matrix create_matrix(unsigned new_size, double val) {
   int i, j, k;
   matrix _new;
   _new.size = new_size;
-  _new.rows = (double*)malloc(sizeof(double*) * new_size);
+  _new.rows = (double**)malloc(sizeof(double*) * new_size);
 
   for (i = 0; i < new_size; ++i) {
     _new.rows[i] = (double*)malloc(sizeof(double) * new_size);
@@ -46,7 +51,6 @@ void kernel(matrix a, matrix b, matrix* out) {
 
   int i, j, k;
   long n = a.size;
-  easy_jit_specialzie_param_long(n); // inline this parameter
 
   for (i = 0; i < n; ++i) {
     for (j = 0; j < n; ++j) {
@@ -58,9 +62,10 @@ void kernel(matrix a, matrix b, matrix* out) {
   }
 }
 
-void verify_kernel(matrix a, matrix b, matrix* out) {
+int verify_kernel(matrix a, matrix b, matrix* out) {
   int i, j, k;
   unsigned n = a.size;
+  int res = 0;
 
   for (i = 0; i < n; ++i) {
     for (j = 0; j < n; ++j) {
@@ -71,12 +76,15 @@ void verify_kernel(matrix a, matrix b, matrix* out) {
 
       if(fabs(out->rows[i][j] - verif) > 0.01) {
         printf("On element i=%d j=%d    expected=%f got=%f.\n", i, j, verif, out->rows[i][j]);
+        res=1;
       }
     }
   }
+  return res;
 }
 
 int main(int argc, char** argv) {
+  int ret = 0;
   matrix min_a = create_matrix(size, 3.14),
          min_b = create_matrix(size, 3.14),
          mout = create_matrix(size, 0.0);
@@ -84,12 +92,12 @@ int main(int argc, char** argv) {
   kernel(min_a, min_b, &mout);
 #ifndef NO_VERIF
   if(argc == 1)
-	  verify_kernel(min_a, min_b, &mout);
+	  ret = verify_kernel(min_a, min_b, &mout);
 #endif
 
   printf("completed %lf.\n", mout.rows[0][0]);
   delete_matrix(&min_a);
   delete_matrix(&min_b);
   delete_matrix(&mout);
-  return 0;
+  return ret;
 }

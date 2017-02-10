@@ -3,325 +3,298 @@
 #include "llvm/Pass.h"
 #include "llvm/InitializePasses.h"
 
-#include "llvm/Support/raw_ostream.h"
-
-#include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/Utils/Cloning.h"
-
-#include "llvm/Bitcode/ReaderWriter.h"
-
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IRBuilder.h"
 
-//TODO: fix this correct include, should link to lib, not incldue cpp files
-#include "lib/Transforms/IPO/ExtractGV.cpp"
-#include "lib/Transforms/Utils/CloneModule.cpp"
+#include "llvm/Bitcode/ReaderWriter.h"
 
-#include <set>
-#include <vector>
-#include <string>
+#include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Utils/Cloning.h"
+
+#include "llvm/Support/raw_ostream.h"
 
 using namespace pass;
 using namespace llvm;
 
 namespace pass {
 
-    bool debug = true;
+  // globals
+  constexpr bool Debug = true;
+  static const char* EnabledName = "easy_jit_enabled";
+  static const char* EmbeddedMoudleName = "easy_jit_module";
+  static const char* HookName = "easy_jit_hook";
+  static const char* HookEndName = "easy_jit_hook_end";
 
-    char ExtractFunctionToIR::ID = 0;
+  // pass configuration
+  static const char* Command = "easy_jit";
+  static const char* Description = "Pass to extract functions to ir.";
+  constexpr bool IsAnalysis = false;
+  constexpr bool IsCfgOnly = false;
+  static RegisterPass<ExtractAndEmbed> X(Command, Description, IsCfgOnly, IsAnalysis);
 
-    ExtractFunctionToIR::ExtractFunctionToIR() : llvm::ModulePass(ID) {
+  char ExtractAndEmbed::ID = 0;
+
+  ExtractAndEmbed::ExtractAndEmbed() :
+    llvm::ModulePass(ID) {
+  }
+
+  void ExtractAndEmbed::getAnalysisUsage(llvm::AnalysisUsage& AU) const {
+  }
+
+  SmallPtrSet<Function*, 8> getFunctionsToExtract(Function* EasyJitEnabled) {
+    assert(EasyJitEnabled);
+    SmallPtrSet<Function*, 8> Fun2Extract;
+
+    //collect the functions where the function is used
+    while(!EasyJitEnabled->user_empty()) {
+      User* U = EasyJitEnabled->user_back();
+      CallInst* AsCall = dyn_cast<CallInst>(U);
+
+      assert(AsCall && AsCall->getCalledFunction() == EasyJitEnabled
+             && "Easy jit function not used as a function call!");
+
+      Function* F = AsCall->getParent()->getParent();
+
+      Fun2Extract.insert(F);
+      AsCall->eraseFromParent();
     }
 
-    ExtractFunctionToIR::~ExtractFunctionToIR() {
+    if(Debug) {
+      for(Function* f : Fun2Extract)
+          errs() << "Function " << f->getName() << " marked for extraction.\n";
     }
 
-    bool ExtractFunctionToIR::doInitialization(llvm::Module&) {
-        return false;
+    return Fun2Extract;
+  }
+
+  void AddJITHookDefinition(Module& M) {
+
+    LLVMContext &C = M.getContext();
+
+    Function* JitHook = M.getFunction(HookName);
+    if(!JitHook) {
+      Type* I8Ptr = Type::getInt8PtrTy(C);
+      Type* I64 = Type::getInt64Ty(C);
+
+      FunctionType* HookFnTy = FunctionType::get(I8Ptr, {I8Ptr, I8Ptr, I64}, false);
+
+      JitHook = Function::Create(HookFnTy, Function::ExternalLinkage, HookName, &M);
     }
 
-    bool ExtractFunctionToIR::doFinalization(llvm::Module&) {
-        return false;
+    Function* JitHookEnd = M.getFunction(HookEndName);
+    if(!JitHookEnd) {
+      Type* VoidTy = Type::getVoidTy(C);
+      Type* I8Ptr = Type::getInt8PtrTy(C);
+      FunctionType* HookEndFnTy = FunctionType::get(VoidTy, {I8Ptr}, false);
+
+      JitHookEnd = Function::Create(HookEndFnTy, Function::ExternalLinkage, HookEndName, &M);
     }
+  }
 
-    void ExtractFunctionToIR::getAnalysisUsage(llvm::AnalysisUsage& AU) const {
-    }
+    bool addGlobalIfUsedByExtracted(GlobalValue& GV,
+                                    const SmallPtrSetImpl<Function*> &Fun2Extract,
+                                    SmallPtrSetImpl<GlobalValue*> &Globals) {
+      for(User* U : GV.users()) {
+        Instruction* UI = dyn_cast<Instruction>(U);
+        if(!UI)
+          continue;
 
-    std::set<Function*> getFunctionsToExtract(Function* easy_jit_enabled) {
-        assert(easy_jit_enabled);
-        std::set<Function*> functions2extract;
-        std::vector<CallInst*> calls;
+        bool UsedInExtracted = Fun2Extract.count(UI->getParent()->getParent());
+        if(!UsedInExtracted)
+          continue;
 
-        //collect the functions where the function is used
-        for(User* use : easy_jit_enabled->users()) {
-            CallInst* use_as_call = dyn_cast<CallInst>(use);
-            assert(use_as_call);
-            Function* parentFun = use_as_call->getParent()->getParent();
-            assert(parentFun);
-            functions2extract.insert(parentFun);
-            calls.push_back(use_as_call);
-        }
-
-        //remove all the uses
-        for(CallInst* call : calls)
-            call->eraseFromParent();
-
-        if(debug) {
-            for(Function* f : functions2extract)
-                errs() << "Function " << f->getName() << " marked for extraction.\n";
-        }
-
-        return functions2extract;
-    }
-
-    void AddJITHookDefinition(Module* M) {
-        Function* jit_hook = M->getFunction("easy_jit_hook");
-        if(!jit_hook) {
-            Type* i8ptr = Type::getInt8PtrTy(M->getContext());
-            Type* i64 = Type::getInt64Ty(M->getContext());
-
-            FunctionType* hook_ty = FunctionType::get(i8ptr, std::vector<Type*>({i8ptr, i8ptr, i64}), false);
-
-            jit_hook = Function::Create(hook_ty, Function::ExternalLinkage, "easy_jit_hook", M);
-        }
-
-        Function* jit_hook_end = M->getFunction("easy_jit_hook_end");
-        if(!jit_hook_end) {
-            Type* voidty = Type::getVoidTy(M->getContext());
-            Type* i8ptr = Type::getInt8PtrTy(M->getContext());
-            FunctionType* hook_end_ty = FunctionType::get(voidty, std::vector<Type*>({i8ptr}), false);
-
-            jit_hook_end = Function::Create(hook_end_ty, Function::ExternalLinkage, "easy_jit_hook_end", M);
-        }
-    }
-
-    bool addGlobalIfUsedByExtracted(GlobalValue& gv, const std::set<Function*> functions2extract, std::set<GlobalValue*>* globals) {
-        for(User* user : gv.users()) {
-            Instruction* use_inst = dyn_cast<Instruction>(user);
-
-            if(use_inst) {
-                bool used_in_extracted = functions2extract.count(use_inst->getParent()->getParent());
-
-                if(used_in_extracted) {
-                    globals->insert(&gv);
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    std::set<GlobalValue*> getReferencedGlobals(const std::set<Function*>& functions2extract, Module* M) {
-        std::set<GlobalValue*> globals;
-
-        for(GlobalVariable& gv : M->globals()) {
-            if(addGlobalIfUsedByExtracted(gv, functions2extract, &globals)) {
-                if(debug) errs() << "Global variable " << gv.getName() << " referenced by extracted function.\n";
-            }
-        }
-
-        for(Function& f : *M) {
-            if(!functions2extract.count(&f)) {
-                if(addGlobalIfUsedByExtracted(f, functions2extract, &globals)) {
-                    if(debug) errs() << "Function " << f.getName() << " referenced by extracted function\n";
-                }
-            }
-        }
-
-        return globals;
-    }
-
-    bool ValidForExtraction(const std::set<GlobalValue*>& referencedGlobals) {
-        for(GlobalValue* gv : referencedGlobals) {
-            bool is_private = (gv->getLinkage() == GlobalValue::PrivateLinkage || gv->getLinkage() == GlobalValue::InternalLinkage);
-
-            if(is_private) {
-                if(debug) errs() << "Cannot extract module to ir since global " << gv->getName() << " has internal linkage.\n";
-
-                return false;
-            }
-        }
-
+        Globals.insert(&GV);
         return true;
+      }
+
+      return false;
     }
 
-    void CreateJITHook(Function* f) {
-        std::string name = f->getName();
+    template<class Range>
+    void getReferencedGlobalsInRange(const SmallPtrSetImpl<Function*>& Fun2Extract,
+                                    Range &&R,
+                                    SmallPtrSetImpl<GlobalValue*> &Globals) {
+      for(auto &FOrGV : R) {
+        Function* F = dyn_cast<Function>(&FOrGV);
+        if(Fun2Extract.count(F))
+          continue;
 
-        Function* hook = Function::Create(f->getFunctionType(), f->getLinkage(), "hook", f->getParent());
-        f->replaceAllUsesWith(hook);
-        f->eraseFromParent();
-        hook->setName(name);
-        
-        Module* M = hook->getParent();
-        LLVMContext& context = hook->getContext();
-        Type* i8ptr = Type::getInt8PtrTy(context);
+        if(addGlobalIfUsedByExtracted(FOrGV, Fun2Extract, Globals) && Debug)
+          errs() << "Global " << FOrGV.getName() << " referenced by extracted function.\n";
+      }
+    }
+
+    SmallPtrSet<GlobalValue*, 8> getReferencedGlobals(const SmallPtrSetImpl<Function*>& Fun2Extract, Module& M) {
+        SmallPtrSet<GlobalValue*, 8> Globals;
+        getReferencedGlobalsInRange(Fun2Extract, M.globals(), Globals);
+        getReferencedGlobalsInRange(Fun2Extract, M.functions(), Globals);
+        return Globals;
+    }
+
+    bool ValidForExtraction(const SmallPtrSetImpl<GlobalValue*>& Globals) {
+      auto Search = std::find_if(Globals.begin(), Globals.end(), [](GlobalValue const* GV) {
+        return GV->hasPrivateLinkage() || GV->hasInternalLinkage();
+      });
+
+      if(Search != Globals.end() && Debug) {
+        errs() << "Cannot extract module: global " << (*Search)->getName()
+               << " has private/internal linkage.\n";
+      }
+      return Search == Globals.end();
+    }
+
+    void CreateJITHook(Function* F) {
+        std::string FName = F->getName();
+
+        Function* Hook = Function::Create(F->getFunctionType(), F->getLinkage(), "hook", F->getParent());
+        F->replaceAllUsesWith(Hook);
+        F->eraseFromParent();
+        Hook->setName(FName);
+
+        Module* M = Hook->getParent();
+        LLVMContext& C = Hook->getContext();
+        Type* I8Ptr = Type::getInt8PtrTy(C);
         
         //get the hook function to the runtime
-        Function* easy_jit_hook = M->getFunction("easy_jit_hook");
-        Function* easy_jit_hook_end = M->getFunction("easy_jit_hook_end");
-        assert(easy_jit_hook && easy_jit_hook_end);
+        Function* JITHook = M->getFunction(HookName);
+        Function* JITHookEnd = M->getFunction(HookEndName);
+        assert(JITHook && JITHookEnd);
         
         //create a single block
-        BasicBlock* entry = BasicBlock::Create(context, "entry", hook);
+        BasicBlock* Entry = BasicBlock::Create(C, "entry", Hook);
+        IRBuilder<> B(Entry);
         
         //create a string
-        ArrayType* i8array = ArrayType::get(cast<IntegerType>(Type::getInt8Ty(context)), name.size() + 1);
-        Constant* initializer = ConstantDataArray::getString(context, name, true);
-        Constant* function_name_global =
-            new GlobalVariable(*M, initializer->getType(), true, GlobalValue::PrivateLinkage, initializer, ".easy_jit_fun_name");
-        function_name_global = ConstantExpr::getPointerCast(cast<Constant>(function_name_global), i8ptr);
+        Constant* Init = ConstantDataArray::getString(C, FName, true);
+        Constant* FNameGV =
+            new GlobalVariable(*M, Init->getType(), true, GlobalValue::InternalLinkage, Init, ".easy_jit_fun_name");
+        FNameGV = ConstantExpr::getPointerCast(FNameGV, I8Ptr);
         
         //get the ir variable
-        Constant* ir_variable = M->getNamedGlobal("easy_jit_module");
-        assert(ir_variable);
-        ArrayType* arrty = cast<ArrayType>(ir_variable->getType()->getContainedType(0));
-        Constant* size = ConstantInt::get(Type::getInt64Ty(context), arrty->getNumElements());
-        ir_variable = ConstantExpr::getPointerCast(cast<Constant>(ir_variable), i8ptr);
+        Constant* IRVar = M->getNamedGlobal(EmbeddedMoudleName);
+        assert(IRVar);
+        ArrayType* IRVarTy = cast<ArrayType>(IRVar->getType()->getContainedType(0));
+        Constant* Size = ConstantInt::get(Type::getInt64Ty(C), IRVarTy->getNumElements());
+        IRVar = ConstantExpr::getPointerCast(IRVar, I8Ptr);
         
         //create the call
-        std::vector<Value*> hook_args = {function_name_global, ir_variable, size};
-        
-        Value* jitResult = CallInst::Create(easy_jit_hook, hook_args, "jitted_function", entry);
-        Value* cast = CastInst::CreatePointerCast(jitResult, hook->getType(), "jitted_function_cast", entry);
+        Value* HookArgs[] = {FNameGV, IRVar, Size};
+        Value* JitResult = B.CreateCall(JITHook, HookArgs);
+        Value* Cast = B.CreatePointerCast(JitResult, Hook->getType());
 
-        std::vector<Value*> fun_args;
-        for(Argument& arg : hook->args())
-            fun_args.push_back(&arg);
+        SmallVector<std::reference_wrapper<Argument>, 8> FunArgs(Hook->arg_begin(), Hook->arg_end());
+        SmallVector<Value*, 8> FunArgsVal(FunArgs.size());
+        std::transform(FunArgs.begin(), FunArgs.end(), FunArgsVal.begin(), std::addressof<Value>);
 
-        Value* call = CallInst::Create(cast, fun_args, "", entry);
+        Value* Call = B.CreateCall(Cast, FunArgsVal);
 
-        std::vector<Value*> hook_end_args = {jitResult};
-        CallInst::Create(easy_jit_hook_end, hook_end_args, "", entry);
+        B.CreateCall(JITHookEnd, {JitResult});
 
-        if(call->getType()->isVoidTy())
-            ReturnInst::Create(context, entry); else {
-
-            call->setName("result");
-            ReturnInst::Create(context, call, entry);
-        }
+        if(Call->getType()->isVoidTy())
+            ReturnInst::Create(C, Entry);
+        else
+            ReturnInst::Create(C, Call, Entry);
     }
 
-    Module* getModuleForJITCompilation(const std::set<Function*>& functions2extract, Module* M) {
-        std::set<GlobalValue*> referencedGlobals = getReferencedGlobals(functions2extract, M);
+    void GVMakeExternalDeclaration(GlobalValue* GV) {
+      GV->setLinkage(GlobalValue::ExternalLinkage);
+      if(Function* F = dyn_cast<Function>(GV)) {
+        F->getBasicBlockList().clear();
+      } else if (GlobalVariable *G = dyn_cast<GlobalVariable>(GV)){
+        G->setInitializer(nullptr);
+      } else assert(false);
+    }
 
-        if(!ValidForExtraction(referencedGlobals)) return nullptr;
+    std::unique_ptr<Module> getModuleForJITCompilation(const SmallPtrSetImpl<Function*>& Fun2Extract, Module& M) {
+        auto Globals = getReferencedGlobals(Fun2Extract, M);
 
-        Module* Clone = llvm::CloneModule(M);
-        
+        if(!ValidForExtraction(Globals))
+          return nullptr;
+
+        auto Clone = llvm::CloneModule(&M);
+        auto GetGlobalInClone = [&Clone](auto* G) { return Clone->getNamedValue(G->getName()); };
+
         //collect the referenced globals in the clone
-        std::vector<GlobalValue*> globalsToKeep;
-
-        for(GlobalValue* gv : referencedGlobals) {
-            GlobalValue* gv_in_clone = Clone->getNamedGlobal(gv->getName());
-            assert(gv_in_clone);
-            globalsToKeep.push_back(gv_in_clone);
-        }
-
-        size_t number_of_globals_to_keep = globalsToKeep.size();
-
-        //add the functions to the globalsToKeep
-        for(Function* fun : functions2extract) {
-            Function* fun_in_clone = Clone->getFunction(fun->getName());
-            assert(fun_in_clone);
-            globalsToKeep.push_back(fun_in_clone);
-        }
+        std::vector<GlobalValue*> GlobalsToKeep(Globals.size() + Fun2Extract.size());
+        std::transform(Globals.begin(), Globals.end(), GlobalsToKeep.begin(), GetGlobalInClone);
+        std::transform(Fun2Extract.begin(), Fun2Extract.end(), GlobalsToKeep.begin() + Globals.size(), GetGlobalInClone);
 
         //clean the clonned module
         llvm::legacy::PassManager Passes;
-        Passes.add(createGVExtractionPass(globalsToKeep));
+        Passes.add(createGVExtractionPass(GlobalsToKeep));
         Passes.add(createGlobalDCEPass());
         Passes.add(createStripDeadDebugInfoPass());
         Passes.add(createStripDeadPrototypesPass());
         Passes.run(*Clone);
 
-        //mark globals as external
-        for(size_t i = 0; i < number_of_globals_to_keep; ++i) {
-            GlobalValue* gv_in_clone = globalsToKeep[i];
-            Function* gv_as_fun = dyn_cast<Function>(gv_in_clone);
-            GlobalVariable* gv_as_global = dyn_cast<GlobalVariable>(gv_in_clone);
+        //transform the globals to external declarations
+        std::for_each(GlobalsToKeep.begin(), GlobalsToKeep.begin() + Globals.size(),
+                      GVMakeExternalDeclaration);
 
-            if(gv_as_global) {
-                gv_as_global->setLinkage(GlobalValue::ExternalLinkage);
-                gv_as_global->setInitializer(nullptr);
-            } else if(gv_as_fun) {
-                gv_as_fun->setLinkage(GlobalValue::ExternalLinkage);
-                gv_as_fun->getBasicBlockList().clear();
-            } else assert(false);
-        }
-
-        for(size_t i = number_of_globals_to_keep; i < globalsToKeep.size(); ++i) {
-            GlobalValue* gv_in_clone = globalsToKeep[i];
-            Function* gv_as_fun = cast<Function>(gv_in_clone);
-            std::string name = gv_as_fun->getName();
-            std::string new_name = name + "__";
-            gv_as_fun->setName(new_name);
-        }
+        //rename the functions
+        std::for_each(GlobalsToKeep.begin() + Globals.size(), GlobalsToKeep.end(),
+        [](GlobalValue *GV) { GV->setName(GV->getName() + "__"); });
 
         return Clone;
     }
 
-    std::string ModuleToString(Module* M) {
-        std::string s;
-        raw_string_ostream so(s);
-        WriteBitcodeToFile(M, so);
-        so.flush();
-        return s;
+    std::string ModuleToString(Module &M) {
+      std::string s;
+      raw_string_ostream so(s);
+      WriteBitcodeToFile(&M, so);
+      so.flush();
+      return s;
     }
 
-    GlobalVariable* WriteModuleToGlobal(Module* M, Module* jitM) {
-        std::string module_as_string = ModuleToString(jitM);
-        LLVMContext& context = M->getContext();
-        
-        ArrayType* type = ArrayType::get(cast<IntegerType>(Type::getInt8Ty(context)), module_as_string.size() + 1);
-        Constant* initializer = ConstantDataArray::getString(context, module_as_string, true);
-        GlobalVariable* bitcode_string =
-            new GlobalVariable(*M, initializer->getType(), true, GlobalValue::PrivateLinkage, initializer, "easy_jit_module");
+    GlobalVariable* WriteModuleToGlobal(Module& M, Module& JitM) {
+      std::string ModuleAsStr = ModuleToString(JitM);
+      LLVMContext& C = M.getContext();
 
-        if(debug)
-            errs() << "Extracted module written to " << bitcode_string->getName() << "\n";
+      Constant* Init = ConstantDataArray::getString(C, ModuleAsStr, true);
+      GlobalVariable* BitcodeGV =
+          new GlobalVariable(M, Init->getType(), true, GlobalValue::InternalLinkage, Init, EmbeddedMoudleName);
 
-        return bitcode_string;
+      if(Debug)
+        errs() << "Extracted module written to " << BitcodeGV->getName() << "\n";
+
+      return BitcodeGV;
     }
 
-    bool ExtractFunctionToIR::runOnModule(llvm::Module& M) {
-        Function* easy_jit_enabled = M.getFunction("easy_jit_enabled");
+    bool ExtractAndEmbed::runOnModule(llvm::Module& M) {
+      Function* EasyJitEnabled = M.getFunction(EnabledName);
 
-        if(M.getNamedGlobal("easy_jit_module")) {
-            errs() << "WARNING: Module already contains an extracted module.\n";
-            return false;
-        }
-
-        if(easy_jit_enabled) {
-            std::set<Function*> functions2extract = getFunctionsToExtract(easy_jit_enabled);
-
-            if(functions2extract.empty()) return false;
-
-            Module* jitM = getModuleForJITCompilation(functions2extract, &M);
-
-            if(!jitM) return false;
-
-            WriteModuleToGlobal(&M, jitM);
-            AddJITHookDefinition(&M);
-
-            //drop extracted functions
-            for(Function* f : functions2extract)
-                CreateJITHook(f);
-
-            return true;
-        }
-
+      if(M.getNamedGlobal(EmbeddedMoudleName)) {
+        errs() << "WARNING: Compilation unit already contains an extracted module.\n";
         return false;
+      }
+
+      if(!EasyJitEnabled)
+        return false;
+
+      auto Fun2Extract = getFunctionsToExtract(EasyJitEnabled);
+
+      if(Fun2Extract.empty())
+        return false;
+
+      // TODO: This extracts all the functions in the same module,
+      //    extract each function in a separated module!
+      auto JitM = getModuleForJITCompilation(Fun2Extract, M);
+
+      if(!JitM)
+        return false;
+
+      WriteModuleToGlobal(M, *JitM);
+
+      //drop extracted functions
+      AddJITHookDefinition(M);
+      for(Function* F : Fun2Extract) {
+        CreateJITHook(F);
+      }
+
+      return true;
     }
-
-    const char* command_line = "extract2ir";
-    const char* description = "Pass to extract functions to ir.";
-    bool is_analysis = false;
-    bool is_cfg_only = false;
-
-    static RegisterPass<ExtractFunctionToIR> X(command_line, description, is_cfg_only, is_analysis);
 }

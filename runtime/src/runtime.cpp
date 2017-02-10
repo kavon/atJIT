@@ -3,6 +3,7 @@
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -10,84 +11,90 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 
-#include <iostream>
-#include <map>
+#include "llvm/ADT/StringMap.h"
+
 
 using namespace llvm;
 
 namespace runtime {
 
 class InitNativeTarget {
-    public:
-    InitNativeTarget() {
-        llvm::InitializeNativeTarget();
-        llvm::InitializeNativeTargetAsmPrinter();
-    }
+  public:
+  InitNativeTarget() {
+    InitializeNativeTarget();
+    InitializeNativeTargetAsmPrinter();
+  }
 };
 
-static InitNativeTarget init;
-
 class ModuleCache {
-    std::map<const char*, std::shared_ptr<llvm::Module>> modules;
+  LLVMContext Context_;
+  StringMap<std::unique_ptr<Module>> Modules_;
 
-    llvm::Module* loadModule(const char* m, size_t size) {
+  std::unique_ptr<Module>& loadModule(const char* ModuleStr, size_t size) {
 
-        llvm::StringRef bytecode_as_string(m, size - 1);
-        llvm::LLVMContext& context = llvm::getGlobalContext();
-        std::unique_ptr<llvm::MemoryBuffer> memory_buffer(llvm::MemoryBuffer::getMemBuffer(bytecode_as_string));
-        llvm::ErrorOr<std::unique_ptr<llvm::Module>> ModuleOrErr = llvm::parseBitcodeFile(memory_buffer.get()->getMemBufferRef(), context);
+    auto KeyPtr = std::make_pair(ModuleStr, nullptr);
+    auto Pair = Modules_.insert(KeyPtr);
 
-        if(std::error_code EC = ModuleOrErr.getError())
-        {
-            std::cerr << EC.message() << "\n";
-            assert(false && "loading the module failed.");
-        }
+    if(Pair.second) {
+      StringRef BytecodeStr(ModuleStr, size - 1);
+      std::unique_ptr<MemoryBuffer> MemoryBuffer(MemoryBuffer::getMemBuffer(BytecodeStr));
+      ErrorOr<std::unique_ptr<Module>> ModuleOrErr = parseBitcodeFile(MemoryBuffer->getMemBufferRef(), Context_);
 
-        std::unique_ptr<llvm::Module> ptr = std::move(ModuleOrErr.get());
-        return ptr.release();
+      if(std::error_code EC = ModuleOrErr.getError()) {
+        errs() << EC.message() << "\n";
+        assert(false && "error loading the module.");
+      }
+      Pair.first->getValue() = std::move(ModuleOrErr.get());
     }
+    return Pair.first->getValue();
+  }
 
-    public:
-    std::unique_ptr<llvm::Module> getModule(const char* m, size_t size) {
-        bool in_cache = modules.count(m);
+  public:
 
-        if(!in_cache) modules[m] = std::shared_ptr<Module>(loadModule(m, size));
-
-        return std::unique_ptr<Module>(CloneModule(modules[m].get()));
-    }
+  std::unique_ptr<llvm::Module> getModule(const char* m, size_t size) {
+    // TODO this is expensive! could we perform the modifications on the module and re-use it?
+    //    the problem is that the ExecEngine take ownership of the module.
+    return CloneModule(loadModule(m, size).get());
+  }
 };
 
 std::unique_ptr<llvm::ExecutionEngine> getExecutionEngine(std::unique_ptr<Module> M) {
-    EngineBuilder ebuilder(std::move(M));
-    std::string eeError;
+  EngineBuilder ebuilder(std::move(M));
+  std::string eeError;
 
-    auto ee = std::move(std::unique_ptr<llvm::ExecutionEngine>(ebuilder.setErrorStr(&eeError)
-            .setMCPU(sys::getHostCPUName())
-            .setEngineKind(EngineKind::JIT)
-            .setOptLevel(llvm::CodeGenOpt::Level::Aggressive)
-            .create()));
+  std::unique_ptr<llvm::ExecutionEngine> ee(ebuilder.setErrorStr(&eeError)
+          .setMCPU(sys::getHostCPUName())
+          .setEngineKind(EngineKind::JIT)
+          .setOptLevel(llvm::CodeGenOpt::Level::Aggressive)
+          .create());
 
-    return ee;
+  if(!ee) {
+    errs() << eeError << "\n";
+    assert(false && "error creating the execution engine.");
+  }
+
+  return ee;
 }
 
-static ModuleCache moduleCache;
-static std::unique_ptr<llvm::ExecutionEngine> exec_engine;
+static InitNativeTarget init;
+static ModuleCache AModuleCache;
+// TODO A single active execution engine...
+static std::unique_ptr<llvm::ExecutionEngine> ExecEngine;
 }
 
 using namespace runtime;
 
+extern "C" void* easy_jit_hook(const char* FunctionName, const char* IR, size_t IRSize) {
 
-extern "C" void* easy_jit_hook(const char* function_name, const char* module_in_ir, size_t module_in_ir_size) {
+  std::unique_ptr<llvm::Module> M(AModuleCache.getModule(IR, IRSize));
+  ExecEngine = std::move(getExecutionEngine(std::move(M)));
 
-    std::unique_ptr<llvm::Module> M = std::move(moduleCache.getModule(module_in_ir, module_in_ir_size));
-    exec_engine = std::move(getExecutionEngine(std::move(M)));
+  std::string JittedFunName = std::string(FunctionName) + "__";
+  auto JittedFunAddr = ExecEngine->getFunctionAddress(JittedFunName.c_str());
 
-    std::string jit_function_name = std::string(function_name) + "__";
-    void* function_address = (void*)exec_engine->getFunctionAddress(jit_function_name.c_str());
-
-    return function_address;
+  return (void*)JittedFunAddr;
 }
 
-extern "C" void easy_jit_hook_end(void* function) {
-    exec_engine = nullptr;
+extern "C" void easy_jit_hook_end(void* JittedFunAddr) {
+  ExecEngine = nullptr;
 }
