@@ -1,7 +1,7 @@
 
 llvm_map_components_to_libnames(LLVM_LIBS all)
 
-add_llvm_loadable_module(easy_jit_pass src/extract.cpp)
+add_llvm_loadable_module(easy_jit_pass src/extract.cpp src/identify.cpp src/declare.cpp)
 
 target_link_libraries(easy_jit_pass PUBLIC ${LLVM_LIBS})
 

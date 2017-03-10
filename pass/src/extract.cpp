@@ -17,6 +17,11 @@
 
 #include "llvm/Support/raw_ostream.h"
 
+#include <boost/iterator/transform_iterator.hpp>
+
+#include "declare.h"
+#include "identify.h"
+
 using namespace pass;
 using namespace llvm;
 
@@ -24,10 +29,7 @@ namespace pass {
 
   // globals
   constexpr bool Debug = true;
-  static const char* EnabledName = "easy_jit_enabled";
   static const char* EmbeddedMoudleName = "easy_jit_module";
-  static const char* HookName = "easy_jit_hook";
-  static const char* HookEndName = "easy_jit_hook_end";
 
   // pass configuration
   static const char* Command = "easy_jit";
@@ -45,59 +47,9 @@ namespace pass {
   void ExtractAndEmbed::getAnalysisUsage(llvm::AnalysisUsage& AU) const {
   }
 
-  SmallPtrSet<Function*, 8> getFunctionsToExtract(Function* EasyJitEnabled) {
-    assert(EasyJitEnabled);
-    SmallPtrSet<Function*, 8> Fun2Extract;
-
-    //collect the functions where the function is used
-    while(!EasyJitEnabled->user_empty()) {
-      User* U = EasyJitEnabled->user_back();
-      CallInst* AsCall = dyn_cast<CallInst>(U);
-
-      assert(AsCall && AsCall->getCalledFunction() == EasyJitEnabled
-             && "Easy jit function not used as a function call!");
-
-      Function* F = AsCall->getParent()->getParent();
-
-      Fun2Extract.insert(F);
-      AsCall->eraseFromParent();
-    }
-
-    if(Debug) {
-      for(Function* f : Fun2Extract)
-          errs() << "Function " << f->getName() << " marked for extraction.\n";
-    }
-
-    return Fun2Extract;
-  }
-
-  void AddJITHookDefinition(Module& M) {
-
-    LLVMContext &C = M.getContext();
-
-    Function* JitHook = M.getFunction(HookName);
-    if(!JitHook) {
-      Type* I8Ptr = Type::getInt8PtrTy(C);
-      Type* I64 = Type::getInt64Ty(C);
-
-      FunctionType* HookFnTy = FunctionType::get(I8Ptr, {I8Ptr, I8Ptr, I64}, false);
-
-      JitHook = Function::Create(HookFnTy, Function::ExternalLinkage, HookName, &M);
-    }
-
-    Function* JitHookEnd = M.getFunction(HookEndName);
-    if(!JitHookEnd) {
-      Type* VoidTy = Type::getVoidTy(C);
-      Type* I8Ptr = Type::getInt8PtrTy(C);
-      FunctionType* HookEndFnTy = FunctionType::get(VoidTy, {I8Ptr}, false);
-
-      JitHookEnd = Function::Create(HookEndFnTy, Function::ExternalLinkage, HookEndName, &M);
-    }
-  }
-
-    bool addGlobalIfUsedByExtracted(GlobalValue& GV,
-                                    const SmallPtrSetImpl<Function*> &Fun2Extract,
-                                    SmallPtrSetImpl<GlobalValue*> &Globals) {
+  bool addGlobalIfUsedByExtracted(GlobalValue& GV,
+                                  const FunToInlineMap &Fun2Extract,
+                                  SmallPtrSetImpl<GlobalValue*> &Globals) {
       for(User* U : GV.users()) {
         Instruction* UI = dyn_cast<Instruction>(U);
         if(!UI)
@@ -115,7 +67,7 @@ namespace pass {
     }
 
     template<class Range>
-    void getReferencedGlobalsInRange(const SmallPtrSetImpl<Function*>& Fun2Extract,
+    void getReferencedGlobalsInRange(const FunToInlineMap& Fun2Extract,
                                     Range &&R,
                                     SmallPtrSetImpl<GlobalValue*> &Globals) {
       for(auto &FOrGV : R) {
@@ -128,7 +80,9 @@ namespace pass {
       }
     }
 
-    SmallPtrSet<GlobalValue*, 8> getReferencedGlobals(const SmallPtrSetImpl<Function*>& Fun2Extract, Module& M) {
+    SmallPtrSet<GlobalValue*, 8> getReferencedGlobals(const FunToInlineMap& Fun2Extract) {
+        Module &M = *Fun2Extract.front().first->getParent();
+
         SmallPtrSet<GlobalValue*, 8> Globals;
         getReferencedGlobalsInRange(Fun2Extract, M.globals(), Globals);
         getReferencedGlobalsInRange(Fun2Extract, M.functions(), Globals);
@@ -136,33 +90,33 @@ namespace pass {
     }
 
     bool ValidForExtraction(const SmallPtrSetImpl<GlobalValue*>& Globals) {
-      auto Search = std::find_if(Globals.begin(), Globals.end(), [](GlobalValue const* GV) {
-        return GV->hasPrivateLinkage() || GV->hasInternalLinkage();
-      });
+      auto ValidGlobal = std::mem_fun(&GlobalValue::hasExternalLinkage);
 
-      if(Search != Globals.end() && Debug) {
-        errs() << "Cannot extract module: global " << (*Search)->getName()
-               << " has private/internal linkage.\n";
+      bool Valid = std::all_of(Globals.begin(), Globals.end(), ValidGlobal);
+      if(!Valid && Debug) {
+        errs() << "Cannot extract module: global has private/internal linkage.\n";
       }
-      return Search == Globals.end();
+
+      return Valid;
     }
 
     void CreateJITHook(Function* F) {
         std::string FName = F->getName();
 
-        Function* Hook = Function::Create(F->getFunctionType(), F->getLinkage(), "hook", F->getParent());
+        Module* M = F->getParent();
+        LLVMContext& C = F->getContext();
+
+        Function* Hook = Function::Create(F->getFunctionType(), F->getLinkage(), "hook", M);
         F->replaceAllUsesWith(Hook);
         F->eraseFromParent();
         Hook->setName(FName);
 
-        Module* M = Hook->getParent();
-        LLVMContext& C = Hook->getContext();
-        Type* I8Ptr = Type::getInt8PtrTy(C);
-        
         //get the hook function to the runtime
-        Function* JITHook = M->getFunction(HookName);
-        Function* JITHookEnd = M->getFunction(HookEndName);
+        Function* JITHook = Declare<declare::JitHook>(*Hook->getParent());
+        Function* JITHookEnd = Declare<declare::JitHookEnd>(*Hook->getParent());
         assert(JITHook && JITHookEnd);
+
+        Type* I8Ptr = Type::getInt8PtrTy(C);
         
         //create a single block
         BasicBlock* Entry = BasicBlock::Create(C, "entry", Hook);
@@ -209,19 +163,21 @@ namespace pass {
       } else assert(false);
     }
 
-    std::unique_ptr<Module> getModuleForJITCompilation(const SmallPtrSetImpl<Function*>& Fun2Extract, Module& M) {
-        auto Globals = getReferencedGlobals(Fun2Extract, M);
+    std::unique_ptr<Module> getModuleForJITCompilation(const FunToInlineMap& Fun2Extract, Module& M) {
+        auto Globals = getReferencedGlobals(Fun2Extract);
 
         if(!ValidForExtraction(Globals))
           return nullptr;
 
         auto Clone = llvm::CloneModule(&M);
-        auto GetGlobalInClone = [&Clone](auto* G) { return Clone->getNamedValue(G->getName()); };
+
+        auto Functions = GetFunctions(Fun2Extract);
 
         //collect the referenced globals in the clone
         std::vector<GlobalValue*> GlobalsToKeep(Globals.size() + Fun2Extract.size());
+        auto GetGlobalInClone = [&Clone](auto* G) { return Clone->getNamedValue(G->getName()); };
         std::transform(Globals.begin(), Globals.end(), GlobalsToKeep.begin(), GetGlobalInClone);
-        std::transform(Fun2Extract.begin(), Fun2Extract.end(), GlobalsToKeep.begin() + Globals.size(), GetGlobalInClone);
+        std::transform(Functions.begin(), Functions.end(), GlobalsToKeep.begin() + Globals.size(), GetGlobalInClone);
 
         //clean the clonned module
         llvm::legacy::PassManager Passes;
@@ -237,7 +193,7 @@ namespace pass {
 
         //rename the functions
         std::for_each(GlobalsToKeep.begin() + Globals.size(), GlobalsToKeep.end(),
-        [](GlobalValue *GV) { GV->setName(GV->getName() + "__"); });
+                      [](GlobalValue *GV) { GV->setName(GV->getName() + "__"); });
 
         return Clone;
     }
@@ -265,35 +221,23 @@ namespace pass {
     }
 
     bool ExtractAndEmbed::runOnModule(llvm::Module& M) {
-      Function* EasyJitEnabled = M.getFunction(EnabledName);
-
       if(M.getNamedGlobal(EmbeddedMoudleName)) {
         errs() << "WARNING: Compilation unit already contains an extracted module.\n";
         return false;
       }
 
-      if(!EasyJitEnabled)
-        return false;
-
-      auto Fun2Extract = getFunctionsToExtract(EasyJitEnabled);
-
+      auto Fun2Extract = GetFunctionsToJit(M);
       if(Fun2Extract.empty())
         return false;
 
-      // TODO: This extracts all the functions in the same module,
-      //    extract each function in a separated module!
       auto JitM = getModuleForJITCompilation(Fun2Extract, M);
-
       if(!JitM)
         return false;
 
       WriteModuleToGlobal(M, *JitM);
 
-      //drop extracted functions
-      AddJITHookDefinition(M);
-      for(Function* F : Fun2Extract) {
-        CreateJITHook(F);
-      }
+      auto Functions = GetFunctions(Fun2Extract);
+      std::for_each(Functions.begin(), Functions.end(), CreateJITHook);
 
       return true;
     }
