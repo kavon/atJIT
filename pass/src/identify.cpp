@@ -62,10 +62,10 @@ FunToInlineMap GetFunctionsToJit(llvm::Module &M) {
   return Map;
 }
 
-llvm::SmallVector<llvm::Function*, 8> GetFunctions(FunToInlineMap &Map) {
+llvm::SmallVector<llvm::Function*, 8> GetFunctions(FunToInlineMap const&Map) {
  llvm::SmallVector<llvm::Function*, 8> Ret(Map.size());
  size_t idx = 0;
- for(auto &pair : Map) {
+ for(auto const&pair : Map) {
    Ret[idx++] = pair.first;
  }
  return Ret;

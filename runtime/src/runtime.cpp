@@ -1,6 +1,6 @@
 #include "llvm/InitializePasses.h"
 
-#include "llvm/Bitcode/ReaderWriter.h"
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
@@ -38,10 +38,9 @@ class ModuleCache {
     if(Pair.second) {
       StringRef BytecodeStr(ModuleStr, size - 1);
       std::unique_ptr<MemoryBuffer> MemoryBuffer(MemoryBuffer::getMemBuffer(BytecodeStr));
-      ErrorOr<std::unique_ptr<Module>> ModuleOrErr = parseBitcodeFile(MemoryBuffer->getMemBufferRef(), Context_);
+      auto ModuleOrErr = parseBitcodeFile(MemoryBuffer->getMemBufferRef(), Context_);
 
-      if(std::error_code EC = ModuleOrErr.getError()) {
-        errs() << EC.message() << "\n";
+      if(auto EC = ModuleOrErr.takeError()) {
         assert(false && "error loading the module.");
       }
       Pair.first->getValue() = std::move(ModuleOrErr.get());

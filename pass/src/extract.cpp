@@ -1,7 +1,6 @@
 #include "extract.hpp"
 
 #include "llvm/Pass.h"
-#include "llvm/InitializePasses.h"
 
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Constants.h"
@@ -10,7 +9,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IRBuilder.h"
 
-#include "llvm/Bitcode/ReaderWriter.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
 
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/Cloning.h"

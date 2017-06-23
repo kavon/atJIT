@@ -6,6 +6,5 @@ add_library(easy_jit_runtime SHARED
 
 target_link_libraries(easy_jit_runtime ${RUNTIME_LLVM_LIBS})
 
-get_property(RUNTIME_TARGET_FILE TARGET easy_jit_runtime PROPERTY LOCATION)
-set(EASY_JIT_RUNTIME ${RUNTIME_TARGET_FILE} PARENT_SCOPE)
+set(EASY_JIT_RUNTIME ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/easy_jit_runtime${CMAKE_SHARED_LIBRARY_SUFFIX} PARENT_SCOPE)
 
