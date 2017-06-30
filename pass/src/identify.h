@@ -14,6 +14,6 @@ using Values = llvm::SmallVector<llvm::Value*, 4>;
 using FunToInlineMap = llvm::MapVector<llvm::Function*, Values>;
 
 FunToInlineMap GetFunctionsToJit(llvm::Module &M);
-llvm::SmallVector<llvm::Function*, 8> GetFunctions(FunToInlineMap const&);
+llvm::SmallVector<llvm::Function *, 8> GetFunctions(FunToInlineMap const &);
 
 #endif

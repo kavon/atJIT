@@ -99,58 +99,73 @@ namespace pass {
       return Valid;
     }
 
-    void CreateJITHook(Function* F) {
-        std::string FName = F->getName();
+    void CreateJITHook(Function *F, SmallVectorImpl<Value *> const &Params) {
+      std::string FName = F->getName();
 
-        Module* M = F->getParent();
-        LLVMContext& C = F->getContext();
+      Module *M = F->getParent();
+      LLVMContext &C = F->getContext();
 
-        Function* Hook = Function::Create(F->getFunctionType(), F->getLinkage(), "hook", M);
-        F->replaceAllUsesWith(Hook);
-        F->eraseFromParent();
-        Hook->setName(FName);
+      Function *Hook =
+          Function::Create(F->getFunctionType(), F->getLinkage(), "hook", M);
+      F->replaceAllUsesWith(Hook);
+      Hook->takeName(F);
 
-        //get the hook function to the runtime
-        Function* JITHook = Declare<declare::JitHook>(*Hook->getParent());
-        Function* JITHookEnd = Declare<declare::JitHookEnd>(*Hook->getParent());
-        assert(JITHook && JITHookEnd);
+      // get the hook function to the runtime
+      Function *JITHook = Declare<declare::JitHook>(*Hook->getParent());
+      Function *JITHookEnd = Declare<declare::JitHookEnd>(*Hook->getParent());
+      assert(JITHook && JITHookEnd);
 
-        Type* I8Ptr = Type::getInt8PtrTy(C);
-        
-        //create a single block
-        BasicBlock* Entry = BasicBlock::Create(C, "entry", Hook);
-        IRBuilder<> B(Entry);
-        
-        //create a string
-        Constant* Init = ConstantDataArray::getString(C, FName, true);
-        Constant* FNameGV =
-            new GlobalVariable(*M, Init->getType(), true, GlobalValue::InternalLinkage, Init, ".easy_jit_fun_name");
-        FNameGV = ConstantExpr::getPointerCast(FNameGV, I8Ptr);
-        
-        //get the ir variable
-        Constant* IRVar = M->getNamedGlobal(EmbeddedMoudleName);
-        assert(IRVar);
-        ArrayType* IRVarTy = cast<ArrayType>(IRVar->getType()->getContainedType(0));
-        Constant* Size = ConstantInt::get(Type::getInt64Ty(C), IRVarTy->getNumElements());
-        IRVar = ConstantExpr::getPointerCast(IRVar, I8Ptr);
-        
-        //create the call
-        Value* HookArgs[] = {FNameGV, IRVar, Size};
-        Value* JitResult = B.CreateCall(JITHook, HookArgs);
-        Value* Cast = B.CreatePointerCast(JitResult, Hook->getType());
+      Type *I8Ptr = Type::getInt8PtrTy(C);
 
-        SmallVector<std::reference_wrapper<Argument>, 8> FunArgs(Hook->arg_begin(), Hook->arg_end());
-        SmallVector<Value*, 8> FunArgsVal(FunArgs.size());
-        std::transform(FunArgs.begin(), FunArgs.end(), FunArgsVal.begin(), std::addressof<Value>);
+      // create a single block
+      BasicBlock *Entry = BasicBlock::Create(C, "entry", Hook);
+      IRBuilder<> B(Entry);
 
-        Value* Call = B.CreateCall(Cast, FunArgsVal);
+      // create a string
+      Constant *Init = ConstantDataArray::getString(C, FName, true);
+      Constant *FNameGV = new GlobalVariable(*M, Init->getType(), true,
+                                             GlobalValue::InternalLinkage, Init,
+                                             ".easy_jit_fun_name");
+      FNameGV = ConstantExpr::getPointerCast(FNameGV, I8Ptr);
 
-        B.CreateCall(JITHookEnd, {JitResult});
+      // get the ir variable
+      Constant *IRVar = M->getNamedGlobal(EmbeddedMoudleName);
+      assert(IRVar);
+      ArrayType *IRVarTy =
+          cast<ArrayType>(IRVar->getType()->getContainedType(0));
+      Constant *Size =
+          ConstantInt::get(Type::getInt64Ty(C), IRVarTy->getNumElements());
+      IRVar = ConstantExpr::getPointerCast(IRVar, I8Ptr);
 
-        if(Call->getType()->isVoidTy())
-            ReturnInst::Create(C, Entry);
-        else
-            ReturnInst::Create(C, Call, Entry);
+      SmallVector<Value *, 8> FunArgsVal;
+      SmallVector<Value *, 8> HookArgs = {FNameGV, IRVar, Size};
+      auto FArgsIter = F->arg_begin();
+      for (auto &V : Hook->args()) {
+        auto Where = std::find(Params.begin(), Params.end(), &*FArgsIter);
+        if (Where != Params.end()) {
+
+          HookArgs.push_back(B.getInt32(Params.end() - Where));
+          HookArgs.push_back(&V);
+        }
+        FunArgsVal.push_back(&V);
+        ++FArgsIter;
+      }
+      HookArgs.push_back(B.getInt32(-1));
+
+      // create the call
+      Value *JitResult = B.CreateCall(JITHook, HookArgs);
+
+      Value *Cast = B.CreatePointerCast(JitResult, Hook->getType());
+
+      Value *Call = B.CreateCall(Cast, FunArgsVal);
+
+      B.CreateCall(JITHookEnd, {JitResult});
+
+      if (Call->getType()->isVoidTy())
+        ReturnInst::Create(C, Entry);
+      else
+        ReturnInst::Create(C, Call, Entry);
+      F->eraseFromParent();
     }
 
     void GVMakeExternalDeclaration(GlobalValue* GV) {
@@ -235,8 +250,9 @@ namespace pass {
 
       WriteModuleToGlobal(M, *JitM);
 
-      auto Functions = GetFunctions(Fun2Extract);
-      std::for_each(Functions.begin(), Functions.end(), CreateJITHook);
+      for (auto const &KV : Fun2Extract) {
+        CreateJITHook(KV.first, KV.second);
+      }
 
       return true;
     }

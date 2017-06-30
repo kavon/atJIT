@@ -47,7 +47,7 @@ void delete_matrix(matrix* a) {
 }
 
 void kernel(matrix a, matrix b, matrix* out) {
-  easy_jit_enabled(); // function marked for extraction
+  easy_jit_enabled(3); // function marked for extraction
 
   int i, j, k;
   long n = a.size;

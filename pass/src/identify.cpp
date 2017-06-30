@@ -51,8 +51,12 @@ FunToInlineMap GetFunctionsToJit(llvm::Module &M) {
     assert(AsCall && AsCall->getCalledFunction() == EasyJitEnabled
            && "Easy jit function not used as a function call!");
 
+    Values Args;
+    for (auto &Arg : AsCall->arg_operands())
+      Args.push_back(Arg.get());
+
     Function* F = AsCall->getParent()->getParent();
-    Map[F] = Values();
+    Map[F] = Args;
 
     AsCall->eraseFromParent();
   }
@@ -62,11 +66,11 @@ FunToInlineMap GetFunctionsToJit(llvm::Module &M) {
   return Map;
 }
 
-llvm::SmallVector<llvm::Function*, 8> GetFunctions(FunToInlineMap const&Map) {
- llvm::SmallVector<llvm::Function*, 8> Ret(Map.size());
- size_t idx = 0;
- for(auto const&pair : Map) {
-   Ret[idx++] = pair.first;
- }
- return Ret;
+llvm::SmallVector<llvm::Function *, 8> GetFunctions(FunToInlineMap const &Map) {
+  llvm::SmallVector<llvm::Function *, 8> Ret(Map.size());
+  size_t idx = 0;
+  for (auto const &pair : Map) {
+    Ret[idx++] = pair.first;
+  }
+  return Ret;
 }

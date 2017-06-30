@@ -5,7 +5,7 @@
   define_easy_jit_specialize_param(type);
 
 // enables the jit compilation for one function
-static void easy_jit_enabled() {}
+static void easy_jit_enabled(int optlevel, ...) {}
 
 // specify a parameter to be inlined
 define_easy_jit_specialize(char);
