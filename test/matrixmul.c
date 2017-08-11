@@ -1,5 +1,5 @@
 // RUN: clang -I%includepath -S -emit-llvm %s -o %t.orig.ll
-// RUN: opt -S %load_static_lib %t.orig.ll -o %t.jit.ll
+// RUN: opt -S -mem2reg %load_static_lib %t.orig.ll -o %t.jit.ll
 // RUN: clang %t.jit.ll -O3 %ldflags -o %t.jit.exe
 // RUN: %t.jit.exe
 
