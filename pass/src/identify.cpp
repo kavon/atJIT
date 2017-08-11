@@ -10,30 +10,6 @@
 using namespace llvm;
 
 static const char* EnabledName = "easy_jit_enabled";
-static const char* SpecializePrefix = "easy_jit_specialize";
-
-static void GetInlineParameters(Module &M, FunToInlineMap &Map) {
-  for(Function &F : M) {
-    if(!F.getName().startswith(SpecializePrefix))
-      continue;
-
-    SmallVector<User*, 8> Users(F.user_begin(), F.user_end());
-
-    for(User* U : Users) {
-      CallInst* AsCall = dyn_cast<CallInst>(U);
-      assert(AsCall && AsCall->getCalledFunction() == &F
-             && "Easy jit function not used as a function call!");
-
-      Function *ParentFun = AsCall->getParent()->getParent();
-      Value* ToInline = AsCall->getArgOperand(0);
-
-      assert(Map.count(ParentFun));
-      Map[ParentFun].push_back(ToInline);
-
-      AsCall->eraseFromParent();
-    }
-  }
-}
 
 FunToInlineMap GetFunctionsToJit(llvm::Module &M) {
   FunToInlineMap Map;
@@ -51,17 +27,12 @@ FunToInlineMap GetFunctionsToJit(llvm::Module &M) {
     assert(AsCall && AsCall->getCalledFunction() == EasyJitEnabled
            && "Easy jit function not used as a function call!");
 
-    Values Args;
-    for (auto &Arg : AsCall->arg_operands())
-      Args.push_back(Arg.get());
-
-    Function* F = AsCall->getParent()->getParent();
-    Map[F] = Args;
+    Values Args(AsCall->arg_begin(), AsCall->arg_end());
+    Function* ToJit = AsCall->getParent()->getParent();
+    Map[ToJit] = Args;
 
     AsCall->eraseFromParent();
   }
-
-  GetInlineParameters(M, Map);
 
   return Map;
 }
