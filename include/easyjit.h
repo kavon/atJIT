@@ -5,11 +5,12 @@
   define_easy_jit_specialize_param(type);
 
 // enables the jit compilation for one function
+//
+// in the example bellow, foo gets compiled at runtime with optimization level 2
+// (-O2), and specialized for parameter 'a'
+//
+// int foo(int a, double b) {
+//   easy_jit_enabled(2, a);
+//   ...
+// }
 static void easy_jit_enabled(int optlevel, ...) {}
-
-// specify a parameter to be inlined
-define_easy_jit_specialize(char);
-define_easy_jit_specialize(int);
-define_easy_jit_specialize(long);
-define_easy_jit_specialize(float);
-define_easy_jit_specialize(double);
