@@ -28,7 +28,7 @@ namespace pass {
 
   // globals
   constexpr bool Debug = true;
-  static const char* EmbeddedMoudleName = "easy_jit_module";
+  static const char* EmbeddedModuleName = "easy_jit_module";
 
   // pass configuration
   static const char* Command = "easy_jit";
@@ -50,7 +50,7 @@ namespace pass {
       Instruction* UI = dyn_cast<Instruction>(U);
       if(!UI)
         return false;
-      return Fun2Extract.count(UI->getParent()->getParent());
+      return Fun2Extract.count(UI->getParent()->getParent()) != 0;
     };
 
     bool Used = std::any_of(GV.user_begin(), GV.user_end(), IsExtractedInst);
@@ -83,9 +83,8 @@ namespace pass {
   }
 
   bool ValidForExtraction(const SmallPtrSetImpl<GlobalValue*>& Globals) {
-    auto ValidGlobal = std::mem_fun(&GlobalValue::hasExternalLinkage);
-
-    bool Valid = std::all_of(Globals.begin(), Globals.end(), ValidGlobal);
+    bool Valid = std::all_of(Globals.begin(), Globals.end(),
+                             std::mem_fun(&GlobalValue::hasExternalLinkage));
     if(!Valid && Debug) {
       errs() << "Cannot extract module: global has private/internal linkage.\n";
     }
@@ -93,7 +92,7 @@ namespace pass {
     return Valid;
   }
 
-  void CreateJITHook(Function *F, SmallVectorImpl<Value *> const &Params) {
+  void CreateJITHook(Function *F, SmallVectorImpl<Value *> const &Params, GlobalVariable* BitcodeGV) {
     std::string FName = F->getName();
 
     Module *M = F->getParent();
@@ -123,26 +122,43 @@ namespace pass {
     FNameGV = ConstantExpr::getPointerCast(FNameGV, I8Ptr);
 
     // get the ir variable
-    Constant *IRVar = M->getNamedGlobal(EmbeddedMoudleName);
-    assert(IRVar);
     ArrayType *IRVarTy =
-        cast<ArrayType>(IRVar->getType()->getContainedType(0));
-    Constant *Size =
+        cast<ArrayType>(BitcodeGV->getType()->getContainedType(0));
+    Constant *IRSize =
         ConstantInt::get(Type::getInt64Ty(C), IRVarTy->getNumElements());
-    IRVar = ConstantExpr::getPointerCast(IRVar, I8Ptr);
+    Constant* IRVar = ConstantExpr::getPointerCast(BitcodeGV, I8Ptr);
+
+    int optlevel = cast<ConstantInt>(*Params.begin())->getSExtValue();
+    Constant* OptLevel = ConstantInt::get(Type::getInt32Ty(C), optlevel);
 
     SmallVector<Value *, 8> FunArgsVal;
-    SmallVector<Value *, 8> HookArgs = {FNameGV, IRVar, Size};
+    SmallVector<Value *, 8> HookArgs = {FNameGV, IRVar, IRSize, OptLevel};
+
+    size_t arg_idx = 0;
     auto FArgsIter = F->arg_begin();
     for (auto &V : Hook->args()) {
-      auto Where = std::find(Params.begin(), Params.end(), &*FArgsIter);
+      auto Where = std::find(Params.begin()+1, Params.end(), &*FArgsIter);
       if (Where != Params.end()) {
+        HookArgs.push_back(B.getInt32(arg_idx)); // pass the index of the parameter
 
-        HookArgs.push_back(B.getInt32(Params.end() - Where));
+        Value* VAsI64 = &V;
+        size_t VSizeInBit = VAsI64->getType()->getPrimitiveSizeInBits();
+
+        if(VAsI64->getType()->isFloatingPointTy()) {
+          VAsI64 = B.CreateFPToUI(VAsI64, IntegerType::get(C, VSizeInBit));
+        } else if (VAsI64->getType()->isPointerTy()) {
+          VAsI64 = B.CreatePtrToInt(VAsI64, IntegerType::get(C, VSizeInBit));
+        }
+
+        if(VAsI64->getType()->getPrimitiveSizeInBits() < 64) { // pass the parameter value
+          VAsI64 = B.CreateZExt(VAsI64, Type::getInt64Ty(C));
+        }
+
         HookArgs.push_back(&V);
       }
       FunArgsVal.push_back(&V);
       ++FArgsIter;
+      ++arg_idx;
     }
     HookArgs.push_back(B.getInt32(-1));
 
@@ -160,6 +176,8 @@ namespace pass {
     else
       ReturnInst::Create(C, Call, Entry);
     F->eraseFromParent();
+
+    M->dump();
   }
 
   void GVMakeExternalDeclaration(GlobalValue* GV) {
@@ -171,7 +189,7 @@ namespace pass {
     } else assert(false);
   }
 
-  std::unique_ptr<Module> getModuleForJITCompilation(const FunToInlineMap& Fun2Extract, Module& M) {
+  std::unique_ptr<Module> GetModuleForJITCompilation(const FunToInlineMap& Fun2Extract, Module& M) {
       auto Globals = getReferencedGlobals(Fun2Extract);
 
       if(!ValidForExtraction(Globals))
@@ -220,7 +238,7 @@ namespace pass {
 
     Constant* Init = ConstantDataArray::getString(C, ModuleAsStr, true);
     GlobalVariable* BitcodeGV =
-        new GlobalVariable(M, Init->getType(), true, GlobalValue::InternalLinkage, Init, EmbeddedMoudleName);
+        new GlobalVariable(M, Init->getType(), true, GlobalValue::InternalLinkage, Init, EmbeddedModuleName);
 
     if(Debug)
       errs() << "Extracted module written to " << BitcodeGV->getName() << "\n";
@@ -229,7 +247,7 @@ namespace pass {
   }
 
   bool ExtractAndEmbed::runOnModule(llvm::Module& M) {
-    if(M.getNamedGlobal(EmbeddedMoudleName)) {
+    if(M.getNamedGlobal(EmbeddedModuleName)) {
       errs() << "WARNING: Compilation unit already contains an extracted module.\n";
       return false;
     }
@@ -238,14 +256,14 @@ namespace pass {
     if(Fun2Extract.empty())
       return false;
 
-    auto JitM = getModuleForJITCompilation(Fun2Extract, M);
+    auto JitM = GetModuleForJITCompilation(Fun2Extract, M);
     if(!JitM)
       return false;
 
-    WriteModuleToGlobal(M, *JitM);
+    GlobalVariable* BitcodeGV = WriteModuleToGlobal(M, *JitM);
 
     for (auto const &KV : Fun2Extract) {
-      CreateJITHook(KV.first, KV.second);
+      CreateJITHook(KV.first, KV.second, BitcodeGV);
     }
 
     return true;

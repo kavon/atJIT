@@ -12,9 +12,7 @@ namespace pass {
 
         ExtractAndEmbed();
 
-        virtual void getAnalysisUsage(llvm::AnalysisUsage&) const;
-
-        virtual bool runOnModule(llvm::Module&);
+        bool runOnModule(llvm::Module&) override;
     };
 
 }

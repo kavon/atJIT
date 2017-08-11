@@ -146,12 +146,9 @@ static std::unique_ptr<llvm::ExecutionEngine> ExecEngine;
 using namespace runtime;
 
 extern "C" void *easy_jit_hook(const char *FunctionName, const char *IR,
-                               size_t IRSize, ...) {
+                               size_t IRSize, uint32_t optlevel, ...) {
   va_list ap;
-  va_start(ap, IRSize);
-
-
-  uint32_t optlevel = va_arg(ap, uint32_t);
+  va_start(ap, optlevel /*pass anything, it's not used*/);
 
   std::unique_ptr<llvm::Module> M(AModuleCache.getModule(IR, IRSize));
   std::string JittedFunName = std::string(FunctionName) + "__";
@@ -185,6 +182,8 @@ extern "C" void *easy_jit_hook(const char *FunctionName, const char *IR,
     ++argcount;
   }
   va_end(ap);
+
+  M->dump();
 
   ExecEngine = std::move(getExecutionEngine(std::move(M), optlevel));
 
