@@ -1,7 +1,10 @@
 
 llvm_map_components_to_libnames(LLVM_LIBS Support Core)
 
-add_llvm_loadable_module(easy_jit_pass src/extract.cpp src/identify.cpp src/declare.cpp)
+add_llvm_loadable_module(easy_jit_pass
+  src/extract.cpp
+  src/identify.cpp
+  src/declare.cpp)
 
 target_link_libraries(easy_jit_pass PUBLIC ${LLVM_LIBS})
 
