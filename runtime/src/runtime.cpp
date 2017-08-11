@@ -63,7 +63,7 @@ class ModuleCache {
   }
 };
 
-std::unique_ptr<llvm::ExecutionEngine> getExecutionEngine(std::unique_ptr<Module> M) {
+std::unique_ptr<llvm::ExecutionEngine> getExecutionEngine(std::unique_ptr<Module> M, int OptLevel) {
   // create target machine, once
   auto TripleStr = sys::getProcessTriple();
 
@@ -96,7 +96,7 @@ std::unique_ptr<llvm::ExecutionEngine> getExecutionEngine(std::unique_ptr<Module
   legacy::PassManager MPM;
 
   PassManagerBuilder Builder;
-  Builder.OptLevel = 3;
+  Builder.OptLevel = OptLevel;
   Builder.SizeLevel = 0;
   Builder.LoopVectorize = true;
   Builder.BBVectorize = true;
@@ -150,25 +150,43 @@ extern "C" void *easy_jit_hook(const char *FunctionName, const char *IR,
   va_list ap;
   va_start(ap, IRSize);
 
-  uint32_t next = va_arg(ap, uint32_t);
+
+  uint32_t optlevel = va_arg(ap, uint32_t);
 
   std::unique_ptr<llvm::Module> M(AModuleCache.getModule(IR, IRSize));
   std::string JittedFunName = std::string(FunctionName) + "__";
 
   Function *F = M->getFunction(JittedFunName);
-  int argcount = 0;
 
+  uint32_t next = va_arg(ap, uint32_t);
+
+  int argcount = 0;
   for (auto &Arg : F->args()) {
     if (argcount == next) {
-      uint32_t val = va_arg(ap, uint32_t);
-      Arg.replaceAllUsesWith(ConstantInt::get(Arg.getType(), val));
+      uint64_t val = va_arg(ap, uint64_t);
+
+      Type* I64 = Type::getInt64Ty(F->getContext());
+      Constant* C = ConstantInt::get(I64, val, false);
+
+      size_t ArgBitWidth = Arg.getType()->getPrimitiveSizeInBits();
+      if(ArgBitWidth < 64) {
+        C = ConstantExpr::getTrunc(C, IntegerType::get(F->getContext(), ArgBitWidth));
+      }
+
+      if(Arg.getType()->isFloatingPointTy()) {
+        C = ConstantExpr::getUIToFP(C, Arg.getType());
+      } else if (Arg.getType()->isPointerTy()) {
+        C = ConstantExpr::getIntToPtr(C, Arg.getType());
+      }
+
+      Arg.replaceAllUsesWith(C);
       next = va_arg(ap, uint32_t);
     }
     ++argcount;
   }
   va_end(ap);
 
-  ExecEngine = std::move(getExecutionEngine(std::move(M)));
+  ExecEngine = std::move(getExecutionEngine(std::move(M), optlevel));
 
   auto JittedFunAddr = ExecEngine->getFunctionAddress(JittedFunName.c_str());
 
