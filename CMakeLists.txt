@@ -10,6 +10,7 @@ include(AddLLVM)
 
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
+include_directories(cpplib/include runtime/include)
 
 add_compile_options(-std=c++14)
 
@@ -21,4 +22,3 @@ set(EASY_JIT_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_subdirectory(pass)
 add_subdirectory(runtime)
-add_subdirectory(test)
