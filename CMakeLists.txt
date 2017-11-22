@@ -1,12 +1,14 @@
 cmake_minimum_required(VERSION 3.4.3)
 
+find_package(Boost REQUIRED)
 find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in ${LLVM_DIR}")
 message(STATUS "LLVM Root: ${LLVM_TOOLS_BINARY_DIR}")
 
-list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
+list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 include(AddLLVM)
+include(Python)
 
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
@@ -22,3 +24,5 @@ set(EASY_JIT_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_subdirectory(pass)
 add_subdirectory(runtime)
+
+include(CMakeTests.txt)

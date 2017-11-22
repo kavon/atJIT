@@ -1,0 +1,29 @@
+import lit.formats
+import lit.util
+import os
+
+config.name = 'easy_jit'
+config.suffixes = ['.c', '.cpp', '.ll', '.test']
+
+config.test_format = lit.formats.ShTest(True)
+
+config.test_source_root = "@CMAKE_CURRENT_SOURCE_DIR@/tests"
+config.test_exec_root = "@CMAKE_CURRENT_BINARY_DIR@/tests"
+
+config.environment['PATH'] = os.pathsep.join(["@LLVM_TOOLS_BINARY_DIR@"] + [ config.environment['PATH'] ])
+
+runtime_lib = os.path.basename("@EASY_JIT_RUNTIME@").split('.')[0].replace("lib", "", 1)
+runtime_lib_dir = os.path.dirname("@EASY_JIT_RUNTIME@")
+
+includes = ["cpplib", "runtime"]
+include_flags = ""
+for dir in includes :
+  include_flags += "-I\'" + os.path.join("@EASY_JIT_ROOT@", dir, "include") + "\' "
+
+# substitutions
+config.substitutions.append(('%clang', "@LLVM_TOOLS_BINARY_DIR@/clang"))
+config.substitutions.append(('%clangxx', "@LLVM_TOOLS_BINARY_DIR@/clang++"))
+config.substitutions.append(('%include_flags', include_flags))
+config.substitutions.append(('%lib_pass', "@EASY_JIT_PASS@"))
+config.substitutions.append(('%lib_runtime', "@EASY_JIT_RUNTIME@"))
+config.substitutions.append(('%ld_flags', "-L" + runtime_lib_dir + " -l" + runtime_lib + " -rpath " + runtime_lib_dir))
