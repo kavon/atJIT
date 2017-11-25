@@ -14,16 +14,24 @@ config.environment['PATH'] = os.pathsep.join(["@LLVM_TOOLS_BINARY_DIR@"] + [ con
 
 runtime_lib = os.path.basename("@EASY_JIT_RUNTIME@").split('.')[0].replace("lib", "", 1)
 runtime_lib_dir = os.path.dirname("@EASY_JIT_RUNTIME@")
+llvm_lib_dir = os.path.join(os.path.dirname("@LLVM_TOOLS_BINARY_DIR@"), "lib")
 
 includes = ["cpplib", "runtime"]
 include_flags = ""
 for dir in includes :
   include_flags += "-I\'" + os.path.join("@EASY_JIT_ROOT@", dir, "include") + "\' "
 
+ld_paths = [runtime_lib_dir, llvm_lib_dir]
+ld_flags = "-l" + runtime_lib
+for ld_path in ld_paths:
+  ld_flags = ld_flags + " -L'" + ld_path + "' -rpath '" + ld_path + "' "
+
+
 # substitutions
+config.substitutions.append(('%clangxx', "@LLVM_TOOLS_BINARY_DIR@/clang++ "))
+config.substitutions.append(('%cxxflags', "--std=c++14"))
 config.substitutions.append(('%clang', "@LLVM_TOOLS_BINARY_DIR@/clang"))
-config.substitutions.append(('%clangxx', "@LLVM_TOOLS_BINARY_DIR@/clang++"))
 config.substitutions.append(('%include_flags', include_flags))
 config.substitutions.append(('%lib_pass', "@EASY_JIT_PASS@"))
 config.substitutions.append(('%lib_runtime', "@EASY_JIT_RUNTIME@"))
-config.substitutions.append(('%ld_flags', "-L" + runtime_lib_dir + " -l" + runtime_lib + " -rpath " + runtime_lib_dir))
+config.substitutions.append(('%ld_flags', ld_flags))
