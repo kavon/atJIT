@@ -1,7 +1,6 @@
 llvm_map_components_to_libnames(RUNTIME_LLVM_LIBS all)
 
 add_library(EasyJitRuntime SHARED
-  CompilerInterface.cpp
   Function.cpp
   Context.cpp
 )

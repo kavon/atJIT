@@ -116,3 +116,27 @@ void Function::MapGlobals(llvm::ExecutionEngine& EE, GlobalMapping* Globals) {
     EE.addGlobalMapping(GM->Name, (uint64_t)GM->Address);
   }
 }
+
+std::unique_ptr<Function> Function::Compile(void *Addr, std::unique_ptr<Context> C) {
+
+  // TODO: Use C to perform the specialization.
+
+  auto &BT = BitcodeTracker::GetTracker();
+
+  const char* Name;
+  GlobalMapping* Globals;
+  std::tie(Name, Globals) = BT.getNameAndGlobalMapping(Addr);
+  auto Original = BT.getModule(Addr);
+
+  std::unique_ptr<llvm::Module> Clone(llvm::CloneModule(Original));
+
+  Optimize(*Clone, 2, 0);
+
+  std::unique_ptr<llvm::ExecutionEngine> EE = GetEngine(std::move(Clone));
+
+  MapGlobals(*EE, Globals);
+
+  void *Address = (void*)EE->getFunctionAddress(Name);
+
+  return std::unique_ptr<Function>(new Function{Address, std::move(EE)});
+}
