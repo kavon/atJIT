@@ -49,6 +49,7 @@ class BitcodeTracker {
   public:
 
   void registerFunction(void* FPtr, const char* Name, GlobalMapping* Globals, const char* Bitcode, size_t BitcodeLen) {
+    llvm::errs() << "register " << FPtr << " " << Name << "\n";
     Functions.emplace(FPtr, FunctionInfo{Name, Globals, Bitcode, BitcodeLen});
   }
 

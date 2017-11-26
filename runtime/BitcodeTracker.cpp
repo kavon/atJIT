@@ -12,7 +12,7 @@ BitcodeTracker& BitcodeTracker::GetTracker() {
 std::tuple<const char*, GlobalMapping*> BitcodeTracker::getNameAndGlobalMapping(void* FPtr) {
   auto InfoPtr = Functions.find(FPtr);
   if(InfoPtr == Functions.end()) {
-    throw std::runtime_error("Cannot name and global mapping. Function not registered");
+    throw std::runtime_error("Cannot find name and global mapping. Function not registered");
   }
 
   return std::make_tuple(InfoPtr->second.Name, InfoPtr->second.Globals);
