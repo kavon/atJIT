@@ -233,7 +233,7 @@ namespace easy {
                      {Fun, NameCast, GlobalMapping, Bitcode, BitcodeSize}, "");
       }
 
-      llvm::appendToGlobalCtors(M, Ctor, GXXPriorityMax);
+      llvm::appendToGlobalCtors(M, Ctor, 65535);
     }
 
     static GlobalVariable* getStringGlobal(Module& M, StringRef Name) {

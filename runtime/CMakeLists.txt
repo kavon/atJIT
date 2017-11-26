@@ -2,6 +2,7 @@ llvm_map_components_to_libnames(RUNTIME_LLVM_LIBS all)
 
 add_library(EasyJitRuntime SHARED
   Function.cpp
+  BitcodeTracker.cpp
   Context.cpp
 )
 
