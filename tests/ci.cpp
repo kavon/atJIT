@@ -1,4 +1,4 @@
-// RUN: %clangxx %cxxflags %include_flags %ld_flags %s -o %t
+// RUN: %clangxx %cxxflags %include_flags %ld_flags %s -Xclang -load -Xclang %lib_runtime -mllvm -easy-register-bitcode -o %t
 // RUN: %t > %t.out
 // RUN: FileCheck %s < %t.out
 
@@ -9,7 +9,7 @@
 
 using namespace std::placeholders;
 
-int add (int a, int b) {
+int __attribute__((section("jit"))) add (int a, int b) {
   return a+b;
 }
 
