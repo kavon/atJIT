@@ -1,4 +1,4 @@
-llvm_map_components_to_libnames(RUNTIME_LLVM_LIBS all)
+llvm_map_components_to_libnames(RUNTIME_LLVM_LIBS ExecutionEngine TransformUtils ipo Core)
 
 add_library(EasyJitRuntime SHARED
   Function.cpp
