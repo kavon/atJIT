@@ -54,12 +54,12 @@ struct set_parameter :
              std::is_placeholder<typename std::decay<Arg>::type>::value> {
 };
 
+}
+
 template<class ParameterList>
 void set_parameters(Context&, size_t, ParameterList) {
   static_assert(ParameterList::empty,
                 "easy::jit: there are more parameters than arguments passed to the function.");
-}
-
 }
 
 template<class ParameterList, class Arg0, class ... Args>

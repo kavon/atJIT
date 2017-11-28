@@ -1,4 +1,3 @@
-#include <llvm/Pass.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/IRBuilder.h>
@@ -24,6 +23,8 @@ namespace easy {
       : ModulePass(ID) { };
 
     bool runOnModule(Module &M) override {
+
+      errs() << "running!\n";
 
       SmallVector<Function*, 8> FunsToJIT;
       collectFunctionsToJIT(M, FunsToJIT);
@@ -136,7 +137,7 @@ namespace easy {
 
     static GlobalVariable* writeModuleToGlobal(Module &M, Twine Name) {
       std::string Bitcode = moduleToString(M);
-      Constant* BitcodeInit = ConstantDataArray::getString(M.getContext(), Bitcode, false);
+      Constant* BitcodeInit = ConstantDataArray::getString(M.getContext(), Bitcode, true);
       return new GlobalVariable(M, BitcodeInit->getType(), true,
                                 GlobalVariable::PrivateLinkage,
                                 BitcodeInit, Name);
@@ -214,7 +215,7 @@ namespace easy {
       Type* FPtr = RegisterBitcodeFun->getFunctionType()->getParamType(0);
       Type* StrPtr = RegisterBitcodeFun->getFunctionType()->getParamType(1);
       Type* BitcodePtr = RegisterBitcodeFun->getFunctionType()->getParamType(3);
-      Type* SizeT = RegisterBitcodeFun->getFunctionType()->getParamType(4);
+      Type* SizeTy = RegisterBitcodeFun->getFunctionType()->getParamType(4);
 
       Function *Ctor = getCtor(M);
       IRBuilder<> B(Ctor->getEntryBlock().getTerminator());
@@ -222,11 +223,12 @@ namespace easy {
       for(size_t i = 0, n = Funs.size(); i != n; ++i) {
         GlobalVariable* Name = getStringGlobal(M, Funs[i]->getName());
         ArrayType* ArrTy = cast<ArrayType>(Bitcodes[i]->getInitializer()->getType());
+        size_t Size = ArrTy->getNumElements()-1; /*-1 for the 0 terminator*/
 
         Value* Fun = B.CreatePointerCast(Funs[i], FPtr);
         Value* NameCast = B.CreatePointerCast(Name, StrPtr);
         Value* Bitcode = B.CreatePointerCast(Bitcodes[i], BitcodePtr);
-        Value* BitcodeSize = ConstantInt::get(SizeT, ArrTy->getNumElements(), false);
+        Value* BitcodeSize = ConstantInt::get(SizeTy, Size, false);
 
         // fun, name, gm, bitcode, bitcode size
         B.CreateCall(RegisterBitcodeFun,
@@ -259,4 +261,9 @@ namespace easy {
     "Parse the compilation unit and insert runtime library calls to register "
     "the bitcode associated to functions marked as \"jit\".",
                                                 false, false);
+
+  llvm::Pass* createRegisterBitcodePass() {
+    return new RegisterBitcode();
+  }
 }
+

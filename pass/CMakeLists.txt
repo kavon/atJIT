@@ -1,6 +1,7 @@
-llvm_map_components_to_libnames(LLVM_LIBS Core Support)
+llvm_map_components_to_libnames(LLVM_LIBS)
 
 add_llvm_loadable_module(EasyJitPass
+  RegisterPasses.cpp
   Easy.cpp)
 
 target_link_libraries(EasyJitPass ${LLVM_LIBS})

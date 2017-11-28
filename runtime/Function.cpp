@@ -59,6 +59,7 @@ std::unique_ptr<llvm::ExecutionEngine> Function::GetEngine(std::unique_ptr<llvm:
           .create());
 
   if(!EE) {
+    // TODO throw easy::exception
     throw std::runtime_error("Failed to create ExecutionEngine.");
   }
 
