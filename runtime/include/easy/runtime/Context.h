@@ -36,6 +36,13 @@ class Context {
   void setParameterFloat(unsigned, double); 
   void setParameterPtr(unsigned, void*);
 
+  auto begin() const { return ArgumentMapping_.begin(); }
+  auto end() const { return ArgumentMapping_.end(); }
+
+  Argument const& getArgumentMapping(size_t i) const {
+    return ArgumentMapping_[i];
+  }
+
   private:
   void initDefaultArgumentMapping();
 }; 
