@@ -1,4 +1,5 @@
-#include "easy/runtime/Function.h"
+#include <easy/runtime/Function.h>
+#include <easy/runtime/RuntimePasses.h>
 
 #include <llvm/Transforms/IPO/PassManagerBuilder.h> 
 #include <llvm/IR/LegacyPassManager.h> 
@@ -44,6 +45,8 @@ void Function::Optimize(llvm::Module& M, const char* Name, const Context& C, int
 
   llvm::legacy::PassManager MPM;
   MPM.add(llvm::createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
+  MPM.add(easy::createContextAnalysisPass(C));
+  MPM.add(easy::createInlineParametersPass(Name));
   Builder.populateModulePassManager(MPM);
   MPM.run(M);
 }
