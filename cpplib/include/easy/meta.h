@@ -45,32 +45,34 @@ namespace  {
 
 template<bool Empty>
 struct remove_placeholders_helper {
-  template<class EmptyList>
+  template<class EmptyList, class ArgList>
   using type = struct type_list<>;
 };
 
 template<>
 struct remove_placeholders_helper<false> {
 
-  template<class ParamList>
+  template<class ParamList, class ArgList>
   struct __helper {
     static_assert(!ParamList::empty, "remove_placeholders_helper: type list is not empty!");
 
     using head = typename ParamList::head;
+    using arg_head = typename ArgList::head;
     using tail = typename ParamList::tail;
-    using recursive = typename remove_placeholders_helper<tail::empty>::template type<tail>;
+    using arg_tail = typename ArgList::tail;
+    using recursive = typename remove_placeholders_helper<tail::empty>::template type<tail, arg_tail>;
     using keep_head_recursive = typename recursive::template push_front<head>;
-    using type = typename std::conditional<std::is_placeholder<head>::value,
+    using type = typename std::conditional<std::is_placeholder<typename std::decay<arg_head>::type>::value,
                                            recursive, keep_head_recursive>::type;
   };
 
-  template<class ParamList>
-  using type = typename __helper<ParamList>::type;
+  template<class ParamList, class ArgList>
+  using type = typename __helper<ParamList, ArgList>::type;
 };
 
-template<class ParamList>
+template<class ParamList, class ArgList>
 struct remove_placeholders {
-  using type = typename remove_placeholders_helper<ParamList::empty>::template type<ParamList>;
+  using type = typename remove_placeholders_helper<ParamList::empty>::template type<ParamList, ArgList>;
 };
 
 template<class Ret, class ... Args>
@@ -89,11 +91,11 @@ struct function_traits {
   using parameter_list = decltype(get_parameter_list(ptr_ty()));
 };
 
-template<class FunTy>
+template<class FunTy, class ArgList>
 struct new_function_traits {
   using OriginalTraits = function_traits<FunTy>;
   using return_type = typename OriginalTraits::return_type;
-  using parameter_list = typename remove_placeholders<typename OriginalTraits::parameter_list>::type;
+  using parameter_list = typename remove_placeholders<typename OriginalTraits::parameter_list, ArgList>::type;
 };
 
 }

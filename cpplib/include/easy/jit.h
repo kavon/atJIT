@@ -13,9 +13,6 @@
 
 namespace easy {
 
-template<class Ret, class ... Params>
-class FunctionWrapper;
-
 class FunctionWrapperBase {
 
   protected:
@@ -25,21 +22,16 @@ class FunctionWrapperBase {
   FunctionWrapperBase(std::unique_ptr<Function> F)
     : Fun_(std::move(F)) {}
 
-  template<class F>
-  F* getRawPointer() const {
-    return reinterpret_cast<F*>(Fun_->getRawPointer());
-  }
-
-  template<class Ret, class ... Params>
-  static
-  FunctionWrapper<Ret, Params ...>
-  get(std::unique_ptr<Function> F, meta::type_list<Ret, Params ...>) {
-    return FunctionWrapper<Ret, Params ...>(std::move(F));
-  }
+  void* getRawPointer() const {
+    return Fun_->getRawPointer();
+  } 
 };
 
+template<class FTy>
+class FunctionWrapper;
+
 template<class Ret, class ... Params>
-class FunctionWrapper :
+class FunctionWrapper<Ret(Params...)> :
     public FunctionWrapperBase {
   public:
   FunctionWrapper(std::unique_ptr<Function> F)
@@ -47,13 +39,13 @@ class FunctionWrapper :
 
   template<class ... Args>
   Ret operator()(Args&& ... args) const {
-    return getRawPointer<Ret(Params ...)>(std::forward<Args>(args)...);
+    return ((Ret(*)(Params...))getRawPointer())(std::forward<Args>(args)...);
   }
 };
 
 // specialization for void return
 template<class ... Params>
-class FunctionWrapper<void, Params ...> :
+class FunctionWrapper<void(Params...)> :
     public FunctionWrapperBase {
   public:
   FunctionWrapper(std::unique_ptr<Function> F)
@@ -61,9 +53,17 @@ class FunctionWrapper<void, Params ...> :
 
   template<class ... Args>
   void operator()(Args&& ... args) const {
-    getRawPointer<void(Params ...)>(std::forward<Args>(args)...);
+    return ((void(*)(Params...))getRawPointer())(std::forward<Args>(args)...);
   }
 };
+
+namespace {
+template<class Ret, class ... Params>
+FunctionWrapper<Ret(Params ...)>
+WrapFunction(std::unique_ptr<Function> F, meta::type_list<Ret, Params ...>) {
+  return FunctionWrapper<Ret(Params ...)>(std::move(F));
+}
+}
 
 template<class T, class ... Args>
 auto jit(T &&Fun, Args&& ... args) {
@@ -78,7 +78,7 @@ auto jit(T &&Fun, Args&& ... args) {
   constexpr size_t nargs = argument_list::size;
   constexpr size_t nparams = parameter_list::size;
 
-  using new_type_traits = meta::new_function_traits<FunOriginalTy>;
+  using new_type_traits = meta::new_function_traits<FunOriginalTy, meta::type_list<Args...>>;
   using new_return_type = typename new_type_traits::return_type;
   using new_parameter_types = typename new_type_traits::parameter_list;
 
@@ -88,12 +88,12 @@ auto jit(T &&Fun, Args&& ... args) {
   std::unique_ptr<Context> C(new Context(nparams));
   easy::set_parameters(*C, 0, parameter_list(), std::forward<Args>(args)...);
 
-  auto CompiledFunction = Function::Compile(reinterpret_cast<void*>(meta::get_as_pointer(Fun)), std::move(C));
+  auto CompiledFunction =
+      Function::Compile(reinterpret_cast<void*>(meta::get_as_pointer(Fun)), std::move(C));
 
   auto Wrapper =
-      FunctionWrapperBase::get(std::move(CompiledFunction),
-                               typename new_parameter_types::template push_front<new_return_type> ());
-
+      WrapFunction(std::move(CompiledFunction),
+                   typename new_parameter_types::template push_front<new_return_type> ());
   return Wrapper;
 }
 
