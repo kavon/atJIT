@@ -31,7 +31,7 @@ std::unique_ptr<llvm::TargetMachine> Function::GetTargetMachine(llvm::StringRef 
                                FeaturesStr, llvm::TargetOptions(), llvm::None));
 }
 
-void Function::Optimize(llvm::Module& M, int OptLevel, int OptSize) {
+void Function::Optimize(llvm::Module& M, const char* Name, const Context& C, int OptLevel, int OptSize) {
 
   auto Triple = llvm::sys::getProcessTriple();
 
@@ -72,7 +72,7 @@ void Function::MapGlobals(llvm::ExecutionEngine& EE, GlobalMapping* Globals) {
   }
 }
 
-std::unique_ptr<Function> Function::Compile(void *Addr, std::unique_ptr<Context> C) {
+std::unique_ptr<Function> Function::Compile(void *Addr, std::unique_ptr<Context const> C) {
 
   // TODO: Use C to perform the specialization.
 
@@ -85,7 +85,7 @@ std::unique_ptr<Function> Function::Compile(void *Addr, std::unique_ptr<Context>
 
   std::unique_ptr<llvm::Module> Clone(llvm::CloneModule(Original));
 
-  Optimize(*Clone, 2, 0);
+  Optimize(*Clone, Name, *C, 2, 0);
 
   std::unique_ptr<llvm::ExecutionEngine> EE = GetEngine(std::move(Clone));
 

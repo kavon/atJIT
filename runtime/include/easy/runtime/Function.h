@@ -24,12 +24,12 @@ class Function {
     return Address;
   }
 
-  static std::unique_ptr<Function> Compile(void *Addr, std::unique_ptr<Context> C);
+  static std::unique_ptr<Function> Compile(void *Addr, std::unique_ptr<Context const> C);
 
   private:
 
   static std::unique_ptr<llvm::TargetMachine> GetTargetMachine(llvm::StringRef Triple); 
-  static void Optimize(llvm::Module& M, int OptLevel = 0, int OptSize = 0); 
+  static void Optimize(llvm::Module& M, const char* Name, easy::Context const& C, int OptLevel = 0, int OptSize = 0);
   static std::unique_ptr<llvm::ExecutionEngine> GetEngine(std::unique_ptr<llvm::Module> M); 
   static void MapGlobals(llvm::ExecutionEngine& EE, GlobalMapping* Globals);
 };
