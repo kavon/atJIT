@@ -117,12 +117,11 @@ namespace easy {
 
     static GlobalVariable* embedBitcode(Module &M, Function& F) {
       std::unique_ptr<Module> Embed = CloneModule(&M);
-      Function &FEmbed = *M.getFunction(F.getName());
 
+      Function &FEmbed = *M.getFunction(F.getName());
       cleanModule(FEmbed, *Embed);
 
-      dropLocalInitializers(*Embed);
-      makeEverythingLocal(FEmbed, *Embed);
+      fixLinkages(FEmbed, *Embed);
 
       return writeModuleToGlobal(M, FEmbed.getName() + "_bitcode");
     }
@@ -154,25 +153,24 @@ namespace easy {
       Passes.run(M);
     }
 
-    static void dropLocalInitializers(Module &M) {
-      for(GlobalVariable& GV : M.globals())
-        if(GV.hasLocalLinkage())
-          GV.setInitializer(nullptr);
-    }
+    static void fixLinkages(Function &Entry, Module &M) {
 
-    static void makeEverythingLocal(Function &Entry, Module &M) {
-
-      Entry.setLinkage(Function::PrivateLinkage);
-      llvm::appendToCompilerUsed(M, {&Entry});
+      Entry.setLinkage(Function::ExternalLinkage);
 
       for(GlobalValue &GV : M.global_values()) {
-        if(GV.hasLocalLinkage())
-          continue;
+
         if(GV.getName().startswith("llvm."))
           continue;
 
-        if(GV.isDefinitionExact() && !GV.isDeclaration()) {
-          // privatize a copy
+        // keep private functions private, to have a copy of their code;
+        // and make private globals external, since the only copy is in the original module
+        if(GV.hasLocalLinkage()) {
+          if(isa<GlobalVariable>(GV))
+            GV.setLinkage(GlobalVariable::ExternalLinkage);
+        }
+
+        if(isa<Function>(GV) && GV.isDefinitionExact() && !GV.isDeclaration()) {
+          // odr or external becomes private
           GV.setLinkage(GlobalValue::PrivateLinkage);
         } else {
           // transform to declaration
@@ -180,7 +178,7 @@ namespace easy {
 
           if(Function* F = dyn_cast<Function>(&GV))
             F->getBasicBlockList().clear();
-          if(GlobalVariable* GVar = dyn_cast<GlobalVariable>(&GV))
+          else if(GlobalVariable* GVar = dyn_cast<GlobalVariable>(&GV))
             GVar->setInitializer(nullptr);
         }
       }
