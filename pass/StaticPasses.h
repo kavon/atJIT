@@ -1,5 +1,5 @@
-#ifndef PASSES
-#define PASSES
+#ifndef STATIC_PASSES
+#define STATIC_PASSES
 
 #include <llvm/Pass.h>
 

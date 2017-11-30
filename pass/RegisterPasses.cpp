@@ -1,4 +1,4 @@
-#include "Passes.h"
+#include "StaticPasses.h"
 
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 #include <llvm/IR/LegacyPassManager.h>
