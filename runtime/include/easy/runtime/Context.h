@@ -7,13 +7,13 @@
 namespace easy {
 
 struct Argument {
-  enum class Type {Arg, Int, Float, Ptr};
+  enum class Type {Forward, Int, Float, Ptr};
 
   Type ty;
   union {
     unsigned param_idx;
     int64_t integer;
-    double floatting;
+    double floating;
     void* ptr;
   } data;
 };
@@ -38,10 +38,12 @@ class Context {
 
   auto begin() const { return ArgumentMapping_.begin(); }
   auto end() const { return ArgumentMapping_.end(); }
+  size_t size() const { return ArgumentMapping_.size(); }
 
   Argument const& getArgumentMapping(size_t i) const {
     return ArgumentMapping_[i];
   }
+
 
   private:
   void initDefaultArgumentMapping();

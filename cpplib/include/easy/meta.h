@@ -62,8 +62,8 @@ struct remove_placeholders_helper<false> {
     using arg_tail = typename ArgList::tail;
     using recursive = typename remove_placeholders_helper<tail::empty>::template type<tail, arg_tail>;
     using keep_head_recursive = typename recursive::template push_front<head>;
-    using type = typename std::conditional<std::is_placeholder<typename std::decay<arg_head>::type>::value,
-                                           recursive, keep_head_recursive>::type;
+    static constexpr bool arg_head_is_placeholder = std::is_placeholder<typename std::decay<arg_head>::type>::value != 0;
+    using type = typename std::conditional<arg_head_is_placeholder, recursive, keep_head_recursive>::type;
   };
 
   template<class ParamList, class ArgList>

@@ -11,16 +11,18 @@ namespace easy {
 
     static char ID;
 
+    ContextAnalysis()
+      : llvm::ImmutablePass(ID), C_(nullptr) {}
     ContextAnalysis(Context const &C)
-      : llvm::ImmutablePass(ID), C_(C) {}
+      : llvm::ImmutablePass(ID), C_(&C) {}
 
     easy::Context const& getContext() const {
-      return C_;
+      return *C_;
     }
 
     private:
 
-    easy::Context const &C_;
+    easy::Context const *C_;
   };
 
   struct InlineParameters:
@@ -28,12 +30,14 @@ namespace easy {
 
     static char ID;
 
+    InlineParameters()
+      : llvm::ModulePass(ID) {}
+    InlineParameters(llvm::StringRef TargetName)
+      : llvm::ModulePass(ID), TargetName_(TargetName) {}
+
     void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
       AU.addRequired<ContextAnalysis>();
     }
-
-    InlineParameters(llvm::StringRef TargetName)
-      : llvm::ModulePass(ID), TargetName_(TargetName) {}
 
     bool runOnModule(llvm::Module &M) override;
 
