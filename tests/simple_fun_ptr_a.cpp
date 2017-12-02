@@ -11,7 +11,7 @@ using namespace std::placeholders;
 
 int __attribute__((section("jit"))) b() {
   static int v = 0;
-  return v;
+  return v++;
 }
 
 int __attribute__((section("jit"))) add (int a, int (*f)()) {
