@@ -8,13 +8,23 @@
 namespace easy {
 namespace meta {
 
-template<class ... T>
+template<class ... Empty>
 struct type_list {
 
   template<class New>
   using push_front = struct type_list<New>;
   template<class New>
   using push_back = struct type_list<New>;
+  template<class _>
+  using remove = type_list<>;
+  template<class _>
+  static constexpr bool has = false;
+
+  // undefined
+  template<size_t _>
+  using at = void;
+  template<size_t _, class T>
+  using set = meta::type_list<>;
 
   static constexpr size_t size = 0;
   static constexpr bool empty = true;
@@ -29,9 +39,40 @@ struct type_list<Head, Tail ...> {
   using push_front = struct type_list<New, Head, Tail ...>;
   template<class New>
   using push_back = struct type_list<Head, Tail ..., New>;
+  template<size_t I>
+  using at = typename std::conditional<I==0, head, typename tail::template at<I-1>>::type;
+
+  template<size_t I, class T>
+  using set = typename std::conditional<I==0,
+                                        typename tail::template push_front<T>,
+                                        typename tail::template set<I-1, T>::template push_front<head>>::type;
+
+  template<class T>
+  using remove = typename std::conditional<std::is_same<head, T>::value,
+                                    typename tail::template remove<T>,
+                                    typename tail::template remove<T>::template push_front<head>
+                                    >::type;
+  template<class T>
+  static constexpr bool has = std::is_same<T, head>::value || tail:: template has<T>;
 
   static constexpr size_t size = 1+tail::size;
   static constexpr bool empty = false;
+};
+
+template<size_t N, class T>
+struct init_list {
+
+  template<size_t NN, class TT>
+  struct helper {
+    using type = typename helper<NN-1, TT>::type::template push_front<TT>;
+  };
+
+  template<class TT>
+  struct helper<0,TT> {
+    using type = meta::type_list<>;
+  };
+
+  using type = typename helper<N, T>::type;
 };
 
 template<class T>
@@ -43,36 +84,72 @@ T* get_as_pointer(T* A) { return A; }
 
 namespace  {
 
-template<bool Empty>
-struct remove_placeholders_helper {
-  template<class EmptyList, class ArgList>
-  using type = struct type_list<>;
-};
+template<class T>
+using is_ph = std::is_placeholder<typename std::decay<T>::type>;
 
-template<>
-struct remove_placeholders_helper<false> {
+template<class ArgList>
+struct max_placeholder {
 
-  template<class ParamList, class ArgList>
-  struct __helper {
-    static_assert(!ParamList::empty, "remove_placeholders_helper: type list is not empty!");
-
-    using head = typename ParamList::head;
-    using arg_head = typename ArgList::head;
-    using tail = typename ParamList::tail;
-    using arg_tail = typename ArgList::tail;
-    using recursive = typename remove_placeholders_helper<tail::empty>::template type<tail, arg_tail>;
-    using keep_head_recursive = typename recursive::template push_front<head>;
-    static constexpr bool arg_head_is_placeholder = std::is_placeholder<typename std::decay<arg_head>::type>::value != 0;
-    using type = typename std::conditional<arg_head_is_placeholder, recursive, keep_head_recursive>::type;
+  template<class AL, bool Empty, size_t Max>
+  struct helper {
+    static constexpr size_t max = Max;
   };
 
-  template<class ParamList, class ArgList>
-  using type = typename __helper<ParamList, ArgList>::type;
+  template<class AL, size_t Max>
+  struct helper<AL, false, Max> {
+    using head = typename AL::head;
+    using tail = typename AL::tail;
+    static constexpr size_t max = helper<tail, tail::empty, std::max<size_t>(is_ph<head>::value, Max)>::max;
+  };
+
+  static constexpr size_t max = helper<ArgList, ArgList::empty, 0>::max;
 };
 
 template<class ParamList, class ArgList>
-struct remove_placeholders {
-  using type = typename remove_placeholders_helper<ParamList::empty>::template type<ParamList, ArgList>;
+struct map_placeholder_to_type {
+
+  template<class _, class __, class Result, class Seen, size_t N, bool Done>
+  struct helper {
+    static_assert(Seen::size == N, "Seen::size != N");
+    static_assert(Result::size == N, "Result::size != N");
+    static_assert(!Result::template has<void>, "Void cannot appear in the resulting type");
+    using type = Result;
+  };
+
+  template<class PL, class AL, class Result, class Seen, size_t N>
+  struct helper<PL, AL, Result, Seen, N, false>{
+    using al_head = typename AL::head;
+    using al_tail = typename AL::tail;
+
+    static bool constexpr parse_placeholder = is_ph<al_head>::value && !Seen::template has<al_head>;
+    static size_t constexpr result_idx = parse_placeholder?is_ph<al_head>::value-1:0;
+    static size_t constexpr arg_idx = PL::size - AL::size;
+    using pl_at_idx = typename PL::template at<arg_idx>;
+
+    // for
+    // foo(int, bool, float) and specialization foo(int(4), _2, _1)
+    // [int,bool,float] [int,_2,_1] [void,void] [] 2
+    // [int,bool,float] [_2,_1] [void,void] [] 2
+    // [int,bool,float] [_1] [void,bool] [_2] 2
+    // [int,bool,float] [] [float,bool] [_2,_1] 2
+    // yields new foo'(float _1, bool _2) = foo(int(4), _2, _1);
+
+    static_assert(PL::size >= AL::size, "More parameters than arguments specified");
+    static_assert(result_idx < Result::size, "Cannot have a placeholder outside the maximium");
+    using new_result = typename std::conditional<parse_placeholder, typename Result::template set<result_idx, pl_at_idx>, Result>::type;
+    using new_seen = typename std::conditional<parse_placeholder, typename Seen::template push_back<al_head>, Seen>::type;
+
+    using type = typename helper<PL, al_tail, new_result, new_seen, N, new_seen::size == N>::type;
+  };
+
+  using default_param = void;
+  static constexpr size_t N = max_placeholder<ArgList>::max;
+  using type = typename helper<ParamList, ArgList, typename init_list<N, default_param>::type, meta::type_list<>, N, N == 0>::type;
+};
+
+template<class ParamList, class ArgList>
+struct get_new_param_list {
+  using type = typename map_placeholder_to_type<ParamList, ArgList>::type;
 };
 
 template<class Ret, class ... Args>
@@ -95,7 +172,7 @@ template<class FunTy, class ArgList>
 struct new_function_traits {
   using OriginalTraits = function_traits<FunTy>;
   using return_type = typename OriginalTraits::return_type;
-  using parameter_list = typename remove_placeholders<typename OriginalTraits::parameter_list, ArgList>::type;
+  using parameter_list = typename get_new_param_list<typename OriginalTraits::parameter_list, ArgList>::type;
 };
 
 }
