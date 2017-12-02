@@ -28,7 +28,7 @@ void Context::setParameterFloat(unsigned arg_idx, double val) {
   Arg.data.floating = val;
 }
 
-void Context::setParameterPtr(unsigned arg_idx, void* val) {
+void Context::setParameterPtrVoid(unsigned arg_idx, void* val) {
   auto &Arg = ArgumentMapping_[arg_idx];
   Arg.ty = Argument::Type::Ptr;
   Arg.data.ptr = val;

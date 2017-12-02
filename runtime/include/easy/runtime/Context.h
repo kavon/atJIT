@@ -34,7 +34,13 @@ class Context {
   void setParameterIndex(unsigned, unsigned); 
   void setParameterInt(unsigned, int64_t);
   void setParameterFloat(unsigned, double); 
-  void setParameterPtr(unsigned, void*);
+
+  void setParameterPtrVoid(unsigned, void*);
+
+  template<class T>
+  void setParameterPtr(unsigned idx, T* ptr) {
+    setParameterPtrVoid(idx, reinterpret_cast<void*>(ptr));
+  }
 
   auto begin() const { return ArgumentMapping_.begin(); }
   auto end() const { return ArgumentMapping_.end(); }
