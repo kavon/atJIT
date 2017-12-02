@@ -4,6 +4,7 @@
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/Support/raw_ostream.h>
+#include <numeric>
 
 using namespace llvm;
 using namespace easy;
@@ -15,65 +16,64 @@ llvm::Pass* easy::createInlineParametersPass(llvm::StringRef Name) {
   return new InlineParameters(Name);
 }
 
-FunctionType* GetWrapperTy(FunctionType *FTy, Context const &C, DenseMap<size_t, size_t> &ParamToNewPosition) {
+FunctionType* GetWrapperTy(FunctionType *FTy, Context const &C) {
 
   Type* RetTy = FTy->getReturnType();
-  SmallVector<Type*, 8> Args;
 
-  // since we expect a small number of arguments, perefer a small vector over of a set
-  SmallVector<size_t, 8> ArgsToForward;
-  for(auto const &Arg : C)
-    if(Arg.ty == arg_ty::Forward)
-      ArgsToForward.push_back(Arg.data.param_idx);
+  size_t NewArgCount =
+      std::accumulate(C.begin(), C.end(), 0, [](size_t Max, easy::Argument const &Arg) {
+        return Arg.ty == arg_ty::Forward ?
+          std::max<size_t>(Arg.data.param_idx+1, Max) : Max;
+      });
 
-  // sort and remeove duplicates
-  std::sort(ArgsToForward.begin(), ArgsToForward.end());
-  ArgsToForward.erase(std::unique(ArgsToForward.begin(), ArgsToForward.end()), ArgsToForward.end());
+  SmallVector<Type*, 8> Args(NewArgCount, nullptr);
 
-  size_t new_position = 0;
-  for(size_t arg_idx : ArgsToForward) {
-    ParamToNewPosition[arg_idx] = new_position;
-    Args.push_back(FTy->getParamType(arg_idx));
+  for(size_t i = 0, n = C.size(); i != n; ++i) {
+    easy::Argument const &Arg = C.getArgumentMapping(i);
+    if(Arg.ty != arg_ty::Forward)
+      continue;
+    if(!Args[Arg.data.param_idx])
+      Args[Arg.data.param_idx] = FTy->getParamType(i);
   }
 
   return FunctionType::get(RetTy, Args, FTy->isVarArg());
 }
 
-void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, SmallVectorImpl<Value*> &Args, DenseMap<size_t, size_t> &ParamNewPos) {
-  SmallVector<Value*, 8> WrapperArgs;
-  for(Value &Arg : Wrapper.args())
-    WrapperArgs.push_back(&Arg);
+void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, SmallVectorImpl<Value*> &Args) {
+  SmallVector<Value*, 8> WrapperArgs(Wrapper.getFunctionType()->getNumParams());
+  std::transform(Wrapper.arg_begin(), Wrapper.arg_end(),
+                 WrapperArgs.begin(), [](llvm::Argument &A)->Value*{return &A;});
 
-  for(size_t arg_idx = 0, n = C.size(); arg_idx != n; ++arg_idx) {
-    auto const &Arg = C.getArgumentMapping(arg_idx);
+  for(size_t i = 0, n = C.size(); i != n; ++i) {
+    auto const &Arg = C.getArgumentMapping(i);
     switch (Arg.ty) {
       case arg_ty::Forward:
-        Args.push_back(WrapperArgs[ParamNewPos[Arg.data.param_idx]]);
+        Args.push_back(WrapperArgs[Arg.data.param_idx]);
         continue;
       case arg_ty::Int:
-        Args.push_back(ConstantInt::get(OldTy.getParamType(arg_idx), Arg.data.integer, true));
+        Args.push_back(ConstantInt::get(OldTy.getParamType(i), Arg.data.integer, true));
         continue;
       case arg_ty::Float:
-        Args.push_back(ConstantFP::get(OldTy.getParamType(arg_idx), Arg.data.floating));
+        Args.push_back(ConstantFP::get(OldTy.getParamType(i), Arg.data.floating));
         continue;
       case arg_ty::Ptr:
         Args.push_back(
-              ConstantExpr::getPtrToInt(
+              ConstantExpr::getIntToPtr(
                 ConstantInt::get(Type::getInt64Ty(OldTy.getContext()), (uintptr_t)Arg.data.ptr, false),
-                OldTy.getParamType(arg_idx)));
+                OldTy.getParamType(i)));
         continue;
     }
   }
 }
 
-Function* CreateWrapperFun(Module &M, FunctionType &WrapperTy, Function &F, Context const &C, DenseMap<size_t, size_t> &ParamNewPos) {
+Function* CreateWrapperFun(Module &M, FunctionType &WrapperTy, Function &F, Context const &C) {
   LLVMContext &CC = M.getContext();
 
   Function* Wrapper = Function::Create(&WrapperTy, Function::ExternalLinkage, "", &M);
   BasicBlock* BB = BasicBlock::Create(CC, "", Wrapper);
 
   SmallVector<Value*, 8> Args;
-  GetInlineArgs(C, *F.getFunctionType(), *Wrapper, Args, ParamNewPos);
+  GetInlineArgs(C, *F.getFunctionType(), *Wrapper, Args);
 
   IRBuilder<> B(BB);
   Value* Call = B.CreateCall(&F, Args);
@@ -96,9 +96,8 @@ bool easy::InlineParameters::runOnModule(llvm::Module &M) {
   FunctionType* FTy = F->getFunctionType();
   assert(FTy->getNumParams() == C.size());
 
-  DenseMap<size_t, size_t> ParamNewPos;
-  FunctionType* WrapperTy = GetWrapperTy(FTy, C, ParamNewPos);
-  Function* WrapperFun = CreateWrapperFun(M, *WrapperTy, *F, C, ParamNewPos);
+  FunctionType* WrapperTy = GetWrapperTy(FTy, C);
+  Function* WrapperFun = CreateWrapperFun(M, *WrapperTy, *F, C);
 
   // privatize F and steal its name
   F->setLinkage(Function::PrivateLinkage);
