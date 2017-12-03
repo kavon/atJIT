@@ -82,11 +82,8 @@ auto jit(T &&Fun, Args&& ... args) {
   using new_return_type = typename new_type_traits::return_type;
   using new_parameter_types = typename new_type_traits::parameter_list;
 
-  static_assert(nargs == nparams,
-                "easy::jit: incorrect number of arguments passed.");
-
   std::unique_ptr<Context> C(new Context(nparams));
-  easy::set_parameters(*C, 0, parameter_list(), std::forward<Args>(args)...);
+  easy::set_parameters<parameter_list, Args&&...>(parameter_list(), *C, 0, std::forward<Args>(args)...);
 
   auto CompiledFunction =
       Function::Compile(reinterpret_cast<void*>(meta::get_as_pointer(Fun)), std::move(C));

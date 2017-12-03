@@ -29,7 +29,7 @@ class Function {
   private:
 
   static std::unique_ptr<llvm::TargetMachine> GetTargetMachine(llvm::StringRef Triple); 
-  static void Optimize(llvm::Module& M, const char* Name, easy::Context const& C, int OptLevel = 0, int OptSize = 0);
+  static void Optimize(llvm::Module& M, const char* Name, easy::Context const& C, unsigned OptLevel = 0, unsigned OptSize = 0);
   static std::unique_ptr<llvm::ExecutionEngine> GetEngine(std::unique_ptr<llvm::Module> M); 
   static void MapGlobals(llvm::ExecutionEngine& EE, GlobalMapping* Globals);
 };

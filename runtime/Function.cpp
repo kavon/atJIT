@@ -32,7 +32,7 @@ std::unique_ptr<llvm::TargetMachine> Function::GetTargetMachine(llvm::StringRef 
                                FeaturesStr, llvm::TargetOptions(), llvm::None));
 }
 
-void Function::Optimize(llvm::Module& M, const char* Name, const Context& C, int OptLevel, int OptSize) {
+void Function::Optimize(llvm::Module& M, const char* Name, const Context& C, unsigned OptLevel, unsigned OptSize) {
 
   auto Triple = llvm::sys::getProcessTriple();
 
@@ -88,7 +88,11 @@ std::unique_ptr<Function> Function::Compile(void *Addr, std::unique_ptr<Context 
 
   std::unique_ptr<llvm::Module> Clone(llvm::CloneModule(Original));
 
-  Optimize(*Clone, Name, *C, 2, 0);
+  unsigned OptLevel;
+  unsigned OptSize;
+  std::tie(OptLevel, OptSize) = C->getOptLevel();
+
+  Optimize(*Clone, Name, *C, OptLevel, OptSize);
 
   std::unique_ptr<llvm::ExecutionEngine> EE = GetEngine(std::move(Clone));
 

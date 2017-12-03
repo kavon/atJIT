@@ -2,6 +2,7 @@
 #define PARAM
 
 #include <easy/runtime/Context.h>
+#include <easy/options.h>
 #include <easy/meta.h>
 
 namespace easy {
@@ -56,19 +57,37 @@ struct set_parameter :
 
 }
 
-template<class ParameterList>
-void set_parameters(Context&, size_t, ParameterList) {
-  static_assert(ParameterList::empty,
-                "easy::jit: there are more parameters than arguments passed to the function.");
+template<class ... NoOptions>
+void set_options(Context &, NoOptions&& ...) {
+  static_assert(meta::type_list<NoOptions...>::empty, "Remaining options to be processed!");
+}
+
+template<class Option0, class ... Options>
+void set_options(Context &C, Option0&& Opt, Options&& ... Opts) {
+  using OptTy = typename std::decay<Option0>::type;
+  OptTy& OptRef = std::ref<OptTy>(Opt);
+  static_assert(options::is_option<OptTy>::value, "An easy::jit option is expected");
+
+  OptRef.handle(C);
+  set_options(C, std::forward<Options>(Opts)...);
+}
+
+template<class ParameterList, class ... Options>
+typename std::enable_if<ParameterList::empty>::type
+set_parameters(ParameterList,
+               Context& C, size_t, Options&& ... opts) {
+  set_options<Options...>(C, std::forward<Options>(opts)...);
 }
 
 template<class ParameterList, class Arg0, class ... Args>
-void set_parameters(Context &C, size_t idx, ParameterList, Arg0 &&arg0, Args&& ... args) {
+typename std::enable_if<!ParameterList::empty>::type
+set_parameters(ParameterList,
+               Context &C, size_t idx, Arg0 &&arg0, Args&& ... args) {
   using Param0 = typename ParameterList::head;
   using ParametersTail = typename ParameterList::tail;
 
   set_parameter<Param0, Arg0>::template set_param<Param0, Arg0>(C, idx, std::forward<Arg0>(arg0));
-  set_parameters(C, idx+1,  ParametersTail(), std::forward<Args>(args)...);
+  set_parameters<ParametersTail, Args&&...>(ParametersTail(), C, idx+1, std::forward<Args>(args)...);
 }
 
 }

@@ -22,6 +22,7 @@ struct Argument {
 class Context {
 
   std::vector<Argument> ArgumentMapping_; 
+  unsigned OptLevel_ = 1, OptSize_ = 0;
 
   public:
 
@@ -31,15 +32,25 @@ class Context {
   }
   
   // set the mapping between 
-  void setParameterIndex(unsigned, unsigned); 
-  void setParameterInt(unsigned, int64_t);
-  void setParameterFloat(unsigned, double); 
+  Context& setParameterIndex(unsigned, unsigned);
+  Context& setParameterInt(unsigned, int64_t);
+  Context& setParameterFloat(unsigned, double);
 
-  void setParameterPtrVoid(unsigned, void*);
+  Context& setParameterPtrVoid(unsigned, void*);
 
   template<class T>
-  void setParameterPtr(unsigned idx, T* ptr) {
-    setParameterPtrVoid(idx, reinterpret_cast<void*>(ptr));
+  Context& setParameterPtr(unsigned idx, T* ptr) {
+    return setParameterPtrVoid(idx, reinterpret_cast<void*>(ptr));
+  }
+
+  Context& setOptLevel(unsigned OptLevel, unsigned OptSize) {
+    OptLevel_ = OptLevel;
+    OptSize_ = OptSize;
+    return *this;
+  }
+
+  std::pair<unsigned, unsigned> getOptLevel() const {
+    return std::make_pair(OptLevel_, OptSize_);
   }
 
   auto begin() const { return ArgumentMapping_.begin(); }

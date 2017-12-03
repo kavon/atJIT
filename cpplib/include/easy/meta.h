@@ -4,6 +4,7 @@
 #include <functional>
 #include <type_traits>
 #include <cstddef>
+#include <easy/options.h>
 
 namespace easy {
 namespace meta {
@@ -86,6 +87,29 @@ namespace  {
 
 template<class T>
 using is_ph = std::is_placeholder<typename std::decay<T>::type>;
+
+template<class ArgList>
+struct discard_options {
+
+  template<class AL, bool Empty>
+  struct helper {
+    using type = meta::type_list<>;
+  };
+
+  template<class AL>
+  struct helper<AL, false> {
+    using head = typename AL::head;
+    using tail = typename AL::tail;
+    static bool constexpr is_opt =
+        options::is_option<typename std::decay<head>::type>::value;
+    using recursive = typename helper<tail, tail::empty>::type;
+    using type = typename std::conditional<is_opt,
+                                           recursive,
+                                           typename recursive::template push_front<head>>::type;
+  };
+
+  using type = typename helper<ArgList, ArgList::empty>::type;
+};
 
 template<class ArgList>
 struct max_placeholder {
@@ -172,7 +196,8 @@ template<class FunTy, class ArgList>
 struct new_function_traits {
   using OriginalTraits = function_traits<FunTy>;
   using return_type = typename OriginalTraits::return_type;
-  using parameter_list = typename get_new_param_list<typename OriginalTraits::parameter_list, ArgList>::type;
+  using clean_arg_list = typename discard_options<ArgList>::type;
+  using parameter_list = typename get_new_param_list<typename OriginalTraits::parameter_list, clean_arg_list>::type;
 };
 
 }
