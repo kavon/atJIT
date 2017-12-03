@@ -1,10 +1,15 @@
-
 llvm_map_components_to_libnames(RUNTIME_LLVM_LIBS all)
 
-add_library(easy_jit_runtime SHARED
-  src/runtime.cpp)
+add_library(EasyJitRuntime SHARED
+  InitNativeTarget.cpp
+  Function.cpp
+  BitcodeTracker.cpp
+  pass/InlineParameters.cpp
+  pass/ContextAnalysis.cpp
+  Context.cpp
+)
 
-target_link_libraries(easy_jit_runtime ${RUNTIME_LLVM_LIBS})
+target_link_libraries(EasyJitRuntime ${RUNTIME_LLVM_LIBS})
 
-set(EASY_JIT_RUNTIME ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/easy_jit_runtime${CMAKE_SHARED_LIBRARY_SUFFIX} PARENT_SCOPE)
+set(EASY_JIT_RUNTIME ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libEasyJitRuntime${CMAKE_SHARED_LIBRARY_SUFFIX} PARENT_SCOPE)
 

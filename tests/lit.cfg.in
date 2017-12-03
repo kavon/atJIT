@@ -1,0 +1,39 @@
+import lit.formats
+import lit.util
+import os
+
+config.name = 'easy_jit'
+config.suffixes = ['.c', '.cpp', '.ll', '.test']
+
+config.test_format = lit.formats.ShTest(True)
+
+config.test_source_root = "@CMAKE_CURRENT_SOURCE_DIR@/tests"
+config.test_exec_root = "@CMAKE_CURRENT_BINARY_DIR@/tests"
+
+config.environment['PATH'] = os.pathsep.join(["@LLVM_TOOLS_BINARY_DIR@"] + [ config.environment['PATH'] ])
+
+runtime_lib = os.path.basename("@EASY_JIT_RUNTIME@").split('.')[0].replace("lib", "", 1)
+runtime_lib_dir = os.path.dirname("@EASY_JIT_RUNTIME@")
+llvm_lib_dir = os.path.join(os.path.dirname("@LLVM_TOOLS_BINARY_DIR@"), "lib")
+
+includes = ["cpplib", "runtime"]
+include_flags = " ".join(["-I'" + dir + "'" for dir in "@LLVM_INCLUDE_DIRS@".split()] + ["-I'" + os.path.join("@EASY_JIT_ROOT@", dir, "include") + "'" for dir in includes] )
+
+ld_paths = [runtime_lib_dir, llvm_lib_dir]
+ld_flags = ""
+for ld_path in ld_paths:
+  ld_flags = ld_flags + " -L'" + ld_path + "' -rpath '" + ld_path + "' "
+
+ld_flags = ld_flags + " -l" + runtime_lib
+ld_flags = ld_flags + " -lLLVMSupport" #TODO: I don't know why I have to pass Support here. It should not be required.
+
+
+
+# substitutions
+config.substitutions.append(('%clangxx', "@LLVM_TOOLS_BINARY_DIR@/clang++ "))
+config.substitutions.append(('%cxxflags', "--std=c++14"))
+config.substitutions.append(('%clang', "@LLVM_TOOLS_BINARY_DIR@/clang"))
+config.substitutions.append(('%include_flags', include_flags))
+config.substitutions.append(('%lib_pass', "@EASY_JIT_PASS@"))
+config.substitutions.append(('%lib_runtime', "@EASY_JIT_RUNTIME@"))
+config.substitutions.append(('%ld_flags', ld_flags))
