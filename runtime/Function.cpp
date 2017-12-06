@@ -8,6 +8,7 @@
 #include <llvm/Support/TargetRegistry.h> 
 #include <llvm/Analysis/TargetTransformInfo.h> 
 #include <llvm/Analysis/TargetLibraryInfo.h> 
+#include <llvm/Support/DynamicLibrary.h>
 
 using namespace easy;
 
@@ -76,8 +77,6 @@ void Function::MapGlobals(llvm::ExecutionEngine& EE, GlobalMapping* Globals) {
 }
 
 std::unique_ptr<Function> Function::Compile(void *Addr, std::unique_ptr<Context const> C) {
-
-  // TODO: Use C to perform the specialization.
 
   auto &BT = BitcodeTracker::GetTracker();
 

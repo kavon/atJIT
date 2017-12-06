@@ -24,8 +24,6 @@ namespace easy {
 
     bool runOnModule(Module &M) override {
 
-      errs() << "running!\n";
-
       SmallVector<Function*, 8> FunsToJIT;
       collectFunctionsToJIT(M, FunsToJIT);
 
@@ -118,12 +116,14 @@ namespace easy {
     static GlobalVariable* embedBitcode(Module &M, Function& F) {
       std::unique_ptr<Module> Embed = CloneModule(&M);
 
-      Function &FEmbed = *M.getFunction(F.getName());
+      Function &FEmbed = *Embed->getFunction(F.getName());
+      fixLinkages(FEmbed, *Embed);
       cleanModule(FEmbed, *Embed);
 
-      fixLinkages(FEmbed, *Embed);
+      Twine ModuleName = F.getName() + "_bitcode";
+      Embed->setModuleIdentifier(ModuleName.str());
 
-      return writeModuleToGlobal(M, FEmbed.getName() + "_bitcode");
+      return writeModuleToGlobal(M, *Embed, FEmbed.getName() + "_bitcode");
     }
 
     static std::string moduleToString(Module &M) {
@@ -134,8 +134,8 @@ namespace easy {
       return s;
     }
 
-    static GlobalVariable* writeModuleToGlobal(Module &M, Twine Name) {
-      std::string Bitcode = moduleToString(M);
+    static GlobalVariable* writeModuleToGlobal(Module &M, Module &Embed, Twine Name) {
+      std::string Bitcode = moduleToString(Embed);
       Constant* BitcodeInit = ConstantDataArray::getString(M.getContext(), Bitcode, true);
       return new GlobalVariable(M, BitcodeInit->getType(), true,
                                 GlobalVariable::PrivateLinkage,
@@ -159,6 +159,8 @@ namespace easy {
 
       for(GlobalValue &GV : M.global_values()) {
 
+        if(&GV == &Entry)
+          continue;
         if(GV.getName().startswith("llvm."))
           continue;
 
@@ -177,7 +179,7 @@ namespace easy {
           GV.setLinkage(GlobalValue::ExternalLinkage);
 
           if(Function* F = dyn_cast<Function>(&GV))
-            F->getBasicBlockList().clear();
+            F->deleteBody();
           else if(GlobalVariable* GVar = dyn_cast<GlobalVariable>(&GV))
             GVar->setInitializer(nullptr);
         }
