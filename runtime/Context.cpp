@@ -37,3 +37,35 @@ Context& Context::setParameterPtrVoid(unsigned arg_idx, void* val) {
   Arg.data.ptr = val;
   return *this;
 }
+
+bool easy::operator<(easy::Context const &C1, easy::Context const &C2) {
+  auto OptC1 = C1.getOptLevel(),
+       OptC2 = C2.getOptLevel();
+  if(OptC1 < OptC2)
+    return true;
+  if(OptC1 > OptC2)
+    return false;
+
+  size_t SizeC1 = C1.size(), SizeC2 = C2.size();
+  if(SizeC1 < SizeC2)
+    return true;
+  if(SizeC1 > SizeC2)
+    return true;
+
+  for(size_t i = 0; i != SizeC1; ++i) {
+    auto const &ArgC1 = C1.getArgumentMapping(i);
+    auto const &ArgC2 = C2.getArgumentMapping(i);
+
+    if(ArgC1.ty < ArgC2.ty)
+      return true;
+    if(ArgC1.ty > ArgC2.ty)
+      return false;
+
+    // it does not matter anyway if it is integer or not. compare using the biggest size
+    if(ArgC1.data.integer < ArgC2.data.integer)
+      return true;
+    if(ArgC1.data.integer > ArgC2.data.integer)
+      return false;
+  }
+  return false;
+}

@@ -61,10 +61,13 @@ class Context {
     return ArgumentMapping_[i];
   }
 
+  friend bool operator<(easy::Context const &C1, easy::Context const &C2);
 
   private:
   void initDefaultArgumentMapping();
 }; 
+
+bool operator<(easy::Context const &C1, easy::Context const &C2);
 
 }
 
