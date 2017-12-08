@@ -26,6 +26,7 @@ Testing
 -------
 
 * Docker setup for testing
+* Small set of benchmarks 
 * Script to randomly transform calls in c++ code to calls to easy::jit for testing on large projects
 * Test with:
   - exceptions
