@@ -18,11 +18,16 @@
 #define DEBUG_TYPE "easy-register-bitcode"
 #include <llvm/Support/Debug.h>
 
+#include <llvm/Support/CommandLine.h>
+#include <llvm/Support/Regex.h>
+
 #include <llvm/Support/raw_ostream.h>
 
 #include <memory>
 
 using namespace llvm;
+
+static cl::opt<std::string> RegexString("easy-regex", cl::desc("<regex>"), cl::init(""));
 
 namespace easy {
   struct RegisterBitcode : public ModulePass {
@@ -75,6 +80,7 @@ namespace easy {
       // get **all** functions passed as parameter to easy jit calls
       //   not only the target function, but also its parameters
       deduceFunctionsToJIT(M);
+      regexFunctionsToJIT(M);
 
       // get functions in section jit section
       for(Function &F : M) {
@@ -108,6 +114,15 @@ namespace easy {
           }
         }
       }
+    }
+
+    static void regexFunctionsToJIT(Module &M) {
+      if(RegexString.empty())
+        return;
+      llvm::Regex Match(RegexString);
+      for(Function &F : M)
+        if(Match.match(F.getName()))
+          F.setSection(JIT_SECTION);
     }
 
     static void collectLocalGlobals(Module &M, SmallVectorImpl<GlobalValue*> &Globals) {

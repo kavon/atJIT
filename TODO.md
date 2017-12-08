@@ -1,10 +1,9 @@
 To Do
 =====
 
-feature
+Feature
 -------
 
-* Use regex to mark functions to jit
 * Better error handling : 
   - if a function is passed as parameter and cannot be extracted, print a warning,
   - if it is the target function, print an error.
@@ -16,14 +15,14 @@ feature
   - e.g ```easy::jit(foo, _2, _1, easy::after_optimization([](BasicBlock* B) { instrument_edges(B); return true; }))```;
 * Drop body of functions that are not used
 
-documentation
+Documentation
 -------------
 
 * API doc
 * Installing doc
 * More complex usage example
 
-testing
+Testing
 -------
 
 * Docker setup for testing
