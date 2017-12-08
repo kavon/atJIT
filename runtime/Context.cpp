@@ -31,11 +31,19 @@ Context& Context::setParameterFloat(unsigned arg_idx, double val) {
   return *this;
 }
 
-Context& Context::setParameterPtrVoid(unsigned arg_idx, void* val) {
+Context& Context::setParameterPtrVoid(unsigned arg_idx, const void* val) {
   auto &Arg = ArgumentMapping_[arg_idx];
   Arg.ty = Argument::Type::Ptr;
   Arg.data.ptr = val;
   return *this;
+}
+
+Context& Context::setParameterPlainStruct(unsigned arg_idx, void const* ptr, size_t size) {
+  auto &Arg = ArgumentMapping_[arg_idx];
+  Arg.ty = Argument::Type::Struct;
+  Arg.data.structure.data = new char[size];
+  Arg.data.structure.size= size;
+  std::memcpy(Arg.data.structure.data, ptr, size);
 }
 
 bool easy::operator<(easy::Context const &C1, easy::Context const &C2) {

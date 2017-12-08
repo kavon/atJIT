@@ -3,30 +3,52 @@
 
 #include <vector>
 #include <cstdint>
+#include <cstring>
 
 namespace easy {
 
 struct Argument {
-  enum class Type {Forward, Int, Float, Ptr};
+  enum class Type {Forward, Int, Float, Ptr, Struct};
 
   Type ty;
   union {
     unsigned param_idx;
     int64_t integer;
     double floating;
-    void* ptr;
+    void const* ptr;
+
+    struct __structure {
+      char* data;
+      unsigned short size;
+    } structure;
   } data;
+
+  ~Argument() {
+    if(ty == Type::Struct)
+      delete[] data.structure.data;
+  }
 
   bool operator<(Argument const& Other) const {
     if(ty < Other.ty)
       return true;
-    if(ty == Other.ty && data.integer < Other.data.integer)
-      return true;
-    return false;
+    if(ty > Other.ty)
+      return false;
+    if(ty == Type::Struct)
+      return data.structure.size < Other.data.structure.size ||
+            (data.structure.size == Other.data.structure.size &&
+             std::memcmp(data.structure.data, Other.data.structure.data, data.structure.size) < 0);
+    else return data.integer < Other.data.integer;
   }
 
   bool operator==(Argument const& Other) const {
-    return ty == Other.ty && data.integer == Other.data.integer;
+    if(ty != Other.ty)
+      return false;
+    if(ty == Type::Struct) {
+      return data.structure.size == Other.data.structure.size &&
+             std::memcmp(data.structure.data, Other.data.structure.data, data.structure.size) == 0;
+    } else {
+      return data.integer == Other.data.integer;
+    }
   }
 
   bool operator!=(Argument const& Other) const {
@@ -51,12 +73,17 @@ class Context {
   Context& setParameterIndex(unsigned, unsigned);
   Context& setParameterInt(unsigned, int64_t);
   Context& setParameterFloat(unsigned, double);
-
-  Context& setParameterPtrVoid(unsigned, void*);
+  Context& setParameterPtrVoid(unsigned, void const*);
+  Context& setParameterPlainStruct(unsigned, void const*, size_t);
 
   template<class T>
   Context& setParameterPtr(unsigned idx, T* ptr) {
     return setParameterPtrVoid(idx, reinterpret_cast<void*>(ptr));
+  }
+
+  template<class T>
+  Context& setParameterStruct(unsigned idx, T* ptr) {
+    return setParameterPlainStruct(idx, reinterpret_cast<void const*>(ptr), sizeof(T));
   }
 
   Context& setOptLevel(unsigned OptLevel, unsigned OptSize) {

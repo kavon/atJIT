@@ -45,7 +45,13 @@ struct set_parameter_helper<false> {
   template<class Param, class Arg>
   static void set_param(Context &C, size_t idx,
                         enable_if<std::is_reference<Param>::value, Arg> &&arg) {
-    C.setParameterPtr(idx, std::addressof(std::forward<Arg>(arg)));
+    C.setParameterPtr(idx, std::addressof(arg));
+  }
+
+  template<class Param, class Arg>
+  static void set_param(Context &C, size_t idx,
+                        enable_if<std::is_class<Param>::value, Arg> &&arg) {
+    C.setParameterStruct(idx, std::addressof(arg));
   }
 };
 

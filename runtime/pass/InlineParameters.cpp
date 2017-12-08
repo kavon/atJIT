@@ -1,6 +1,8 @@
 #include <easy/runtime/RuntimePasses.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Function.h>
+#include <llvm/IR/Constant.h>
+#include <llvm/IR/Constants.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/Support/raw_ostream.h>
@@ -40,6 +42,7 @@ FunctionType* GetWrapperTy(FunctionType *FTy, Context const &C) {
 }
 
 void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, SmallVectorImpl<Value*> &Args) {
+  LLVMContext &Ctx = OldTy.getContext();
   SmallVector<Value*, 8> WrapperArgs(Wrapper.getFunctionType()->getNumParams());
   std::transform(Wrapper.arg_begin(), Wrapper.arg_end(),
                  WrapperArgs.begin(), [](llvm::Argument &A)->Value*{return &A;});
@@ -59,8 +62,21 @@ void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, Sma
       case arg_ty::Ptr:
         Args.push_back(
               ConstantExpr::getIntToPtr(
-                ConstantInt::get(Type::getInt64Ty(OldTy.getContext()), (uintptr_t)Arg.data.ptr, false),
+                ConstantInt::get(Type::getInt64Ty(Ctx), (uintptr_t)Arg.data.ptr, false),
                 OldTy.getParamType(i)));
+        continue;
+      case arg_ty::Struct:
+        Type* Int8 = Type::getInt8Ty(Ctx);
+        SmallVector<Constant*, 16> Data(Arg.data.structure.size);
+        for(size_t i = 0; i != Arg.data.structure.size; ++i)
+          Data[i] = ConstantInt::get(Int8, Arg.data.structure.data[i], false);
+        Constant* CD = ConstantVector::get(Data);
+        Constant* Struct = ConstantExpr::getBitCast(CD, OldTy.getParamType(i));
+
+        assert(Wrapper.getParent()->getDataLayout().getTypeAllocSize(OldTy.getParamType(i))
+               == Arg.data.structure.size);
+
+        Args.push_back(Struct);
         continue;
     }
   }

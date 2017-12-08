@@ -1,6 +1,15 @@
 To Do
 =====
 
+Doing
+-----
+
+* Inlining of structures.
+  - small structures are casted directly
+  - try medium (do not fit on an integer)
+  - try large (may be not passed by value)
+  - large structure return
+
 Feature
 -------
 
@@ -10,7 +19,6 @@ Feature
   - if it is the target function, print an error.
 * Inlining of functions.
   - instead of doing on the parameter inlining, do it on a after-optimization pass, to inline **any** concrete function pointer that may appear.
-* Inlining of structures.
 * Expansion of recursive calls.
 * Hook function to modify the IR at runtime.
   - e.g ```easy::jit(foo, _2, _1, easy::after_optimization([](BasicBlock* B) { instrument_edges(B); return true; }))```;
