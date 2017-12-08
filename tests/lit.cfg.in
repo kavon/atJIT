@@ -30,10 +30,12 @@ ld_flags = ld_flags + " -lLLVMSupport" #TODO: I don't know why I have to pass Su
 
 
 # substitutions
-config.substitutions.append(('%clangxx', "@LLVM_TOOLS_BINARY_DIR@/clang++ "))
+config.substitutions.append(('%clangxx', "@LLVM_TOOLS_BINARY_DIR@/clang++"))
 config.substitutions.append(('%cxxflags', "--std=c++14"))
 config.substitutions.append(('%clang', "@LLVM_TOOLS_BINARY_DIR@/clang"))
 config.substitutions.append(('%include_flags', include_flags))
 config.substitutions.append(('%lib_pass', "@EASY_JIT_PASS@"))
 config.substitutions.append(('%lib_runtime', "@EASY_JIT_RUNTIME@"))
 config.substitutions.append(('%ld_flags', ld_flags))
+
+config.substitutions.append(('%FileCheck', "FileCheck"))

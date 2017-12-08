@@ -1,6 +1,6 @@
 // RUN: %clangxx %cxxflags %include_flags %ld_flags %s -Xclang -load -Xclang %lib_pass -o %t
 // RUN: %t > %t.out
-// RUN: FileCheck %s < %t.out
+// RUN: %FileCheck %s < %t.out
 
 #include <easy/jit.h>
 
@@ -9,13 +9,12 @@
 
 using namespace std::placeholders;
 
-int add (int a, int *b) {
-  return a+*b;
+int add (int a, int b) {
+  return a+b;
 }
 
 int main() {
-  int b = 1;
-  easy::FunctionWrapper<int(int)> inc = easy::jit(add, _1, &b);
+  easy::FunctionWrapper<int(int)> inc = easy::jit(add, _1, 1);
 
   // CHECK: inc(4) is 5
   // CHECK: inc(5) is 6
