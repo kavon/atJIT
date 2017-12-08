@@ -4,6 +4,7 @@ To Do
 Feature
 -------
 
+* Serialization/Deserialization of object code.
 * Better error handling : 
   - if a function is passed as parameter and cannot be extracted, print a warning,
   - if it is the target function, print an error.
