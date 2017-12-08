@@ -76,7 +76,7 @@ void Function::MapGlobals(llvm::ExecutionEngine& EE, GlobalMapping* Globals) {
   }
 }
 
-std::unique_ptr<Function> Function::Compile(void *Addr, std::unique_ptr<Context const> C) {
+std::unique_ptr<Function> Function::Compile(void *Addr, const Context& C) {
 
   auto &BT = BitcodeTracker::GetTracker();
 
@@ -89,9 +89,9 @@ std::unique_ptr<Function> Function::Compile(void *Addr, std::unique_ptr<Context 
 
   unsigned OptLevel;
   unsigned OptSize;
-  std::tie(OptLevel, OptSize) = C->getOptLevel();
+  std::tie(OptLevel, OptSize) = C.getOptLevel();
 
-  Optimize(*Clone, Name, *C, OptLevel, OptSize);
+  Optimize(*Clone, Name, C, OptLevel, OptSize);
 
   std::unique_ptr<llvm::ExecutionEngine> EE = GetEngine(std::move(Clone));
 

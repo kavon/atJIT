@@ -16,6 +16,22 @@ struct Argument {
     double floating;
     void* ptr;
   } data;
+
+  bool operator<(Argument const& Other) const {
+    if(ty < Other.ty)
+      return true;
+    if(ty == Other.ty && data.integer < Other.data.integer)
+      return true;
+    return false;
+  }
+
+  bool operator==(Argument const& Other) const {
+    return ty == Other.ty && data.integer == Other.data.integer;
+  }
+
+  bool operator!=(Argument const& Other) const {
+    return !(*this==Other);
+  }
 };
 
 // class that holds information about the just-in-time context

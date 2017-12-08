@@ -56,15 +56,9 @@ bool easy::operator<(easy::Context const &C1, easy::Context const &C2) {
     auto const &ArgC1 = C1.getArgumentMapping(i);
     auto const &ArgC2 = C2.getArgumentMapping(i);
 
-    if(ArgC1.ty < ArgC2.ty)
+    if(ArgC1 < ArgC2)
       return true;
-    if(ArgC1.ty > ArgC2.ty)
-      return false;
-
-    // it does not matter anyway if it is integer or not. compare using the biggest size
-    if(ArgC1.data.integer < ArgC2.data.integer)
-      return true;
-    if(ArgC1.data.integer > ArgC2.data.integer)
+    if(ArgC1 != ArgC2)
       return false;
   }
   return false;

@@ -16,12 +16,13 @@ class Cache {
     using wrapper_ty = decltype(easy::jit(std::forward<T>(Fun), std::forward<Args>(args)...));
 
     void* FunPtr = reinterpret_cast<void*>(meta::get_as_pointer(Fun));
-    auto C = get_context_for<T, Args...>(std::forward<Args>(args)...);
-
-    auto CacheEntry = Cache_.insert(std::make_pair(Key(FunPtr, *C), FunctionWrapperBase()));
+    auto CacheEntry = Cache_.insert(std::make_pair(Key(FunPtr,
+                                                       get_context_for<T, Args...>(std::forward<Args>(args)...)),
+                                                   FunctionWrapperBase()));
     FunctionWrapperBase &FWB = CacheEntry.first->second;
     if(CacheEntry.second) {
-      wrapper_ty FW = easy::jit_with_context<T, Args...>(std::move(C), std::forward<T>(Fun));
+      easy::Context const &C = CacheEntry.first->first.second;
+      wrapper_ty FW = easy::jit_with_context<T, Args...>(C, std::forward<T>(Fun));
       FWB = std::move(FW);
     }
     return reinterpret_cast<wrapper_ty&>(FWB);

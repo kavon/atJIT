@@ -77,7 +77,7 @@ WrapFunction(std::unique_ptr<Function> F, meta::type_list<Ret, Params ...>) {
 }
 
 template<class T, class ... Args>
-auto jit_with_context(std::unique_ptr<easy::Context> C, T &&Fun) {
+auto jit_with_context(easy::Context const &C, T &&Fun) {
 
   auto* FunPtr = meta::get_as_pointer(Fun);
   using FunOriginalTy = typename std::remove_pointer<typename std::decay<T>::type>::type;
@@ -87,7 +87,7 @@ auto jit_with_context(std::unique_ptr<easy::Context> C, T &&Fun) {
   using new_parameter_types = typename new_type_traits::parameter_list;
 
   auto CompiledFunction =
-      Function::Compile(reinterpret_cast<void*>(FunPtr), std::move(C));
+      Function::Compile(reinterpret_cast<void*>(FunPtr), C);
 
   auto Wrapper =
       WrapFunction(std::move(CompiledFunction),
@@ -96,7 +96,7 @@ auto jit_with_context(std::unique_ptr<easy::Context> C, T &&Fun) {
 }
 
 template<class T, class ... Args>
-std::unique_ptr<Context> get_context_for(Args&& ... args) {
+easy::Context get_context_for(Args&& ... args) {
   using FunOriginalTy = typename std::remove_pointer<typename std::decay<T>::type>::type;
   static_assert(std::is_function<FunOriginalTy>::value,
                 "easy::jit: supports only on functions and function pointers");
@@ -104,8 +104,8 @@ std::unique_ptr<Context> get_context_for(Args&& ... args) {
   using parameter_list = typename meta::function_traits<FunOriginalTy>::parameter_list;
   constexpr size_t nparams = parameter_list::size;
 
-  std::unique_ptr<Context> C(new Context(nparams));
-  easy::set_parameters<parameter_list, Args&&...>(parameter_list(), *C, 0,
+  easy::Context C(nparams);
+  easy::set_parameters<parameter_list, Args&&...>(parameter_list(), C, 0,
                                                   std::forward<Args>(args)...);
   return C;
 }
@@ -114,7 +114,7 @@ std::unique_ptr<Context> get_context_for(Args&& ... args) {
 template<class T, class ... Args>
 auto jit(T &&Fun, Args&& ... args) {
   auto C = get_context_for<T, Args...>(std::forward<Args>(args)...);
-  return jit_with_context<T, Args...>(std::move(C), std::forward<T>(Fun));
+  return jit_with_context<T, Args...>(C, std::forward<T>(Fun));
 }
 
 }

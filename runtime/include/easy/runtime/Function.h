@@ -24,7 +24,7 @@ class Function {
     return Address;
   }
 
-  static std::unique_ptr<Function> Compile(void *Addr, std::unique_ptr<Context const> C);
+  static std::unique_ptr<Function> Compile(void *Addr, Context const &C);
 
   private:
 
