@@ -3,6 +3,7 @@
 
 #include <easy/runtime/Context.h>
 #include <easy/runtime/Function.h>
+#include <easy/attributes.h>
 #include <easy/meta.h>
 #include <easy/param.h>
 
@@ -112,7 +113,7 @@ easy::Context get_context_for(Args&& ... args) {
 }
 
 template<class T, class ... Args>
-auto jit(T &&Fun, Args&& ... args) {
+auto EASY_JIT_COMPILER_INTERFACE jit(T &&Fun, Args&& ... args) {
   auto C = get_context_for<T, Args...>(std::forward<Args>(args)...);
   return jit_with_context<T, Args...>(C, std::forward<T>(Fun));
 }

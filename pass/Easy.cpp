@@ -1,3 +1,5 @@
+#include <easy/attributes.h>
+
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/IRBuilder.h>
@@ -11,7 +13,14 @@
 
 #include <llvm/Bitcode/BitcodeWriter.h>
 
+#include <llvm/ADT/SetVector.h>
+
+#define DEBUG_TYPE "easy-register-bitcode"
+#include <llvm/Support/Debug.h>
+
 #include <llvm/Support/raw_ostream.h>
+
+#include <memory>
 
 using namespace llvm;
 
@@ -25,6 +34,7 @@ namespace easy {
     bool runOnModule(Module &M) override {
 
       SmallVector<Function*, 8> FunsToJIT;
+
       collectFunctionsToJIT(M, FunsToJIT);
 
       if(FunsToJIT.empty())
@@ -53,18 +63,50 @@ namespace easy {
       return true;
     }
 
+    static auto compilerInterface(Module &M) {
+      SmallVector<std::reference_wrapper<Function>, 4> Funs;
+      std::copy_if(M.begin(), M.end(), std::back_inserter(Funs),
+                   [](Function &F) {return F.getSection() == CI_SECTION;});
+      return Funs;
+    }
+
     static void collectFunctionsToJIT(Module &M, SmallVectorImpl<Function*> &FunsToJIT) {
+
+      // get **all** functions passed as parameter to easy jit calls
+      //   not only the target function, but also its parameters
+      deduceFunctionsToJIT(M);
+
+      // get functions in section jit section
       for(Function &F : M) {
-        if(F.getSection() != "jit")
+        if(F.getSection() != JIT_SECTION)
           continue;
+
+        F.setSection(""); // drop the identifier
 
         std::string Reason;
         if(!canExtractBitcode(F, Reason)) {
-          M.getContext().emitError(F.getName() + ": " + Reason);
+          DEBUG(dbgs() << "Could not extract function '" << F.getName() << "'. " << Reason << "\n");
           continue;
         }
 
+        DEBUG(dbgs() << "Function '" << F.getName() << "' marked for extraction.\n");
+
         FunsToJIT.push_back(&F);
+      }
+    }
+
+    static void deduceFunctionsToJIT(Module &M) {
+      for(Function &EasyJitFun : compilerInterface(M)) {
+        for(User* U : EasyJitFun.users()) {
+          if(CallSite CS{U}) {
+            for(Value* O : CS.args()) {
+              O = O->stripPointerCastsNoFollowAliases();
+              if(Function* F = dyn_cast<Function>(O)) {
+                F->setSection(JIT_SECTION);
+              }
+            }
+          }
+        }
       }
     }
 

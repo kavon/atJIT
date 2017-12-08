@@ -12,7 +12,7 @@ class Cache {
   public:
 
   template<class T, class ... Args>
-  auto const& jit(T &&Fun, Args&& ... args) {
+  auto const& EASY_JIT_COMPILER_INTERFACE jit(T &&Fun, Args&& ... args) {
     using wrapper_ty = decltype(easy::jit(std::forward<T>(Fun), std::forward<Args>(args)...));
 
     void* FunPtr = reinterpret_cast<void*>(meta::get_as_pointer(Fun));

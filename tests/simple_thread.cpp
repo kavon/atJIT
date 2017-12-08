@@ -10,7 +10,7 @@
 
 using namespace std::placeholders;
 
-int __attribute__((section("jit"))) add (int a, int b) {
+int add (int a, int b) {
   return a+b;
 }
 

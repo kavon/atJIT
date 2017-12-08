@@ -9,12 +9,12 @@
 
 using namespace std::placeholders;
 
-int __attribute__((section("jit"))) b() {
+int b() {
   static int v = 0;
   return v++;
 }
 
-int __attribute__((section("jit"))) add (int a, int (*f)()) {
+int add (int a, int (*f)()) {
   return a+f();
 }
 

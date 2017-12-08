@@ -9,7 +9,7 @@
 
 using namespace std::placeholders;
 
-void __attribute__((section("jit"))) add (int b) {
+void add (int b) {
   static int a = 4;
   printf("inc(%d) is %d\n", a, a+b);
   a++;
