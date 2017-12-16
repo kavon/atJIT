@@ -5,7 +5,6 @@ Doing
 -----
 
 * Inlining of structures.
-  - small structures are casted directly
   - try medium (do not fit on an integer)
   - try large (may be not passed by value)
   - large structure return
@@ -38,7 +37,6 @@ Testing
 * Small set of benchmarks 
 * Script to randomly transform calls in c++ code to calls to easy::jit for testing on large projects
 * Test with:
-  - exceptions
   - member functions
   - function objects (jit operator() ?)
   - other architectures: ARM ?
