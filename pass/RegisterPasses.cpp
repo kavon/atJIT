@@ -9,8 +9,6 @@ using namespace easy;
 
 static void callback(const PassManagerBuilder &,
                      legacy::PassManagerBase &PM) {
-
-  errs() << "register pass!\n";
   PM.add(easy::createRegisterBitcodePass());
 }
 
