@@ -2,65 +2,92 @@
 #define CONTEXT
 
 #include <vector>
+#include <memory>
 #include <cstdint>
 #include <cstring>
 
 namespace easy {
 
-struct Argument {
-  enum class Type {Forward, Int, Float, Ptr, Struct};
+struct ArgumentBase {
+  ArgumentBase() = default;
+  virtual ~ArgumentBase() = default;
 
-  Type ty;
-  union {
-    unsigned param_idx;
-    int64_t integer;
-    double floating;
-    void const* ptr;
-
-    struct __structure {
-      char* data;
-      unsigned short size;
-    } structure;
-  } data;
-
-  ~Argument() {
-    if(ty == Type::Struct)
-      delete[] data.structure.data;
+  bool operator==(ArgumentBase const &Other) const {
+    return typeid(*this) == typeid(Other) &&
+        this->compareWithSameType(Other);
   }
 
-  bool operator<(Argument const& Other) const {
-    if(ty < Other.ty)
-      return true;
-    if(ty > Other.ty)
-      return false;
-    if(ty == Type::Struct)
-      return data.structure.size < Other.data.structure.size ||
-            (data.structure.size == Other.data.structure.size &&
-             std::memcmp(data.structure.data, Other.data.structure.data, data.structure.size) < 0);
-    else return data.integer < Other.data.integer;
+  template<class ArgTy>
+  typename std::enable_if<std::is_base_of<ArgumentBase, ArgTy>::value, ArgTy const*>::type
+  as() const {
+    return dynamic_cast<ArgTy const*>(this);
   }
 
-  bool operator==(Argument const& Other) const {
-    if(ty != Other.ty)
-      return false;
-    if(ty == Type::Struct) {
-      return data.structure.size == Other.data.structure.size &&
-             std::memcmp(data.structure.data, Other.data.structure.data, data.structure.size) == 0;
-    } else {
-      return data.integer == Other.data.integer;
-    }
+  friend std::hash<easy::ArgumentBase>;
+
+  protected:
+  virtual bool compareWithSameType(ArgumentBase const&) const = 0;
+  virtual size_t hash() const noexcept = 0;
+};
+
+#define DeclareArgument(Name, Type) \
+  class Name##Argument \
+    : public ArgumentBase { \
+    Type Data_; \
+    public: \
+    Name##Argument(Type D) : ArgumentBase(), Data_(D) {}; \
+    virtual ~Name ## Argument() = default; \
+    Type get() const { return Data_; } \
+    \
+    protected: \
+    bool compareWithSameType(ArgumentBase const& Other) const override { \
+      auto const &OtherCast = static_cast<Name##Argument const&>(Other); \
+      return Data_ == OtherCast.Data_; \
+    } \
+    \
+    size_t hash() const noexcept override  { return std::hash<Type>{}(Data_); } \
   }
 
-  bool operator!=(Argument const& Other) const {
-    return !(*this==Other);
+DeclareArgument(Forward, unsigned);
+DeclareArgument(Int, int64_t);
+DeclareArgument(Float, double);
+DeclareArgument(Ptr, void const*);
+
+class StructArgument
+    : public ArgumentBase {
+  std::vector<char> Data_;
+  public:
+  StructArgument(const char* Str, size_t Size)
+    : ArgumentBase(), Data_(Str, Str+Size) {};
+  virtual ~StructArgument() = default;
+  std::vector<char> const & get() const { return Data_; }
+
+  protected:
+  bool compareWithSameType(ArgumentBase const& Other) const override {
+    auto const &OtherCast = static_cast<StructArgument const&>(Other);
+    return Data_ == OtherCast.Data_;
+  }
+
+  size_t hash() const noexcept override {
+    std::hash<int64_t> hash{};
+    size_t R = 0;
+    for (char c : Data_)
+      R ^= hash(c);
+    return R;
   }
 };
 
 // class that holds information about the just-in-time context
 class Context {
 
-  std::vector<Argument> ArgumentMapping_; 
+  std::vector<std::unique_ptr<ArgumentBase>> ArgumentMapping_;
   unsigned OptLevel_ = 1, OptSize_ = 0;
+
+  template<class ArgTy, class ... Args>
+  inline void setArg(size_t i, Args && ... args) {
+    ArgumentMapping_[i] =
+        std::unique_ptr<ArgumentBase>(new ArgTy(std::forward<Args>(args)...));
+  }
 
   public:
 
@@ -68,6 +95,8 @@ class Context {
     : ArgumentMapping_(nargs) { 
     initDefaultArgumentMapping(); 
   }
+
+  bool operator==(const Context&) const;
   
   // set the mapping between 
   Context& setParameterIndex(unsigned, unsigned);
@@ -100,8 +129,8 @@ class Context {
   auto end() const { return ArgumentMapping_.end(); }
   size_t size() const { return ArgumentMapping_.size(); }
 
-  Argument const& getArgumentMapping(size_t i) const {
-    return ArgumentMapping_[i];
+  ArgumentBase const& getArgumentMapping(size_t i) const {
+    return *ArgumentMapping_[i];
   }
 
   friend bool operator<(easy::Context const &C1, easy::Context const &C2);
@@ -110,8 +139,43 @@ class Context {
   void initDefaultArgumentMapping();
 }; 
 
-bool operator<(easy::Context const &C1, easy::Context const &C2);
-
 }
+
+namespace std
+{
+  template<class L, class R> struct hash<std::pair<L, R>>
+  {
+    typedef std::pair<L,R> argument_type;
+    typedef std::size_t result_type;
+    result_type operator()(argument_type const& s) const noexcept {
+      return std::hash<L>{}(s.first) ^ std::hash<R>{}(s.second);
+    }
+  };
+
+  template<> struct hash<easy::ArgumentBase>
+  {
+    typedef easy::ArgumentBase argument_type;
+    typedef std::size_t result_type;
+    result_type operator()(argument_type const& s) const noexcept {
+      return s.hash();
+    }
+  };
+
+  template<> struct hash<easy::Context>
+  {
+    typedef easy::Context argument_type;
+    typedef std::size_t result_type;
+    result_type operator()(argument_type const& C) const noexcept {
+      size_t H = 0;
+      std::hash<easy::ArgumentBase> ArgHash;
+      std::hash<std::pair<unsigned, unsigned>> OptHash;
+      for(auto const &Arg : C)
+        H ^= ArgHash(*Arg);
+      H ^= OptHash(C.getOptLevel());
+      return H;
+    }
+  };
+}
+
 
 #endif

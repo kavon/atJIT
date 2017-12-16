@@ -10,7 +10,6 @@
 
 using namespace llvm;
 using namespace easy;
-using arg_ty = easy::Argument::Type;
 
 char easy::InlineParameters::ID = 0;
 
@@ -18,24 +17,29 @@ llvm::Pass* easy::createInlineParametersPass(llvm::StringRef Name) {
   return new InlineParameters(Name);
 }
 
+static size_t GetNewArgCount(easy::Context const &C) {
+  size_t Max = 0;
+  for(auto const &Arg : C) {
+    if(auto const* Forward = Arg->as<easy::ForwardArgument>()) {
+      Max = std::max<size_t>(Forward->get()+1, Max);
+    }
+  }
+  return Max;
+}
+
 FunctionType* GetWrapperTy(FunctionType *FTy, Context const &C) {
 
   Type* RetTy = FTy->getReturnType();
 
-  size_t NewArgCount =
-      std::accumulate(C.begin(), C.end(), 0, [](size_t Max, easy::Argument const &Arg) {
-        return Arg.ty == arg_ty::Forward ?
-          std::max<size_t>(Arg.data.param_idx+1, Max) : Max;
-      });
-
+  size_t NewArgCount = GetNewArgCount(C);
   SmallVector<Type*, 8> Args(NewArgCount, nullptr);
 
   for(size_t i = 0, n = C.size(); i != n; ++i) {
-    easy::Argument const &Arg = C.getArgumentMapping(i);
-    if(Arg.ty != arg_ty::Forward)
-      continue;
-    if(!Args[Arg.data.param_idx])
-      Args[Arg.data.param_idx] = FTy->getParamType(i);
+    if(auto const *Arg = C.getArgumentMapping(i).as<easy::ForwardArgument>()) {
+      size_t param_idx = Arg->get();
+      if(!Args[param_idx])
+        Args[param_idx] = FTy->getParamType(i);
+    }
   }
 
   return FunctionType::get(RetTy, Args, FTy->isVarArg());
@@ -49,35 +53,31 @@ void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, Sma
 
   for(size_t i = 0, n = C.size(); i != n; ++i) {
     auto const &Arg = C.getArgumentMapping(i);
-    switch (Arg.ty) {
-      case arg_ty::Forward:
-        Args.push_back(WrapperArgs[Arg.data.param_idx]);
-        continue;
-      case arg_ty::Int:
-        Args.push_back(ConstantInt::get(OldTy.getParamType(i), Arg.data.integer, true));
-        continue;
-      case arg_ty::Float:
-        Args.push_back(ConstantFP::get(OldTy.getParamType(i), Arg.data.floating));
-        continue;
-      case arg_ty::Ptr:
-        Args.push_back(
-              ConstantExpr::getIntToPtr(
-                ConstantInt::get(Type::getInt64Ty(Ctx), (uintptr_t)Arg.data.ptr, false),
-                OldTy.getParamType(i)));
-        continue;
-      case arg_ty::Struct:
-        Type* Int8 = Type::getInt8Ty(Ctx);
-        SmallVector<Constant*, 16> Data(Arg.data.structure.size);
-        for(size_t i = 0; i != Arg.data.structure.size; ++i)
-          Data[i] = ConstantInt::get(Int8, Arg.data.structure.data[i], false);
-        Constant* CD = ConstantVector::get(Data);
-        Constant* Struct = ConstantExpr::getBitCast(CD, OldTy.getParamType(i));
+    if(auto const *Forward = Arg.as<ForwardArgument>()) {
+      Args.push_back(WrapperArgs[Forward->get()]);
+    } else if(auto const *Int = Arg.as<IntArgument>()) {
+      Args.push_back(ConstantInt::get(OldTy.getParamType(i), Int->get(), true));
+    } else if(auto const *Float = Arg.as<FloatArgument>()) {
+      Args.push_back(ConstantFP::get(OldTy.getParamType(i), Float->get()));
+    } else if(auto const *Ptr = Arg.as<PtrArgument>()) {
+      Args.push_back(
+            ConstantExpr::getIntToPtr(
+              ConstantInt::get(Type::getInt64Ty(Ctx), (uintptr_t)Ptr->get(), false),
+              OldTy.getParamType(i)));
+    } else if(auto const *Struct = Arg.as<StructArgument>()) {
+      Type* Int8 = Type::getInt8Ty(Ctx);
+      std::vector<char> const &Raw =  Struct->get();
+      std::vector<Constant*> Data(Raw.size());
 
-        assert(Wrapper.getParent()->getDataLayout().getTypeAllocSize(OldTy.getParamType(i))
-               == Arg.data.structure.size);
+      for(size_t i = 0, n = Raw.size(); i != n; ++i)
+        Data[i] = ConstantInt::get(Int8, Raw[i], false);
+      Constant* CD = ConstantVector::get(Data);
+      Constant* ConstantStruct = ConstantExpr::getBitCast(CD, OldTy.getParamType(i));
 
-        Args.push_back(Struct);
-        continue;
+      assert(Wrapper.getParent()->getDataLayout().getTypeAllocSize(OldTy.getParamType(i))
+             == Raw.size());
+
+      Args.push_back(ConstantStruct);
     }
   }
 }

@@ -2,12 +2,12 @@
 #define CACHE
 
 #include <easy/jit.h>
-#include <map>
+#include <unordered_map>
 
 namespace easy {
 class Cache {
   using Key = std::pair<void*, easy::Context>;
-  std::map<Key, easy::FunctionWrapperBase> Cache_;
+  std::unordered_map<Key, easy::FunctionWrapperBase> Cache_;
 
   public:
 
