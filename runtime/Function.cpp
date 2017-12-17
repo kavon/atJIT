@@ -1,5 +1,6 @@
 #include <easy/runtime/Function.h>
 #include <easy/runtime/RuntimePasses.h>
+#include <easy/exceptions.h>
 
 #include <llvm/Transforms/IPO/PassManagerBuilder.h> 
 #include <llvm/IR/LegacyPassManager.h> 
@@ -11,6 +12,10 @@
 #include <llvm/Support/DynamicLibrary.h>
 
 using namespace easy;
+
+namespace easy {
+  DefineEasyException(ExecutionEngineCreateError, "Failed to create execution engine for:");
+}
 
 std::unique_ptr<llvm::TargetMachine> Function::GetTargetMachine(llvm::StringRef Triple) {
   std::string TgtErr;
@@ -52,7 +57,7 @@ void Function::Optimize(llvm::Module& M, const char* Name, const Context& C, uns
   MPM.run(M);
 }
 
-std::unique_ptr<llvm::ExecutionEngine> Function::GetEngine(std::unique_ptr<llvm::Module> M) {
+std::unique_ptr<llvm::ExecutionEngine> Function::GetEngine(std::unique_ptr<llvm::Module> M, const char *Name) {
   llvm::EngineBuilder ebuilder(std::move(M));
   std::string eeError;
 
@@ -63,8 +68,7 @@ std::unique_ptr<llvm::ExecutionEngine> Function::GetEngine(std::unique_ptr<llvm:
           .create());
 
   if(!EE) {
-    // TODO throw easy::exception
-    throw std::runtime_error("Failed to create ExecutionEngine.");
+    throw easy::ExecutionEngineCreateError(Name);
   }
 
   return EE;
@@ -93,7 +97,7 @@ std::unique_ptr<Function> Function::Compile(void *Addr, const Context& C) {
 
   Optimize(*Clone, Name, C, OptLevel, OptSize);
 
-  std::unique_ptr<llvm::ExecutionEngine> EE = GetEngine(std::move(Clone));
+  std::unique_ptr<llvm::ExecutionEngine> EE = GetEngine(std::move(Clone), Name);
 
   MapGlobals(*EE, Globals);
 

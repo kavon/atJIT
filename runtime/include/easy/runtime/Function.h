@@ -30,7 +30,7 @@ class Function {
 
   static std::unique_ptr<llvm::TargetMachine> GetTargetMachine(llvm::StringRef Triple); 
   static void Optimize(llvm::Module& M, const char* Name, easy::Context const& C, unsigned OptLevel = 0, unsigned OptSize = 0);
-  static std::unique_ptr<llvm::ExecutionEngine> GetEngine(std::unique_ptr<llvm::Module> M); 
+  static std::unique_ptr<llvm::ExecutionEngine> GetEngine(std::unique_ptr<llvm::Module> M, const char *Name);
   static void MapGlobals(llvm::ExecutionEngine& EE, GlobalMapping* Globals);
 };
 
