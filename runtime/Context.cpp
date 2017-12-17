@@ -10,28 +10,23 @@ void Context::initDefaultArgumentMapping() {
 }
 
 Context& Context::setParameterIndex(unsigned arg_idx, unsigned param_idx) {
-  setArg<ForwardArgument>(arg_idx, param_idx);
-  return *this;
+  return setArg<ForwardArgument>(arg_idx, param_idx);
 }
 
 Context& Context::setParameterInt(unsigned arg_idx, int64_t val) {
-  setArg<IntArgument>(arg_idx, val);
-  return *this;
+  return setArg<IntArgument>(arg_idx, val);
 }
 
 Context& Context::setParameterFloat(unsigned arg_idx, double val) {
-  setArg<FloatArgument>(arg_idx, val);
-  return *this;
+  return setArg<FloatArgument>(arg_idx, val);
 }
 
 Context& Context::setParameterPtrVoid(unsigned arg_idx, const void* val) {
-  setArg<PtrArgument>(arg_idx, val);
-  return *this;
+  return setArg<PtrArgument>(arg_idx, val);
 }
 
-Context& Context::setParameterPlainStruct(unsigned arg_idx, void const* ptr, size_t size) {
-  setArg<StructArgument>(arg_idx, static_cast<const char*>(ptr), size);
-  return *this;
+Context& Context::setParameterPlainStruct(unsigned arg_idx, char const* ptr, size_t size) {
+  return setArg<StructArgument>(arg_idx, ptr, size);
 }
 
 bool Context::operator==(const Context& Other) const {

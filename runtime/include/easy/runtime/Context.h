@@ -84,9 +84,10 @@ class Context {
   unsigned OptLevel_ = 1, OptSize_ = 0;
 
   template<class ArgTy, class ... Args>
-  inline void setArg(size_t i, Args && ... args) {
+  inline Context& setArg(size_t i, Args && ... args) {
     ArgumentMapping_[i] =
         std::unique_ptr<ArgumentBase>(new ArgTy(std::forward<Args>(args)...));
+    return *this;
   }
 
   public:
@@ -98,12 +99,12 @@ class Context {
 
   bool operator==(const Context&) const;
   
-  // set the mapping between 
+  // set the mapping between
   Context& setParameterIndex(unsigned, unsigned);
   Context& setParameterInt(unsigned, int64_t);
   Context& setParameterFloat(unsigned, double);
   Context& setParameterPtrVoid(unsigned, void const*);
-  Context& setParameterPlainStruct(unsigned, void const*, size_t);
+  Context& setParameterPlainStruct(unsigned, char const*, size_t);
 
   template<class T>
   Context& setParameterPtr(unsigned idx, T* ptr) {
@@ -112,7 +113,7 @@ class Context {
 
   template<class T>
   Context& setParameterStruct(unsigned idx, T* ptr) {
-    return setParameterPlainStruct(idx, reinterpret_cast<void const*>(ptr), sizeof(T));
+    return setParameterPlainStruct(idx, reinterpret_cast<char const*>(ptr), sizeof(T));
   }
 
   Context& setOptLevel(unsigned OptLevel, unsigned OptSize) {
