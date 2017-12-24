@@ -17,25 +17,9 @@ namespace easy {
   DefineEasyException(ExecutionEngineCreateError, "Failed to create execution engine for:");
 }
 
-std::unique_ptr<llvm::TargetMachine> Function::GetTargetMachine(llvm::StringRef Triple) {
-  std::string TgtErr;
-  llvm::Target const *Tgt = llvm::TargetRegistry::lookupTarget(Triple, TgtErr);
-
-  llvm::StringMap<bool> Features;
-  (void)llvm::sys::getHostCPUFeatures(Features);
-
-  std::string FeaturesStr;
-  for (auto &&KV : Features) {
-    if (KV.getValue()) {
-      FeaturesStr += '+';
-      FeaturesStr += KV.getKey();
-      FeaturesStr += ',';
-    }
-  }
-
-  return std::unique_ptr<llvm::TargetMachine>(
-      Tgt->createTargetMachine(Triple, llvm::sys::getHostCPUName(), 
-                               FeaturesStr, llvm::TargetOptions(), llvm::None));
+std::unique_ptr<llvm::TargetMachine> Function::GetTargetMachine() {
+  std::unique_ptr<llvm::TargetMachine> TM(llvm::EngineBuilder().selectTarget());
+  return TM;
 }
 
 void Function::Optimize(llvm::Module& M, const char* Name, const Context& C, unsigned OptLevel, unsigned OptSize) {
@@ -47,7 +31,8 @@ void Function::Optimize(llvm::Module& M, const char* Name, const Context& C, uns
   Builder.SizeLevel = OptSize;
   Builder.LibraryInfo = new llvm::TargetLibraryInfoImpl(llvm::Triple{Triple});
 
-  std::unique_ptr<llvm::TargetMachine> TM = GetTargetMachine(Triple);
+  std::unique_ptr<llvm::TargetMachine> TM = GetTargetMachine();
+  assert(TM);
 
   llvm::legacy::PassManager MPM;
   MPM.add(llvm::createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));

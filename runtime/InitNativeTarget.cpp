@@ -10,8 +10,11 @@ namespace {
 class InitNativeTarget {
   public:
   InitNativeTarget() {
-    InitializeNativeTarget();
-    InitializeNativeTargetAsmPrinter();
+    InitializeAllTargets();
+    InitializeAllTargetInfos();
+    InitializeAllTargetMCs();
+    InitializeAllAsmPrinters();
+    sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
   }
 } Init;
 }
