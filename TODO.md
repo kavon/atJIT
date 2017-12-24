@@ -12,6 +12,7 @@ Doing
 Feature
 -------
 
+* Combine specialization of functions: see Issues.
 * Serialization/Deserialization of object code.
 * Better error handling : 
   - if a function is passed as parameter and cannot be extracted, print a warning,
@@ -33,6 +34,7 @@ Documentation
 Testing
 -------
 
+* Small test showing loop unrolling (add support to dump the llvm-ir) 
 * Docker setup for testing
 * Small set of benchmarks 
 * Script to randomly transform calls in c++ code to calls to easy::jit for testing on large projects
