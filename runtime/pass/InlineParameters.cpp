@@ -1,4 +1,5 @@
 #include <easy/runtime/RuntimePasses.h>
+#include <easy/runtime/BitcodeTracker.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Constant.h>
@@ -15,8 +16,8 @@ using namespace easy;
 
 char easy::InlineParameters::ID = 0;
 
-llvm::Pass* easy::createInlineParametersPass(llvm::StringRef Name, GlobalMapping const* Globals) {
-  return new InlineParameters(Name, Globals);
+llvm::Pass* easy::createInlineParametersPass(llvm::StringRef Name) {
+  return new InlineParameters(Name);
 }
 
 static size_t GetNewArgCount(easy::Context const &C) {
@@ -47,7 +48,7 @@ FunctionType* GetWrapperTy(FunctionType *FTy, Context const &C) {
   return FunctionType::get(RetTy, Args, FTy->isVarArg());
 }
 
-void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, SmallVectorImpl<Value*> &Args, GlobalMapping const* Globals) {
+void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, SmallVectorImpl<Value*> &Args) {
   LLVMContext &Ctx = OldTy.getContext();
   SmallVector<Value*, 8> WrapperArgs(Wrapper.getFunctionType()->getNumParams());
   std::transform(Wrapper.arg_begin(), Wrapper.arg_end(),
@@ -103,14 +104,14 @@ void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, Sma
   }
 }
 
-Function* CreateWrapperFun(Module &M, FunctionType &WrapperTy, Function &F, Context const &C, GlobalMapping const* Globals) {
+Function* CreateWrapperFun(Module &M, FunctionType &WrapperTy, Function &F, Context const &C) {
   LLVMContext &CC = M.getContext();
 
   Function* Wrapper = Function::Create(&WrapperTy, Function::ExternalLinkage, "", &M);
   BasicBlock* BB = BasicBlock::Create(CC, "", Wrapper);
 
   SmallVector<Value*, 8> Args;
-  GetInlineArgs(C, *F.getFunctionType(), *Wrapper, Args, Globals);
+  GetInlineArgs(C, *F.getFunctionType(), *Wrapper, Args);
 
   IRBuilder<> B(BB);
   Value* Call = B.CreateCall(&F, Args);
@@ -134,7 +135,7 @@ bool easy::InlineParameters::runOnModule(llvm::Module &M) {
   assert(FTy->getNumParams() == C.size());
 
   FunctionType* WrapperTy = GetWrapperTy(FTy, C);
-  Function* WrapperFun = CreateWrapperFun(M, *WrapperTy, *F, C, Globals_);
+  Function* WrapperFun = CreateWrapperFun(M, *WrapperTy, *F, C);
 
   // privatize F and steal its name
   F->setLinkage(Function::PrivateLinkage);
