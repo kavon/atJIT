@@ -4,6 +4,7 @@
 #include<llvm/Pass.h>
 #include<llvm/ADT/StringRef.h>
 #include<easy/runtime/Context.h>
+#include<easy/runtime/BitcodeTracker.h>
 
 namespace easy {
   struct ContextAnalysis :
@@ -32,8 +33,8 @@ namespace easy {
 
     InlineParameters()
       : llvm::ModulePass(ID) {}
-    InlineParameters(llvm::StringRef TargetName)
-      : llvm::ModulePass(ID), TargetName_(TargetName) {}
+    InlineParameters(llvm::StringRef TargetName, GlobalMapping const* Globals)
+      : llvm::ModulePass(ID), TargetName_(TargetName), Globals_(Globals) {}
 
     void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
       AU.addRequired<ContextAnalysis>();
@@ -42,12 +43,12 @@ namespace easy {
     bool runOnModule(llvm::Module &M) override;
 
     private:
-
+    GlobalMapping const* Globals_;
     llvm::StringRef TargetName_;
   };
 
   llvm::Pass* createContextAnalysisPass(easy::Context const &C);
-  llvm::Pass* createInlineParametersPass(llvm::StringRef Name);
+  llvm::Pass* createInlineParametersPass(llvm::StringRef Name, GlobalMapping const*);
 }
 
 #endif

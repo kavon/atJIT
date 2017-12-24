@@ -22,7 +22,7 @@ std::unique_ptr<llvm::TargetMachine> Function::GetTargetMachine() {
   return TM;
 }
 
-void Function::Optimize(llvm::Module& M, const char* Name, const Context& C, unsigned OptLevel, unsigned OptSize) {
+void Function::Optimize(llvm::Module& M, const char* Name, const Context& C, unsigned OptLevel, unsigned OptSize, GlobalMapping const* Globals) {
 
   auto Triple = llvm::sys::getProcessTriple();
 
@@ -37,7 +37,7 @@ void Function::Optimize(llvm::Module& M, const char* Name, const Context& C, uns
   llvm::legacy::PassManager MPM;
   MPM.add(llvm::createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
   MPM.add(easy::createContextAnalysisPass(C));
-  MPM.add(easy::createInlineParametersPass(Name));
+  MPM.add(easy::createInlineParametersPass(Name, Globals));
   Builder.populateModulePassManager(MPM);
   MPM.run(M);
 }
@@ -80,7 +80,7 @@ std::unique_ptr<Function> Function::Compile(void *Addr, const Context& C) {
   unsigned OptSize;
   std::tie(OptLevel, OptSize) = C.getOptLevel();
 
-  Optimize(*Clone, Name, C, OptLevel, OptSize);
+  Optimize(*Clone, Name, C, OptLevel, OptSize, Globals);
 
   std::unique_ptr<llvm::ExecutionEngine> EE = GetEngine(std::move(Clone), Name);
 

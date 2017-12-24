@@ -13,8 +13,8 @@ using namespace easy;
 
 char easy::InlineParameters::ID = 0;
 
-llvm::Pass* easy::createInlineParametersPass(llvm::StringRef Name) {
-  return new InlineParameters(Name);
+llvm::Pass* easy::createInlineParametersPass(llvm::StringRef Name, GlobalMapping const* Globals) {
+  return new InlineParameters(Name, Globals);
 }
 
 static size_t GetNewArgCount(easy::Context const &C) {
@@ -45,7 +45,7 @@ FunctionType* GetWrapperTy(FunctionType *FTy, Context const &C) {
   return FunctionType::get(RetTy, Args, FTy->isVarArg());
 }
 
-void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, SmallVectorImpl<Value*> &Args) {
+void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, SmallVectorImpl<Value*> &Args, GlobalMapping const* Globals) {
   LLVMContext &Ctx = OldTy.getContext();
   SmallVector<Value*, 8> WrapperArgs(Wrapper.getFunctionType()->getNumParams());
   std::transform(Wrapper.arg_begin(), Wrapper.arg_end(),
@@ -60,10 +60,28 @@ void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, Sma
     } else if(auto const *Float = Arg.as<FloatArgument>()) {
       Args.push_back(ConstantFP::get(OldTy.getParamType(i), Float->get()));
     } else if(auto const *Ptr = Arg.as<PtrArgument>()) {
-      Args.push_back(
+      Value* Repl = nullptr;;
+      if(isa<FunctionType>(cast<PointerType>(OldTy.getParamType(i))->getElementType())) {
+        // TODO: make sure functions are embedded in Globals
+        for(auto const* GlobalDescr = Globals; GlobalDescr->Name; ++GlobalDescr) {
+          if(GlobalDescr->Address == Ptr->get()) {
+            if(Function* F = Wrapper.getParent()->getFunction(GlobalDescr->Name)) {
+              Args.push_back(F);
+              Repl = F;;
+              break;
+            }
+          }
+        }
+      }
+      if(!Repl) { // default
+        Repl =
             ConstantExpr::getIntToPtr(
               ConstantInt::get(Type::getInt64Ty(Ctx), (uintptr_t)Ptr->get(), false),
-              OldTy.getParamType(i)));
+              OldTy.getParamType(i));
+      }
+
+      Args.push_back(Repl);
+
     } else if(auto const *Struct = Arg.as<StructArgument>()) {
       Type* Int8 = Type::getInt8Ty(Ctx);
       std::vector<char> const &Raw =  Struct->get();
@@ -82,14 +100,14 @@ void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, Sma
   }
 }
 
-Function* CreateWrapperFun(Module &M, FunctionType &WrapperTy, Function &F, Context const &C) {
+Function* CreateWrapperFun(Module &M, FunctionType &WrapperTy, Function &F, Context const &C, GlobalMapping const* Globals) {
   LLVMContext &CC = M.getContext();
 
   Function* Wrapper = Function::Create(&WrapperTy, Function::ExternalLinkage, "", &M);
   BasicBlock* BB = BasicBlock::Create(CC, "", Wrapper);
 
   SmallVector<Value*, 8> Args;
-  GetInlineArgs(C, *F.getFunctionType(), *Wrapper, Args);
+  GetInlineArgs(C, *F.getFunctionType(), *Wrapper, Args, Globals);
 
   IRBuilder<> B(BB);
   Value* Call = B.CreateCall(&F, Args);
@@ -113,7 +131,7 @@ bool easy::InlineParameters::runOnModule(llvm::Module &M) {
   assert(FTy->getNumParams() == C.size());
 
   FunctionType* WrapperTy = GetWrapperTy(FTy, C);
-  Function* WrapperFun = CreateWrapperFun(M, *WrapperTy, *F, C);
+  Function* WrapperFun = CreateWrapperFun(M, *WrapperTy, *F, C, Globals_);
 
   // privatize F and steal its name
   F->setLinkage(Function::PrivateLinkage);
