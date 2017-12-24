@@ -4,7 +4,9 @@
 #include <llvm/IR/Constant.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/IRBuilder.h>
+#include "llvm/Linker/Linker.h"
 #include <llvm/ADT/SmallVector.h>
+#include <llvm/Transforms/Utils/Cloning.h>
 #include <llvm/Support/raw_ostream.h>
 #include <numeric>
 
@@ -62,15 +64,16 @@ void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, Sma
     } else if(auto const *Ptr = Arg.as<PtrArgument>()) {
       Value* Repl = nullptr;;
       if(isa<FunctionType>(cast<PointerType>(OldTy.getParamType(i))->getElementType())) {
-        // TODO: make sure functions are embedded in Globals
-        for(auto const* GlobalDescr = Globals; GlobalDescr->Name; ++GlobalDescr) {
-          if(GlobalDescr->Address == Ptr->get()) {
-            if(Function* F = Wrapper.getParent()->getFunction(GlobalDescr->Name)) {
-              Args.push_back(F);
-              Repl = F;;
-              break;
-            }
-          }
+        auto &BT = BitcodeTracker::GetTracker();
+        const char* LName;
+        Module* LM = BT.getModule(const_cast<void*>(Ptr->get()));
+        Module* M = Wrapper.getParent();
+        if(Linker::linkModules(*M, CloneModule(LM), Linker::None, [](Module &M, const StringSet<> &){})) {
+          continue;
+        }
+        if(Function* F = M->getFunction(LName)) {
+          Args.push_back(F);
+          Repl = F;;
         }
       }
       if(!Repl) { // default
