@@ -15,8 +15,6 @@ Feature
 * Better error handling : 
   - if a function is passed as parameter and cannot be extracted, print a warning,
   - if it is the target function, print an error.
-* Inlining of functions.
-  - instead of doing on the parameter inlining, do it on a after-optimization pass, to inline **any** concrete function pointer that may appear.
 * Expansion of recursive calls.
 * Hook function to modify the IR at runtime.
   - e.g ```easy::jit(foo, _2, _1, easy::after_optimization([](BasicBlock* B) { instrument_edges(B); return true; }))```;

@@ -244,20 +244,26 @@ namespace easy {
 
     static void fixLinkages(Function &Entry, Module &M) {
       for(GlobalValue &GV : M.global_values()) {
-
-        GV.setUnnamedAddr(GlobalValue::UnnamedAddr::None);
-        if(Function* F = dyn_cast<Function>(&GV))
-          F->removeFnAttr(Attribute::NoInline);
-
-        if(&GV == &Entry)
-          continue;
         if(GV.getName().startswith("llvm."))
           continue;
-        if(GV.getVisibility() != GlobalValue::DefaultVisibility ||
-           GV.getLinkage() != GlobalValue::PrivateLinkage) {
-          GV.setVisibility(GlobalValue::DefaultVisibility);
-          GV.setLinkage(GlobalValue::PrivateLinkage);
-        }
+        if(auto* GVar = dyn_cast<GlobalVariable>(&GV)) {
+          // gv becomes a declaration
+          GVar->setInitializer(nullptr);
+          GVar->setVisibility(GlobalValue::DefaultVisibility);
+          GVar->setLinkage(GlobalValue::ExternalLinkage);
+        } else if(auto* F = dyn_cast<Function>(&GV)) {
+          // f becomes private
+          F->removeFnAttr(Attribute::NoInline);
+          if(F == &Entry)
+            continue;
+
+          if(!F->isDeclaration() &&
+             (F->getVisibility() != GlobalValue::DefaultVisibility ||
+              F->getLinkage() != GlobalValue::PrivateLinkage)) {
+            F->setVisibility(GlobalValue::DefaultVisibility);
+            F->setLinkage(GlobalValue::PrivateLinkage);
+          }
+        } else assert(false && "TODO: handle aliases, etc.");
       }
     }
 

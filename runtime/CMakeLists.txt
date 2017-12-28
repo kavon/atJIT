@@ -1,11 +1,11 @@
 llvm_map_components_to_libnames(RUNTIME_LLVM_LIBS all)
 
 add_library(EasyJitRuntime SHARED
+  pass/InlineParameters.cpp
+  pass/ContextAnalysis.cpp
   InitNativeTarget.cpp
   Function.cpp
   BitcodeTracker.cpp
-  pass/InlineParameters.cpp
-  pass/ContextAnalysis.cpp
   Context.cpp
 )
 

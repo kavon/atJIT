@@ -27,8 +27,7 @@ std::tuple<const char*, GlobalMapping*> BitcodeTracker::getNameAndGlobalMapping(
   return std::make_tuple(InfoPtr->second.Name, InfoPtr->second.Globals);
 }
 
-llvm::Module* BitcodeTracker::getModule(void* FPtr) {
-
+std::unique_ptr<llvm::Module> BitcodeTracker::getModuleWithContext(void* FPtr, llvm::LLVMContext &C) {
   auto InfoPtr = Functions.find(FPtr);
   if(InfoPtr == Functions.end()) {
     throw easy::BitcodeNotRegistered();
@@ -36,26 +35,23 @@ llvm::Module* BitcodeTracker::getModule(void* FPtr) {
 
   auto &Info = InfoPtr->second;
 
-  // to avoid races when parsing the same bitcode
-  std::lock_guard<std::mutex> Lock(*Info.CachedLock);
-
-  if(Info.FJC)
-    return Info.FJC->Module.get();
-
-  Info.FJC = std::make_shared<FunctionJitContext>(
-      std::unique_ptr<llvm::LLVMContext>(new llvm::LLVMContext()));
-
   llvm::StringRef BytecodeStr(Info.Bitcode, Info.BitcodeLen);
   std::unique_ptr<llvm::MemoryBuffer> Buf(llvm::MemoryBuffer::getMemBuffer(BytecodeStr));
   auto ModuleOrErr =
-      llvm::parseBitcodeFile(Buf->getMemBufferRef(), *Info.FJC->Context);
+      llvm::parseBitcodeFile(Buf->getMemBufferRef(), C);
 
-  if (llvm::Error EC = ModuleOrErr.takeError()) {
+  if (ModuleOrErr.takeError()) {
     throw easy::BitcodeParseError(Info.Name);
   }
 
-  Info.FJC->Module = std::move(ModuleOrErr.get());
-  return Info.FJC->Module.get();
+  return std::move(ModuleOrErr.get());
+}
+
+BitcodeTracker::ModuleContextPair BitcodeTracker::getModule(void* FPtr) {
+
+  std::unique_ptr<llvm::LLVMContext> Context(new llvm::LLVMContext());
+  auto Module = getModuleWithContext(FPtr, *Context);
+  return ModuleContextPair(std::move(Module), std::move(Context));
 }
 
 // function to interface with the generated code
