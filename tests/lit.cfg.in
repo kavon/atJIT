@@ -17,12 +17,12 @@ runtime_lib_dir = os.path.dirname("@EASY_JIT_RUNTIME@")
 llvm_lib_dir = os.path.join(os.path.dirname("@LLVM_TOOLS_BINARY_DIR@"), "lib")
 
 includes = ["cpplib", "runtime"]
-include_flags = " ".join(["-I'" + dir + "'" for dir in "@LLVM_INCLUDE_DIRS@".split()] + ["-I'" + os.path.join("@EASY_JIT_ROOT@", dir, "include") + "'" for dir in includes] )
+include_flags = " ".join(["-I'" + os.path.abspath(dir) + "'" for dir in "@LLVM_INCLUDE_DIRS@".split()] + ["-I'" + os.path.join("@EASY_JIT_ROOT@", dir, "include") + "'" for dir in includes] )
 
 ld_paths = [runtime_lib_dir, llvm_lib_dir]
 ld_flags = ""
 for ld_path in ld_paths:
-  ld_flags = ld_flags + " -L'" + ld_path + "' -rpath '" + ld_path + "' "
+  ld_flags = ld_flags + " -L'" + os.path.abspath(ld_path) + "' -rpath '" + os.path.abspath(ld_path) + "' "
 
 ld_flags = ld_flags + " -l" + runtime_lib
 ld_flags = ld_flags + " -lLLVMSupport" #TODO: I don't know why I have to pass Support here. It should not be required.

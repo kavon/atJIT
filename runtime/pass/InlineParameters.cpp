@@ -67,10 +67,11 @@ void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, Sma
       Value* Repl = nullptr;
       if(isa<FunctionType>(cast<PointerType>(ParamTy)->getElementType())) {
         auto &BT = BitcodeTracker::GetTracker();
-        const char* LName;
-        Module* LM = BT.getModule(const_cast<void*>(Ptr->get()));
+        const char* LName = std::get<0>(BT.getNameAndGlobalMapping(const_cast<void*>(Ptr->get())));
+        std::unique_ptr<Module> LM = BT.getModuleWithContext(const_cast<void*>(Ptr->get()), Ctx);
         Module* M = Wrapper.getParent();
-        if(!Linker::linkModules(*M, CloneModule(LM), Linker::None,
+
+        if(!Linker::linkModules(*M, std::move(LM), Linker::OverrideFromSrc,
                                 [](Module &, const StringSet<> &){})) {
           if(Function* F = M->getFunction(LName)) {
             F->setLinkage(Function::PrivateLinkage);
@@ -91,8 +92,8 @@ void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, Sma
       Type* Int8 = Type::getInt8Ty(Ctx);
       std::vector<char> const &Raw =  Struct->get();
       std::vector<Constant*> Data(Raw.size());
-        for(size_t i = 0, n = Raw.size(); i != n; ++i)
-          Data[i] = ConstantInt::get(Int8, Raw[i], false);
+      for(size_t i = 0, n = Raw.size(); i != n; ++i)
+        Data[i] = ConstantInt::get(Int8, Raw[i], false);
       Constant* CD = ConstantVector::get(Data);
 
       bool PassedByPtr = ParamTy->isPointerTy();

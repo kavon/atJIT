@@ -1,5 +1,6 @@
 #include <easy/runtime/Function.h>
 #include <easy/runtime/RuntimePasses.h>
+#include <easy/runtime/LLVMHolderImpl.h>
 #include <easy/exceptions.h>
 
 #include <llvm/Transforms/IPO/PassManagerBuilder.h> 
@@ -19,30 +20,35 @@ namespace easy {
   DefineEasyException(CouldNotOpenFile, "Failed to file to dump intermediate representation.");
 }
 
+Function::Function(void* Addr, std::unique_ptr<LLVMHolder> H)
+  : Address(Addr), Holder(std::move(H)) {
+}
+
 std::unique_ptr<llvm::TargetMachine> Function::GetHostTargetMachine() {
   std::unique_ptr<llvm::TargetMachine> TM(llvm::EngineBuilder().selectTarget());
   return TM;
 }
 
-void Function::Optimize(llvm::Module& M, const char* Name, const Context& C, unsigned OptLevel, unsigned OptSize) {
+void Function::Optimize(llvm::Module& M, const char* Name, const easy::Context& C, unsigned OptLevel, unsigned OptSize) {
 
-  auto Triple = llvm::sys::getProcessTriple();
+  llvm::Triple Triple{llvm::sys::getProcessTriple()};
 
   llvm::PassManagerBuilder Builder;
   Builder.OptLevel = OptLevel;
   Builder.SizeLevel = OptSize;
-  Builder.LibraryInfo = new llvm::TargetLibraryInfoImpl(llvm::Triple{Triple});
+  Builder.LibraryInfo = new llvm::TargetLibraryInfoImpl(Triple);
   Builder.Inliner = llvm::createFunctionInliningPass(OptLevel, OptSize, false);
 
   std::unique_ptr<llvm::TargetMachine> TM = GetHostTargetMachine();
   assert(TM);
+  TM->adjustPassManager(Builder);
 
   llvm::legacy::PassManager MPM;
   MPM.add(llvm::createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
   MPM.add(easy::createContextAnalysisPass(C));
   MPM.add(easy::createInlineParametersPass(Name));
-  TM->adjustPassManager(Builder);
   Builder.populateModulePassManager(MPM);
+
   MPM.run(M);
 }
 
@@ -69,32 +75,34 @@ void Function::MapGlobals(llvm::ExecutionEngine& EE, GlobalMapping* Globals) {
   }
 }
 
-std::unique_ptr<Function> Function::Compile(void *Addr, const Context& C) {
+std::unique_ptr<Function> Function::Compile(void *Addr, easy::Context const& C) {
 
   auto &BT = BitcodeTracker::GetTracker();
 
   const char* Name;
   GlobalMapping* Globals;
   std::tie(Name, Globals) = BT.getNameAndGlobalMapping(Addr);
-  auto Original = BT.getModule(Addr);
 
-  std::unique_ptr<llvm::Module> Clone(llvm::CloneModule(Original));
+  std::unique_ptr<llvm::Module> M;
+  std::unique_ptr<llvm::LLVMContext> Ctx;
+  std::tie(M, Ctx) = BT.getModule(Addr);
 
   unsigned OptLevel;
   unsigned OptSize;
   std::tie(OptLevel, OptSize) = C.getOptLevel();
 
-  Optimize(*Clone, Name, C, OptLevel, OptSize);
+  Optimize(*M, Name, C, OptLevel, OptSize);
 
-  WriteOptimizedToFile(*Clone, C.getDebugFile());
+  WriteOptimizedToFile(*M, C.getDebugFile());
 
-  std::unique_ptr<llvm::ExecutionEngine> EE = GetEngine(std::move(Clone), Name);
+  std::unique_ptr<llvm::ExecutionEngine> EE = GetEngine(std::move(M), Name);
 
   MapGlobals(*EE, Globals);
 
   void *Address = (void*)EE->getFunctionAddress(Name);
 
-  return std::unique_ptr<Function>(new Function{Address, std::move(EE)});
+  std::unique_ptr<LLVMHolder> Holder(new easy::LLVMHolderImpl{std::move(EE), std::move(Ctx)});
+  return std::unique_ptr<Function>(new Function(Address, std::move(Holder)));
 }
 
 void Function::WriteOptimizedToFile(llvm::Module const &M, std::string const& File) {
