@@ -42,7 +42,6 @@ namespace easy {
     bool runOnModule(llvm::Module &M) override;
 
     private:
-
     llvm::StringRef TargetName_;
   };
 

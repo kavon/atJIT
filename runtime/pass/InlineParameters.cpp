@@ -1,10 +1,13 @@
 #include <easy/runtime/RuntimePasses.h>
+#include <easy/runtime/BitcodeTracker.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Constant.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/Linker/Linker.h>
 #include <llvm/ADT/SmallVector.h>
+#include <llvm/Transforms/Utils/Cloning.h>
 #include <llvm/Support/raw_ostream.h>
 #include <numeric>
 
@@ -61,10 +64,29 @@ void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, Sma
     } else if(auto const *Float = Arg.as<FloatArgument>()) {
       Args.push_back(ConstantFP::get(ParamTy, Float->get()));
     } else if(auto const *Ptr = Arg.as<PtrArgument>()) {
-      Args.push_back(
+      Value* Repl = nullptr;
+      if(isa<FunctionType>(cast<PointerType>(ParamTy)->getElementType())) {
+        auto &BT = BitcodeTracker::GetTracker();
+        const char* LName;
+        Module* LM = BT.getModule(const_cast<void*>(Ptr->get()));
+        Module* M = Wrapper.getParent();
+        if(!Linker::linkModules(*M, CloneModule(LM), Linker::None,
+                                [](Module &, const StringSet<> &){})) {
+          if(Function* F = M->getFunction(LName)) {
+            F->setLinkage(Function::PrivateLinkage);
+            Repl = F;
+          }
+        }
+      }
+      if(!Repl) { // default
+        Repl =
             ConstantExpr::getIntToPtr(
               ConstantInt::get(Type::getInt64Ty(Ctx), (uintptr_t)Ptr->get(), false),
-              ParamTy));
+              ParamTy);
+      }
+
+      Args.push_back(Repl);
+
     } else if(auto const *Struct = Arg.as<StructArgument>()) {
       Type* Int8 = Type::getInt8Ty(Ctx);
       std::vector<char> const &Raw =  Struct->get();
