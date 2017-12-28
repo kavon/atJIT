@@ -5,8 +5,6 @@ Doing
 -----
 
 * Inlining of structures.
-  - try medium (do not fit on an integer)
-  - try large (may be not passed by value)
   - large structure return
 
 Feature
@@ -34,7 +32,6 @@ Documentation
 Testing
 -------
 
-* Small test showing loop unrolling (add support to dump the llvm-ir) 
 * Docker setup for testing
 * Small set of benchmarks 
 * Script to randomly transform calls in c++ code to calls to easy::jit for testing on large projects

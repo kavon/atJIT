@@ -81,7 +81,8 @@ class StructArgument
 class Context {
 
   std::vector<std::unique_ptr<ArgumentBase>> ArgumentMapping_;
-  unsigned OptLevel_ = 1, OptSize_ = 0;
+  unsigned OptLevel_ = 2, OptSize_ = 0;
+  std::string DebugFile_;
 
   template<class ArgTy, class ... Args>
   inline Context& setArg(size_t i, Args && ... args) {
@@ -122,8 +123,17 @@ class Context {
     return *this;
   }
 
+  Context& setDebugFile(std::string const &File) {
+    DebugFile_ = File;
+    return *this;
+  }
+
   std::pair<unsigned, unsigned> getOptLevel() const {
     return std::make_pair(OptLevel_, OptSize_);
+  }
+
+  std::string const& getDebugFile() const {
+    return DebugFile_;
   }
 
   auto begin() const { return ArgumentMapping_.begin(); }

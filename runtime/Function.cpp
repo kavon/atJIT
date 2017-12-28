@@ -3,21 +3,23 @@
 #include <easy/exceptions.h>
 
 #include <llvm/Transforms/IPO/PassManagerBuilder.h> 
-#include <llvm/IR/LegacyPassManager.h> 
+#include <llvm/Transforms/IPO.h>
+#include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Support/Host.h> 
 #include <llvm/Target/TargetMachine.h> 
 #include <llvm/Support/TargetRegistry.h> 
 #include <llvm/Analysis/TargetTransformInfo.h> 
 #include <llvm/Analysis/TargetLibraryInfo.h> 
-#include <llvm/Support/DynamicLibrary.h>
+#include <llvm/Support/FileSystem.h>
 
 using namespace easy;
 
 namespace easy {
   DefineEasyException(ExecutionEngineCreateError, "Failed to create execution engine for:");
+  DefineEasyException(CouldNotOpenFile, "Failed to file to dump intermediate representation.");
 }
 
-std::unique_ptr<llvm::TargetMachine> Function::GetTargetMachine() {
+std::unique_ptr<llvm::TargetMachine> Function::GetHostTargetMachine() {
   std::unique_ptr<llvm::TargetMachine> TM(llvm::EngineBuilder().selectTarget());
   return TM;
 }
@@ -30,14 +32,16 @@ void Function::Optimize(llvm::Module& M, const char* Name, const Context& C, uns
   Builder.OptLevel = OptLevel;
   Builder.SizeLevel = OptSize;
   Builder.LibraryInfo = new llvm::TargetLibraryInfoImpl(llvm::Triple{Triple});
+  Builder.Inliner = llvm::createFunctionInliningPass(OptLevel, OptSize, false);
 
-  std::unique_ptr<llvm::TargetMachine> TM = GetTargetMachine();
+  std::unique_ptr<llvm::TargetMachine> TM = GetHostTargetMachine();
   assert(TM);
 
   llvm::legacy::PassManager MPM;
   MPM.add(llvm::createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
   MPM.add(easy::createContextAnalysisPass(C));
   MPM.add(easy::createInlineParametersPass(Name));
+  TM->adjustPassManager(Builder);
   Builder.populateModulePassManager(MPM);
   MPM.run(M);
 }
@@ -82,6 +86,8 @@ std::unique_ptr<Function> Function::Compile(void *Addr, const Context& C) {
 
   Optimize(*Clone, Name, C, OptLevel, OptSize);
 
+  WriteOptimizedToFile(*Clone, C.getDebugFile());
+
   std::unique_ptr<llvm::ExecutionEngine> EE = GetEngine(std::move(Clone), Name);
 
   MapGlobals(*EE, Globals);
@@ -89,4 +95,16 @@ std::unique_ptr<Function> Function::Compile(void *Addr, const Context& C) {
   void *Address = (void*)EE->getFunctionAddress(Name);
 
   return std::unique_ptr<Function>(new Function{Address, std::move(EE)});
+}
+
+void Function::WriteOptimizedToFile(llvm::Module const &M, std::string const& File) {
+  if(File.empty())
+    return;
+  std::error_code Error;
+  llvm::raw_fd_ostream Out(File, Error, llvm::sys::fs::F_None);
+
+  if(Error)
+    throw CouldNotOpenFile(Error.message());
+
+  Out << M;
 }

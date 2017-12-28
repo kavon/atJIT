@@ -45,7 +45,7 @@ FunctionType* GetWrapperTy(FunctionType *FTy, Context const &C) {
   return FunctionType::get(RetTy, Args, FTy->isVarArg());
 }
 
-void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, SmallVectorImpl<Value*> &Args) {
+void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, SmallVectorImpl<Value*> &Args, IRBuilder<> &B) {
   LLVMContext &Ctx = OldTy.getContext();
   SmallVector<Value*, 8> WrapperArgs(Wrapper.getFunctionType()->getNumParams());
   std::transform(Wrapper.arg_begin(), Wrapper.arg_end(),
@@ -53,31 +53,43 @@ void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, Sma
 
   for(size_t i = 0, n = C.size(); i != n; ++i) {
     auto const &Arg = C.getArgumentMapping(i);
+    Type* ParamTy = OldTy.getParamType(i);
     if(auto const *Forward = Arg.as<ForwardArgument>()) {
       Args.push_back(WrapperArgs[Forward->get()]);
     } else if(auto const *Int = Arg.as<IntArgument>()) {
-      Args.push_back(ConstantInt::get(OldTy.getParamType(i), Int->get(), true));
+      Args.push_back(ConstantInt::get(ParamTy, Int->get(), true));
     } else if(auto const *Float = Arg.as<FloatArgument>()) {
-      Args.push_back(ConstantFP::get(OldTy.getParamType(i), Float->get()));
+      Args.push_back(ConstantFP::get(ParamTy, Float->get()));
     } else if(auto const *Ptr = Arg.as<PtrArgument>()) {
       Args.push_back(
             ConstantExpr::getIntToPtr(
               ConstantInt::get(Type::getInt64Ty(Ctx), (uintptr_t)Ptr->get(), false),
-              OldTy.getParamType(i)));
+              ParamTy));
     } else if(auto const *Struct = Arg.as<StructArgument>()) {
       Type* Int8 = Type::getInt8Ty(Ctx);
       std::vector<char> const &Raw =  Struct->get();
       std::vector<Constant*> Data(Raw.size());
-
-      for(size_t i = 0, n = Raw.size(); i != n; ++i)
-        Data[i] = ConstantInt::get(Int8, Raw[i], false);
+        for(size_t i = 0, n = Raw.size(); i != n; ++i)
+          Data[i] = ConstantInt::get(Int8, Raw[i], false);
       Constant* CD = ConstantVector::get(Data);
-      Constant* ConstantStruct = ConstantExpr::getBitCast(CD, OldTy.getParamType(i));
 
-      assert(Wrapper.getParent()->getDataLayout().getTypeAllocSize(OldTy.getParamType(i))
-             == Raw.size());
+      bool PassedByPtr = ParamTy->isPointerTy();
+      Type* StructType = PassedByPtr ?
+                  ParamTy->getContainedType(0) : ParamTy;
 
-      Args.push_back(ConstantStruct);
+      if(ParamTy->isPointerTy()) {
+        // big structures are passed by pointer, create a local alloca
+        AllocaInst* Alloc = B.CreateAlloca(StructType, 0, "param_alloc");
+        Value* AllocCast =
+                B.CreatePointerCast(Alloc,
+                                    PointerType::getUnqual(CD->getType()));
+        B.CreateStore(CD, AllocCast);
+        Args.push_back(Alloc);
+      } else {
+        // small structures are passed by value, cast it directly
+        Constant* ConstantStruct = ConstantExpr::getBitCast(CD, StructType);
+        Args.push_back(ConstantStruct);
+      }
     }
   }
 }
@@ -87,11 +99,11 @@ Function* CreateWrapperFun(Module &M, FunctionType &WrapperTy, Function &F, Cont
 
   Function* Wrapper = Function::Create(&WrapperTy, Function::ExternalLinkage, "", &M);
   BasicBlock* BB = BasicBlock::Create(CC, "", Wrapper);
+  IRBuilder<> B(BB);
 
   SmallVector<Value*, 8> Args;
-  GetInlineArgs(C, *F.getFunctionType(), *Wrapper, Args);
+  GetInlineArgs(C, *F.getFunctionType(), *Wrapper, Args, B);
 
-  IRBuilder<> B(BB);
   Value* Call = B.CreateCall(&F, Args);
 
   if(Call->getType()->isVoidTy()) {
@@ -115,9 +127,14 @@ bool easy::InlineParameters::runOnModule(llvm::Module &M) {
   FunctionType* WrapperTy = GetWrapperTy(FTy, C);
   Function* WrapperFun = CreateWrapperFun(M, *WrapperTy, *F, C);
 
-  // privatize F and steal its name
+  // privatize F, steal its name, copy its attributes, and its cc
   F->setLinkage(Function::PrivateLinkage);
   WrapperFun->takeName(F);
+  WrapperFun->setCallingConv(F->getCallingConv());
+
+  auto FunAttrs = F->getAttributes().getFnAttributes();
+  for(Attribute Attr : FunAttrs)
+    WrapperFun->addFnAttr(Attr);
 
   return true;
 }

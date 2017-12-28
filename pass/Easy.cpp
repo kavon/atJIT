@@ -2,6 +2,7 @@
 
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Constants.h>
+#include <llvm/IR/InstIterator.h>
 #include <llvm/IR/IRBuilder.h>
 
 #include <llvm/IR/LegacyPassManager.h>
@@ -174,7 +175,6 @@ namespace easy {
       std::unique_ptr<Module> Embed = CloneModule(&M);
 
       Function &FEmbed = *Embed->getFunction(F.getName());
-      fixLinkages(FEmbed, *Embed);
       cleanModule(FEmbed, *Embed);
 
       Twine ModuleName = F.getName() + "_bitcode";
@@ -200,45 +200,63 @@ namespace easy {
     }
 
     static void cleanModule(Function &Entry, Module &M) {
+      Entry.setLinkage(GlobalValue::ExternalLinkage);
+      auto Referenced = getReferencedFromEntry(Entry);
+
       //clean the clonned module
       legacy::PassManager Passes;
-      std::vector<GlobalValue*> Keep = {&Entry};
-      Passes.add(createGVExtractionPass(Keep));
+      Passes.add(createGVExtractionPass(Referenced));
       Passes.add(createGlobalDCEPass());
       Passes.add(createStripDeadDebugInfoPass());
       Passes.add(createStripDeadPrototypesPass());
       Passes.run(M);
+
+      fixLinkages(Entry, M);
+    }
+
+    static std::vector<GlobalValue*> getReferencedFromEntry(Function &Entry) {
+      std::vector<GlobalValue*> Funs;
+
+      SmallPtrSet<User*, 32> Visited;
+      SmallVector<User*, 8> ToVisit;
+      ToVisit.push_back(&Entry);
+
+      while(!ToVisit.empty()) {
+        User* U = ToVisit.pop_back_val();
+        if(!Visited.insert(U).second)
+          continue;
+        if(Function* UF = dyn_cast<Function>(U)) {
+          Funs.push_back(UF);
+
+          for(Instruction &I : instructions(UF))
+            for(Value* Op : I.operands())
+              if(User* OpU = dyn_cast<User>(Op))
+                ToVisit.push_back(OpU);
+        }
+
+        for(Value* Op : U->operands())
+          if(User* OpU = dyn_cast<User>(Op))
+            ToVisit.push_back(OpU);
+      }
+
+      return Funs;
     }
 
     static void fixLinkages(Function &Entry, Module &M) {
-
-      Entry.setLinkage(Function::ExternalLinkage);
-
       for(GlobalValue &GV : M.global_values()) {
+
+        GV.setUnnamedAddr(GlobalValue::UnnamedAddr::None);
+        if(Function* F = dyn_cast<Function>(&GV))
+          F->removeFnAttr(Attribute::NoInline);
 
         if(&GV == &Entry)
           continue;
         if(GV.getName().startswith("llvm."))
           continue;
-
-        // keep private functions private, to have a copy of their code;
-        // and make private globals external, since the only copy is in the original module
-        if(GV.hasLocalLinkage()) {
-          if(isa<GlobalVariable>(GV))
-            GV.setLinkage(GlobalVariable::ExternalLinkage);
-        }
-
-        if(isa<Function>(GV) && GV.isDefinitionExact() && !GV.isDeclaration()) {
-          // odr or external becomes private
+        if(GV.getVisibility() != GlobalValue::DefaultVisibility ||
+           GV.getLinkage() != GlobalValue::PrivateLinkage) {
+          GV.setVisibility(GlobalValue::DefaultVisibility);
           GV.setLinkage(GlobalValue::PrivateLinkage);
-        } else {
-          // transform to declaration
-          GV.setLinkage(GlobalValue::ExternalLinkage);
-
-          if(Function* F = dyn_cast<Function>(&GV))
-            F->deleteBody();
-          else if(GlobalVariable* GVar = dyn_cast<GlobalVariable>(&GV))
-            GVar->setInitializer(nullptr);
         }
       }
     }
