@@ -1,0 +1,10 @@
+# Dockerfile to compile and test easy-jit 
+FROM easy/llvm
+
+LABEL maintainer "Juan Manuel Martinez Caamaño jmartinezcaamao@gmail.com"
+
+ARG branch=master
+
+ADD compile_easy.sh /
+RUN git clone https://github.com/jmmartinez/easy-just-in-time.git -b ${branch} /easy-jit 
+RUN bash compile_easy.sh release /llvm/_install/lib/cmake/llvm /easy-jit
