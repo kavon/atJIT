@@ -1,7 +1,7 @@
 #ifndef OPTIONS
 #define OPTIONS
 
-#include <easy/runtime/Context.h>
+#include "../../../runtime/include/easy/runtime/Context.h"
 
 #define EASY_NEW_OPTION_STRUCT(Name) \
   struct Name; \

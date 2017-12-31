@@ -1,8 +1,8 @@
 #ifndef EASY
 #define EASY
 
-#include <easy/runtime/Context.h>
-#include <easy/runtime/Function.h>
+#include "../../../runtime/include/easy/runtime/Context.h"
+#include "../../../runtime/include/easy/runtime/Function.h"
 #include <easy/attributes.h>
 #include <easy/meta.h>
 #include <easy/param.h>

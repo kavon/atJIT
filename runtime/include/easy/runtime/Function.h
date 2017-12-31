@@ -1,10 +1,9 @@
 #ifndef FUNCTION
 #define FUNCTION
 
-#include <easy/runtime/Context.h>
-#include <easy/runtime/Function.h>
-#include <easy/runtime/BitcodeTracker.h>
-#include <easy/runtime/LLVMHolder.h>
+#include "Context.h"
+#include "BitcodeTracker.h"
+#include "LLVMHolder.h"
 
 namespace easy {
 

@@ -109,7 +109,7 @@ class Context {
 
   template<class T>
   Context& setParameterPtr(unsigned idx, T* ptr) {
-    return setParameterPtrVoid(idx, reinterpret_cast<void*>(ptr));
+    return setParameterPtrVoid(idx, reinterpret_cast<const void*>(ptr));
   }
   template<class T>
   Context& setParameterPtr(unsigned idx, T const* ptr) {
