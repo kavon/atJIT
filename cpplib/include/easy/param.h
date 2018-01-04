@@ -14,7 +14,7 @@ struct set_parameter_helper {
 
   template<class _, class Arg>
   static void set_param(Context &C, size_t idx, Arg &&) {
-    C.setParameterIndex(idx, std::is_placeholder<Arg>::value);
+    C.setParameterIndex(idx, std::is_placeholder<typename std::decay<Arg>::type>::value-1);
   }
 };
 
@@ -58,7 +58,7 @@ struct set_parameter_helper<false> {
 template<class Param, class Arg>
 struct set_parameter :
     public set_parameter_helper<
-             std::is_placeholder<typename std::decay<Arg>::type>::value> {
+             (bool)std::is_placeholder<typename std::decay<Arg>::type>::value> {
 };
 
 }
