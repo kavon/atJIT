@@ -115,4 +115,12 @@ static void BM_qsort(benchmark::State& state) {
 }
 BENCHMARK(BM_qsort);
 
+static void BM_jit(benchmark::State& state) {
+  using namespace std::placeholders;
+  for (auto _ : state) {
+    volatile auto my_qsort = easy::jit(Qsort, _1, _2, _3, int_cmp);
+  }
+}
+BENCHMARK(BM_jit);
+
 BENCHMARK_MAIN();
