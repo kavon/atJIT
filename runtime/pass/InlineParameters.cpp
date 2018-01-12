@@ -65,17 +65,27 @@ void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, Sma
       Args.push_back(ConstantFP::get(ParamTy, Float->get()));
     } else if(auto const *Ptr = Arg.as<PtrArgument>()) {
       Value* Repl = nullptr;
-      if(isa<FunctionType>(cast<PointerType>(ParamTy)->getElementType())) {
-        auto &BT = BitcodeTracker::GetTracker();
-        const char* LName = std::get<0>(BT.getNameAndGlobalMapping(const_cast<void*>(Ptr->get())));
-        std::unique_ptr<Module> LM = BT.getModuleWithContext(const_cast<void*>(Ptr->get()), Ctx);
+      auto &BT = BitcodeTracker::GetTracker();
+      void* PtrValue = const_cast<void*>(Ptr->get());
+      if(BT.hasGlobalMapping(PtrValue)) {
+        const char* LName = std::get<0>(BT.getNameAndGlobalMapping(PtrValue));
+        std::unique_ptr<Module> LM = BT.getModuleWithContext(PtrValue, Ctx);
         Module* M = Wrapper.getParent();
 
         if(!Linker::linkModules(*M, std::move(LM), Linker::OverrideFromSrc,
-                                [](Module &, const StringSet<> &){})) {
-          if(Function* F = M->getFunction(LName)) {
+                                [](Module &, const StringSet<> &){}))
+        {
+          GlobalValue *GV = M->getNamedValue(LName);
+          if(GlobalVariable* G = dyn_cast<GlobalVariable>(GV)) {
+            GV->setLinkage(Function::PrivateLinkage);
+            Repl = GV;
+          }
+          else if(Function* F = dyn_cast<Function>(GV)) {
             F->setLinkage(Function::PrivateLinkage);
             Repl = F;
+          }
+          else {
+            assert(false && "wtf");
           }
         }
       }

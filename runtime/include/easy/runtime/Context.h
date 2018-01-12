@@ -111,6 +111,10 @@ class Context {
   Context& setParameterPtr(unsigned idx, T* ptr) {
     return setParameterPtrVoid(idx, reinterpret_cast<void*>(ptr));
   }
+  template<class T>
+  Context& setParameterPtr(unsigned idx, T const* ptr) {
+    return setParameterPtrVoid(idx, reinterpret_cast<void const*>(ptr));
+  }
 
   template<class T>
   Context& setParameterStruct(unsigned idx, T* ptr) {
