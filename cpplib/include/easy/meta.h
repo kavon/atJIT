@@ -165,6 +165,10 @@ struct map_placeholder_to_type {
 
     using type = typename helper<PL, al_tail, new_result, new_seen, N, new_seen::size == N>::type;
   };
+  template<class PL, class Result, class Seen, size_t N>
+  struct helper<PL, type_list<>, Result, Seen, N, false>{
+    static_assert(N==-1 /*just to make this context dependent*/, "easy::jit: Invalid bind, placeholder cannot be bound to a formal argument");
+  };
 
   using default_param = void;
   static constexpr size_t N = max_placeholder<ArgList>::max;
