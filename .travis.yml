@@ -1,0 +1,20 @@
+language: cpp
+
+addons:
+    apt:
+        sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-trusty-5.0
+
+        packages:
+            - g++-6
+            - llvm-5.0-dev
+            - llvm-5.0-tools
+            - clang-5.0
+
+before_install:
+    - pip install --user lit
+
+script:
+  - mkdir _build && cd _build && cmake -DLLVM_DIR=/usr/lib/llvm-5.0/cmake -DCMAKE_CXX_COMPILER=clang++-5.0 -DCMAKE_C_COMPILER=clang-5.0 .. && make check
+
