@@ -113,7 +113,13 @@ namespace easy {
       if(V == GO)
         return true;
       //TODO: generalize that
-      if(auto* Alloca = dyn_cast<AllocaInst>(V)) {
+      if(auto* PHI = dyn_cast<PHINode>(V)) {
+        return std::any_of(PHI->op_begin(), PHI->op_end(), [GO](Value* V) { return mayAlias(V, GO);});
+      }
+      if(auto* Select = dyn_cast<SelectInst>(V)) {
+        return mayAlias(Select->getTrueValue(), GO) || mayAlias(Select->getFalseValue(), GO);
+      }
+      else if(auto* Alloca = dyn_cast<AllocaInst>(V)) {
         for(User* U : Alloca->users()) {
           if(auto* SI = dyn_cast<StoreInst>(U)) {
             if(GlobalObject* G = dyn_cast<GlobalObject>(SI->getOperand(0))) {
