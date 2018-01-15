@@ -105,6 +105,8 @@ easy::Context get_context_for(Args&& ... args) {
   using parameter_list = typename meta::function_traits<FunOriginalTy>::parameter_list;
   constexpr size_t nparams = parameter_list::size;
 
+  static_assert(nparams <= sizeof...(Args), "easy::jit: not providing enough argument to actual call");
+
   easy::Context C(nparams);
   easy::set_parameters<parameter_list, Args&&...>(parameter_list(), C, 0,
                                                   std::forward<Args>(args)...);

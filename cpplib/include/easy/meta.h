@@ -158,12 +158,16 @@ struct map_placeholder_to_type {
     // [int,bool,float] [] [float,bool] [_2,_1] 2
     // yields new foo'(float _1, bool _2) = foo(int(4), _2, _1);
 
-    static_assert(PL::size >= AL::size, "More parameters than arguments specified");
-    static_assert(result_idx < Result::size, "Cannot have a placeholder outside the maximium");
+    static_assert(PL::size >= AL::size, "easy::jit: More parameters than arguments specified");
+    static_assert(result_idx < Result::size, "easy::jit: Cannot have a placeholder outside the maximum");
     using new_result = typename std::conditional<parse_placeholder, typename Result::template set<result_idx, pl_at_idx>, Result>::type;
     using new_seen = typename std::conditional<parse_placeholder, typename Seen::template push_back<al_head>, Seen>::type;
 
     using type = typename helper<PL, al_tail, new_result, new_seen, N, new_seen::size == N>::type;
+  };
+  template<class PL, class Result, class Seen, size_t N>
+  struct helper<PL, type_list<>, Result, Seen, N, false>{
+    static_assert(N==-1 /*just to make this context dependent*/, "easy::jit: Invalid bind, placeholder cannot be bound to a formal argument");
   };
 
   using default_param = void;
@@ -188,8 +192,8 @@ template<class FunTy>
 struct function_traits {
   static_assert(std::is_function<FunTy>::value, "function expected.");
   using ptr_ty = typename std::decay<FunTy>::type;
-  using return_type = decltype(get_return_type(ptr_ty()));
-  using parameter_list = decltype(get_parameter_list(ptr_ty()));
+  using return_type = decltype(get_return_type(std::declval<ptr_ty>()));
+  using parameter_list = decltype(get_parameter_list(std::declval<ptr_ty>()));
 };
 
 template<class FunTy, class ArgList>
