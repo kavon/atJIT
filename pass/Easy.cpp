@@ -7,6 +7,8 @@
 
 #include <llvm/IR/LegacyPassManager.h>
 
+#include "llvm/InitializePasses.h"
+
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/ModuleUtils.h>
 #include <llvm/Transforms/Utils/CtorUtils.h>
@@ -35,34 +37,34 @@ namespace easy {
     static char ID;
 
     RegisterBitcode()
-      : ModulePass(ID) { };
+      : ModulePass(ID) {};
 
     bool runOnModule(Module &M) override {
 
-      SmallVector<Function*, 8> FunsToJIT;
+      SmallVector<GlobalObject*, 8> ObjectsToJIT;
 
-      collectFunctionsToJIT(M, FunsToJIT);
+      collectObjectsToJIT(M, ObjectsToJIT);
 
-      if(FunsToJIT.empty())
+      if(ObjectsToJIT.empty())
         return false;
 
       SmallVector<GlobalValue*, 8> LocalVariables;
       collectLocalGlobals(M, LocalVariables);
       nameGlobals(LocalVariables, "unnamed_local_global");
 
-      auto Bitcode = embedBitcode(M, FunsToJIT);
+      auto Bitcode = embedBitcode(M, ObjectsToJIT);
       GlobalVariable* GlobalMapping = getGlobalMapping(M, LocalVariables);
 
       Function* RegisterBitcodeFun = declareRegisterBitcode(M, GlobalMapping);
-      registerBitcode(M, FunsToJIT, Bitcode, GlobalMapping, RegisterBitcodeFun);
+      registerBitcode(M, ObjectsToJIT, Bitcode, GlobalMapping, RegisterBitcodeFun);
 
       return true;
     }
 
     private:
 
-    static bool canExtractBitcode(Function &F, std::string &Reason) {
-      if(F.isDeclaration()) {
+    static bool canExtractBitcode(GlobalObject &GO, std::string &Reason) {
+      if(GO.isDeclaration()) {
         Reason = "Can't extract a declaration.";
         return false;
       }
@@ -76,40 +78,70 @@ namespace easy {
       return Funs;
     }
 
-    static void collectFunctionsToJIT(Module &M, SmallVectorImpl<Function*> &FunsToJIT) {
+    void collectObjectsToJIT(Module &M, SmallVectorImpl<GlobalObject*> &ObjectsToJIT) {
 
       // get **all** functions passed as parameter to easy jit calls
       //   not only the target function, but also its parameters
-      deduceFunctionsToJIT(M);
+      deduceObjectsToJIT(M);
       regexFunctionsToJIT(M);
 
       // get functions in section jit section
-      for(Function &F : M) {
-        if(F.getSection() != JIT_SECTION)
+      for(GlobalObject &GO : M.global_objects()) {
+        if(GO.getSection() != JIT_SECTION)
           continue;
 
-        F.setSection(""); // drop the identifier
+        GO.setSection(""); // drop the identifier
 
         std::string Reason;
-        if(!canExtractBitcode(F, Reason)) {
-          DEBUG(dbgs() << "Could not extract function '" << F.getName() << "'. " << Reason << "\n");
+        if(!canExtractBitcode(GO, Reason)) {
+          DEBUG(dbgs() << "Could not extract global '" << GO.getName() << "'. " << Reason << "\n");
           continue;
         }
+        DEBUG(dbgs() << "Global '" << GO.getName() << "' marked for extraction.\n");
 
-        DEBUG(dbgs() << "Function '" << F.getName() << "' marked for extraction.\n");
-
-        FunsToJIT.push_back(&F);
+        ObjectsToJIT.push_back(&GO);
       }
     }
 
-    static void deduceFunctionsToJIT(Module &M) {
+    static bool isConstant(GlobalObject const& GO) {
+      if(isa<Function const>(GO))
+        return true;
+      return cast<GlobalVariable>(GO).isConstant();
+    }
+
+    static bool mayAlias(Value * V, GlobalObject * GO) {
+      if(V == GO)
+        return true;
+      //TODO: generalize that
+      if(auto* PHI = dyn_cast<PHINode>(V)) {
+        return std::any_of(PHI->op_begin(), PHI->op_end(), [GO](Value* V) { return mayAlias(V, GO);});
+      }
+      if(auto* Select = dyn_cast<SelectInst>(V)) {
+        return mayAlias(Select->getTrueValue(), GO) || mayAlias(Select->getFalseValue(), GO);
+      }
+      else if(auto* Alloca = dyn_cast<AllocaInst>(V)) {
+        for(User* U : Alloca->users()) {
+          if(auto* SI = dyn_cast<StoreInst>(U)) {
+            if(GlobalObject* G = dyn_cast<GlobalObject>(SI->getOperand(0))) {
+              return mayAlias(G, GO);
+            }
+          }
+        }
+      }
+      return false;
+    }
+
+
+    void deduceObjectsToJIT(Module &M) {
       for(Function &EasyJitFun : compilerInterface(M)) {
         for(User* U : EasyJitFun.users()) {
           if(CallSite CS{U}) {
             for(Value* O : CS.args()) {
               O = O->stripPointerCastsNoFollowAliases();
-              if(Function* F = dyn_cast<Function>(O)) {
-                F->setSection(JIT_SECTION);
+              // FIXME: O(2)
+              for(GlobalObject& GO: M.global_objects()) {
+                if(isConstant(GO) and mayAlias(O, &GO))
+                  GO.setSection(JIT_SECTION);
               }
             }
           }
@@ -164,23 +196,24 @@ namespace easy {
     }
 
     static SmallVector<GlobalVariable*, 8>
-    embedBitcode(Module &M, SmallVectorImpl<Function*> &Funs) {
-      SmallVector<GlobalVariable*, 8> Bitcode(Funs.size());
-      for(size_t i = 0, n = Funs.size(); i != n; ++i)
-        Bitcode[i] = embedBitcode(M, *Funs[i]);
+    embedBitcode(Module &M, SmallVectorImpl<GlobalObject*> &Objs) {
+      SmallVector<GlobalVariable*, 8> Bitcode(Objs.size());
+      for(size_t i = 0, n = Objs.size(); i != n; ++i)
+        Bitcode[i] = embedBitcode(M, *Objs[i]);
       return Bitcode;
     }
 
-    static GlobalVariable* embedBitcode(Module &M, Function& F) {
+    static GlobalVariable* embedBitcode(Module &M, GlobalObject& GO) {
       std::unique_ptr<Module> Embed = CloneModule(&M);
 
-      Function &FEmbed = *Embed->getFunction(F.getName());
-      cleanModule(FEmbed, *Embed);
+      GlobalValue *FEmbed = Embed->getNamedValue(GO.getName());
+      assert(FEmbed && "global value with that name exists");
+      cleanModule(*FEmbed, *Embed);
 
-      Twine ModuleName = F.getName() + "_bitcode";
+      Twine ModuleName = GO.getName() + "_bitcode";
       Embed->setModuleIdentifier(ModuleName.str());
 
-      return writeModuleToGlobal(M, *Embed, FEmbed.getName() + "_bitcode");
+      return writeModuleToGlobal(M, *Embed, FEmbed->getName() + "_bitcode");
     }
 
     static std::string moduleToString(Module &M) {
@@ -199,22 +232,35 @@ namespace easy {
                                 BitcodeInit, Name);
     }
 
-    static void cleanModule(Function &Entry, Module &M) {
-      Entry.setLinkage(GlobalValue::ExternalLinkage);
+    static void cleanModule(GlobalValue &Entry, Module &M) {
       auto Referenced = getReferencedFromEntry(Entry);
+      Referenced.push_back(&Entry);
+      if(isa<Function>(Entry)) {
+        Entry.setLinkage(GlobalValue::ExternalLinkage);
+        //clean the cloned module
+        legacy::PassManager Passes;
+        Passes.add(createGVExtractionPass(Referenced));
+        Passes.add(createGlobalDCEPass());
+        Passes.add(createStripDeadDebugInfoPass());
+        Passes.add(createStripDeadPrototypesPass());
+        Passes.run(M);
 
-      //clean the clonned module
-      legacy::PassManager Passes;
-      Passes.add(createGVExtractionPass(Referenced));
-      Passes.add(createGlobalDCEPass());
-      Passes.add(createStripDeadDebugInfoPass());
-      Passes.add(createStripDeadPrototypesPass());
-      Passes.run(M);
-
-      fixLinkages(Entry, M);
+        fixLinkages(Entry, M);
+      }
+      else {
+        SmallVector<GlobalValue*, 16> ToRemove;
+        SmallPtrSet<GlobalValue*, 8> WhiteList(ToRemove.begin(), ToRemove.end());
+        WhiteList.insert(&Entry);
+        for(auto& GV: M.global_values())
+          if(WhiteList.count(&GV) == 0) {
+            ToRemove.push_back(&GV);
+          }
+        for(auto* GV:ToRemove)
+          GV->eraseFromParent();
+      }
     }
 
-    static std::vector<GlobalValue*> getReferencedFromEntry(Function &Entry) {
+    static std::vector<GlobalValue*> getReferencedFromEntry(GlobalValue &Entry) {
       std::vector<GlobalValue*> Funs;
 
       SmallPtrSet<User*, 32> Visited;
@@ -242,7 +288,7 @@ namespace easy {
       return Funs;
     }
 
-    static void fixLinkages(Function &Entry, Module &M) {
+    static void fixLinkages(GlobalValue &Entry, Module &M) {
       for(GlobalValue &GV : M.global_values()) {
         if(GV.getName().startswith("llvm."))
           continue;
@@ -288,7 +334,7 @@ namespace easy {
     }
 
     static void
-    registerBitcode(Module &M, SmallVectorImpl<Function*> &Funs,
+    registerBitcode(Module &M, SmallVectorImpl<GlobalObject*> &Objs,
                     SmallVectorImpl<GlobalVariable*> &Bitcodes,
                     Value* GlobalMapping,
                     Function* RegisterBitcodeFun) {
@@ -301,12 +347,12 @@ namespace easy {
       Function *Ctor = getCtor(M);
       IRBuilder<> B(Ctor->getEntryBlock().getTerminator());
 
-      for(size_t i = 0, n = Funs.size(); i != n; ++i) {
-        GlobalVariable* Name = getStringGlobal(M, Funs[i]->getName());
+      for(size_t i = 0, n = Objs.size(); i != n; ++i) {
+        GlobalVariable* Name = getStringGlobal(M, Objs[i]->getName());
         ArrayType* ArrTy = cast<ArrayType>(Bitcodes[i]->getInitializer()->getType());
         size_t Size = ArrTy->getNumElements()-1; /*-1 for the 0 terminator*/
 
-        Value* Fun = B.CreatePointerCast(Funs[i], FPtr);
+        Value* Fun = B.CreatePointerCast(Objs[i], FPtr);
         Value* NameCast = B.CreatePointerCast(Name, StrPtr);
         Value* Bitcode = B.CreatePointerCast(Bitcodes[i], BitcodePtr);
         Value* BitcodeSize = ConstantInt::get(SizeTy, Size, false);
@@ -347,4 +393,3 @@ namespace easy {
     return new RegisterBitcode();
   }
 }
-

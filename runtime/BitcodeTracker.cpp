@@ -18,6 +18,11 @@ BitcodeTracker& BitcodeTracker::GetTracker() {
   return TheTracker;
 }
 
+bool BitcodeTracker::hasGlobalMapping(void* FPtr) const {
+  auto InfoPtr = Functions.find(FPtr);
+  return InfoPtr != Functions.end();
+}
+
 std::tuple<const char*, GlobalMapping*> BitcodeTracker::getNameAndGlobalMapping(void* FPtr) {
   auto InfoPtr = Functions.find(FPtr);
   if(InfoPtr == Functions.end()) {

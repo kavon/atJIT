@@ -38,6 +38,7 @@ class BitcodeTracker {
   }
 
   std::tuple<const char*, GlobalMapping*> getNameAndGlobalMapping(void* FPtr);
+  bool hasGlobalMapping(void* FPtr) const;
 
   using ModuleContextPair = std::pair<std::unique_ptr<llvm::Module>, std::unique_ptr<llvm::LLVMContext>>;
   ModuleContextPair getModule(void* FPtr);
