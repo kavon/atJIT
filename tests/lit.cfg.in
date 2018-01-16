@@ -40,6 +40,8 @@ config.substitutions.append(('%lib_pass', "@EASY_JIT_PASS@"))
 config.substitutions.append(('%lib_runtime', "@EASY_JIT_RUNTIME@"))
 config.substitutions.append(('%ld_flags', ld_flags))
 
+config.substitutions.append(('%not', "!"))
+
 config.substitutions.append(('%FileCheck', os.path.join("@LLVM_TOOLS_BINARY_DIR@", "FileCheck")))
 
 if "@EASY_JIT_BENCHMARK@" in ["1", "ON"] :

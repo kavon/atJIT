@@ -1,4 +1,4 @@
-// RUN: not %clangxx %cxxflags -O2 %include_flags %ld_flags %s -Xclang -load -Xclang %lib_pass -o %t 2> %t.log
+// RUN: %not %clangxx %cxxflags -O2 %include_flags %ld_flags %s -Xclang -load -Xclang %lib_pass -o %t 2> %t.log
 // RUN: %FileCheck %s < %t.log
 
 #include <easy/jit.h>
