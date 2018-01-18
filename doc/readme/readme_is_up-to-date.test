@@ -1,0 +1,4 @@
+// RUN: cd %S
+// RUN: bash update_doc.sh > %t.new 
+// RUN: cp %S/../../README.md %t.old
+// RUN: diff %t.new %t.old
