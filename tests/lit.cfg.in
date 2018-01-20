@@ -29,6 +29,8 @@ ld_flags = ld_flags + " -l" + runtime_lib
 
 
 # substitutions
+config.substitutions.append(('%bin', "@CMAKE_ARCHIVE_OUTPUT_DIRECTORY@"))
+
 config.substitutions.append(('%clangxx', os.path.join("@LLVM_TOOLS_BINARY_DIR@", "clang++")))
 config.substitutions.append(('%clang', os.path.join("@LLVM_TOOLS_BINARY_DIR@", "clang")))
 config.substitutions.append(('%opt', os.path.join("@LLVM_TOOLS_BINARY_DIR@", "opt")))
@@ -39,3 +41,6 @@ config.substitutions.append(('%lib_runtime', "@EASY_JIT_RUNTIME@"))
 config.substitutions.append(('%ld_flags', ld_flags))
 
 config.substitutions.append(('%FileCheck', os.path.join("@LLVM_TOOLS_BINARY_DIR@", "FileCheck")))
+
+if "@EASY_JIT_BENCHMARK@" in ["1", "ON"] :
+  config.available_features.add('benchmark')
