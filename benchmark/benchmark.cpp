@@ -2,7 +2,7 @@
 #include <benchmark/benchmark.h>
 #include <easy/jit.h>
 
-void kernel(int n, int m, int * image, int * mask, int* out) __attribute__((noinline)) {
+void __attribute__((noinline)) kernel(int n, int m, int * image, int * mask, int* out) {
   for(int i = 0; i < n - m; ++i)
     for(int j = 0; j < n - m; ++j)
       for(int k = 0; k < m; ++k)
@@ -26,7 +26,7 @@ int int_cmp(int a, int b)
 }
 
 // https://github.com/ctasims/The-C-Programming-Language--Kernighan-and-Ritchie/blob/master/ch04-functions-and-program-structure/qsort.c
-void Qsort(int v[], int left, int right, int (*cmp)(int, int)) __attribute__((noinline))
+void __attribute__((noinline)) Qsort(int v[], int left, int right, int (*cmp)(int, int)) 
 {
     int i, last;
     void swap(int v[], int i, int j);
