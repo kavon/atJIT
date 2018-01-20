@@ -12,7 +12,7 @@ include(Python)
 
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
-include_directories(cpplib/include runtime/include)
+include_directories(cpplib/include)
 
 add_compile_options(-std=c++14)
 

@@ -2,7 +2,7 @@
 // RUN: %t > %t.out
 // RUN: %FileCheck %s < %t.out
 
-#include <easy/cache.h>
+#include <easy/code_cache.h>
 
 #include <functional>
 #include <cstdio>

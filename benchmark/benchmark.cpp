@@ -1,6 +1,6 @@
 
 #include <benchmark/benchmark.h>
-#include <easy/cache.h>
+#include <easy/code_cache.h>
 #include <numeric>
 
 void __attribute__((noinline)) kernel(int n, int m, int * image, int const * mask, int* out) {

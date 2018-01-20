@@ -1,7 +1,7 @@
 #ifndef PARAM
 #define PARAM
 
-#include "../../../runtime/include/easy/runtime/Context.h"
+#include <easy/runtime/Context.h>
 #include <easy/options.h>
 #include <easy/meta.h>
 

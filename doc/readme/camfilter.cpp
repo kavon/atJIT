@@ -14,7 +14,7 @@
 // TO HERE #INCLUDE_EASY#
 
 // INLINE FROM HERE #INCLUDE_EASY_CACHE#
-#include <easy/cache.h>
+#include <easy/code_cache.h>
 // TO HERE #INCLUDE_EASY_CACHE#
 
 struct timeval;
