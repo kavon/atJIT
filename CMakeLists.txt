@@ -24,6 +24,9 @@ set(EASY_JIT_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_subdirectory(pass)
 add_subdirectory(runtime)
+
+add_custom_target(easy-jit-core DEPENDS EasyJitPass EasyJitRuntime)
+
 add_subdirectory(benchmark)
 
 include(CMakeTests.txt)
