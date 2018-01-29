@@ -17,9 +17,9 @@ class Cache {
 
     void* FunPtr = reinterpret_cast<void*>(meta::get_as_pointer(Fun));
     auto CacheEntry =
-        Cache_.insert(std::make_pair(Key(FunPtr,
-                      get_context_for<T, Args...>(std::forward<Args>(args)...)),
-                                     FunctionWrapperBase()));
+        Cache_.emplace(
+          Key(FunPtr, get_context_for<T, Args...>(std::forward<Args>(args)...)),
+          FunctionWrapperBase());
     FunctionWrapperBase &FWB = CacheEntry.first->second;
     if(CacheEntry.second) {
       easy::Context const &C = CacheEntry.first->first.second;
