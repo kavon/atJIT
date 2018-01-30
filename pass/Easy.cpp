@@ -32,6 +32,67 @@ using namespace llvm;
 
 static cl::opt<std::string> RegexString("easy-regex", cl::desc("<regex>"), cl::init(""));
 
+namespace {
+  class MayAliasTracer {
+    GlobalObject & GO_;
+    bool const Result_;
+
+    bool mayAliasWithStoredValues(Value* V) {
+      if(V == &GO_) {
+        return true;
+      }
+
+      if(auto* SI = dyn_cast<StoreInst>(V)) {
+        if(GlobalObject* G = dyn_cast<GlobalObject>(SI->getOperand(0))) {
+          if(mayAliasWithLoadedValues(G))
+            return true;
+        }
+      }
+
+      if(isa<AllocaInst>(V)||isa<GetElementPtrInst>(V)) {
+        for(User* U : V->users()) {
+          if(mayAliasWithStoredValues(U))
+            return true;
+        }
+      }
+      return false;
+    }
+
+    bool mayAliasWithLoadedValues(Value * V) {
+      if(V == &GO_)
+        return true;
+      //TODO: generalize that
+      if(auto* PHI = dyn_cast<PHINode>(V)) {
+        return std::any_of(PHI->op_begin(), PHI->op_end(), [this](Value* V) { return mayAliasWithLoadedValues(V);});
+      }
+      if(auto* Select = dyn_cast<SelectInst>(V)) {
+        return mayAliasWithLoadedValues(Select->getTrueValue()) || mayAliasWithLoadedValues(Select->getFalseValue());
+      }
+      if(auto* Alloca = dyn_cast<AllocaInst>(V)) {
+        return mayAliasWithStoredValues(Alloca);
+      }
+      if(auto *GEP = dyn_cast<GetElementPtrInst>(V)) {
+        return mayAliasWithLoadedValues(GEP->getPointerOperand());
+      }
+      if(auto* OtherGV = dyn_cast<GlobalVariable>(V)) {
+        if(!OtherGV->hasInitializer())
+          return false;
+        return mayAliasWithLoadedValues(OtherGV->getInitializer()) || mayAliasWithStoredValues(OtherGV);
+      }
+      if(auto* CA = dyn_cast<ConstantArray>(V)) {
+        return std::any_of(CA->op_begin(), CA->op_end(), [this](Value* V) { return mayAliasWithLoadedValues(V); });
+      }
+      return false;
+    }
+
+    public:
+
+    MayAliasTracer(GlobalObject& GO, Value* V) : GO_{GO}, Result_{mayAliasWithLoadedValues(V)} {}
+    operator bool() const { return Result_;}
+  };
+
+}
+
 namespace easy {
   struct RegisterBitcode : public ModulePass {
     static char ID;
@@ -109,28 +170,6 @@ namespace easy {
       return cast<GlobalVariable>(GO).isConstant();
     }
 
-    static bool mayAlias(Value * V, GlobalObject * GO) {
-      if(V == GO)
-        return true;
-      //TODO: generalize that
-      if(auto* PHI = dyn_cast<PHINode>(V)) {
-        return std::any_of(PHI->op_begin(), PHI->op_end(), [GO](Value* V) { return mayAlias(V, GO);});
-      }
-      if(auto* Select = dyn_cast<SelectInst>(V)) {
-        return mayAlias(Select->getTrueValue(), GO) || mayAlias(Select->getFalseValue(), GO);
-      }
-      else if(auto* Alloca = dyn_cast<AllocaInst>(V)) {
-        for(User* U : Alloca->users()) {
-          if(auto* SI = dyn_cast<StoreInst>(U)) {
-            if(GlobalObject* G = dyn_cast<GlobalObject>(SI->getOperand(0))) {
-              return mayAlias(G, GO);
-            }
-          }
-        }
-      }
-      return false;
-    }
-
 
     void deduceObjectsToJIT(Module &M) {
       for(Function &EasyJitFun : compilerInterface(M)) {
@@ -140,8 +179,9 @@ namespace easy {
               O = O->stripPointerCastsNoFollowAliases();
               // FIXME: O(2)
               for(GlobalObject& GO: M.global_objects()) {
-                if(isConstant(GO) and mayAlias(O, &GO))
+                if(isConstant(GO) and MayAliasTracer(GO, O)) {
                   GO.setSection(JIT_SECTION);
+                }
               }
             }
           }
