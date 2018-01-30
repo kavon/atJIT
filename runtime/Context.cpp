@@ -37,7 +37,9 @@ bool Context::operator==(const Context& Other) const {
 
   for(auto this_it = begin(), other_it = Other.begin();
       this_it != end(); ++this_it, ++other_it) {
-    if(!(*this_it == *other_it))
+    ArgumentBase &ThisArg = **this_it;
+    ArgumentBase &OtherArg = **other_it;
+    if(!(ThisArg == OtherArg))
       return false;
   }
 

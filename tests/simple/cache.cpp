@@ -23,6 +23,12 @@ int main() {
 
   for(int i = 0; i != 16; ++i) {
     auto const &inc = C.jit(add, _1, 1);
+
+    if(!C.has(add, _1, 1)) {
+      printf("code not in cache!\n");
+      return -1;
+    }
+
     for(int v = 4; v != 8; ++v)
       printf("inc(%d) is %d\n", v, inc(v));
   }
