@@ -12,7 +12,7 @@ include(Python)
 
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
-include_directories(cpplib/include runtime/include)
+include_directories(cpplib/include)
 
 add_compile_options(-std=c++14)
 
@@ -27,6 +27,7 @@ add_subdirectory(runtime)
 
 add_custom_target(easy-jit-core DEPENDS EasyJitPass EasyJitRuntime)
 
+add_subdirectory(doc)
 add_subdirectory(benchmark)
 
 include(CMakeTests.txt)

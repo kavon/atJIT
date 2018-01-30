@@ -64,7 +64,7 @@ void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, Sma
     } else if(auto const *Float = Arg.as<FloatArgument>()) {
       Args.push_back(ConstantFP::get(ParamTy, Float->get()));
     } else if(auto const *Ptr = Arg.as<PtrArgument>()) {
-      Value* Repl = nullptr;
+      Constant* Repl = nullptr;
       auto &BT = BitcodeTracker::GetTracker();
       void* PtrValue = const_cast<void*>(Ptr->get());
       if(BT.hasGlobalMapping(PtrValue)) {
@@ -79,6 +79,10 @@ void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, Sma
           if(GlobalVariable* G = dyn_cast<GlobalVariable>(GV)) {
             GV->setLinkage(Function::PrivateLinkage);
             Repl = GV;
+
+            if(Repl->getType() != ParamTy) {
+              Repl = ConstantExpr::getPointerCast(Repl, ParamTy);
+            }
           }
           else if(Function* F = dyn_cast<Function>(GV)) {
             F->setLinkage(Function::PrivateLinkage);

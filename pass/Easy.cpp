@@ -30,7 +30,9 @@
 
 using namespace llvm;
 
-static cl::opt<std::string> RegexString("easy-regex", cl::desc("<regex>"), cl::init(""));
+static cl::opt<std::string> RegexString("easy-export",
+                                        cl::desc("A regular expression to describe functions to expose at runtime."),
+                                        cl::init(""));
 
 namespace {
   class MayAliasTracer {
@@ -193,9 +195,9 @@ namespace easy {
       if(RegexString.empty())
         return;
       llvm::Regex Match(RegexString);
-      for(Function &F : M)
-        if(Match.match(F.getName()))
-          F.setSection(JIT_SECTION);
+      for(GlobalObject &GO : M.global_objects())
+        if(Match.match(GO.getName()))
+          GO.setSection(JIT_SECTION);
     }
 
     static void collectLocalGlobals(Module &M, SmallVectorImpl<GlobalValue*> &Globals) {

@@ -16,7 +16,7 @@ runtime_lib = os.path.basename("@EASY_JIT_RUNTIME@").split('.')[0].replace("lib"
 runtime_lib_dir = os.path.dirname("@EASY_JIT_RUNTIME@")
 llvm_lib_dir = os.path.join(os.path.dirname("@LLVM_TOOLS_BINARY_DIR@"), "lib")
 
-includes = ["cpplib", "runtime"]
+includes = ["cpplib"]
 include_flags = " ".join(["-I'" + os.path.abspath(dir) + "'" for dir in "@LLVM_INCLUDE_DIRS@".split()] + ["-I'" + os.path.join("@EASY_JIT_ROOT@", dir, "include") + "'" for dir in includes] )
 
 ld_paths = [runtime_lib_dir, llvm_lib_dir]
@@ -25,8 +25,6 @@ for ld_path in ld_paths:
   ld_flags = ld_flags + " -L'" + os.path.abspath(ld_path) + "' -rpath '" + os.path.abspath(ld_path) + "' "
 
 ld_flags = ld_flags + " -l" + runtime_lib
-
-
 
 # substitutions
 config.substitutions.append(('%bin', "@CMAKE_ARCHIVE_OUTPUT_DIRECTORY@"))
@@ -39,6 +37,8 @@ config.substitutions.append(('%include_flags', include_flags))
 config.substitutions.append(('%lib_pass', "@EASY_JIT_PASS@"))
 config.substitutions.append(('%lib_runtime', "@EASY_JIT_RUNTIME@"))
 config.substitutions.append(('%ld_flags', ld_flags))
+
+config.substitutions.append(('%not', "!"))
 
 config.substitutions.append(('%FileCheck', os.path.join("@LLVM_TOOLS_BINARY_DIR@", "FileCheck")))
 

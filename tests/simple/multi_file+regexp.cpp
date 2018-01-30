@@ -1,5 +1,5 @@
 // RUN: %clangxx %cxxflags %include_flags %s -DMAIN -c -o %t.main.o
-// RUN: %clangxx %cxxflags %include_flags %s -Xclang -load -Xclang %lib_pass -DLIB -c -o %t.lib.o -mllvm -easy-regex="add"
+// RUN: %clangxx %cxxflags %include_flags %s -Xclang -load -Xclang %lib_pass -DLIB -c -o %t.lib.o -mllvm -easy-export="add"
 // RUN: %clangxx %ld_flags %t.main.o %t.lib.o -o %t 
 // RUN: %t > %t.out
 // RUN: %FileCheck %s < %t.out

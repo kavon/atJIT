@@ -70,31 +70,7 @@ Moreover, the image dimensions and number of channels typically remain constant 
 the entire execution; however, it is impossible to know their values as they depend on the stream.
 
 ```cpp
-static void kernel(const char* mask, unsigned mask_size, unsigned mask_area,
-                   const unsigned char* in, unsigned char* out,
-                   unsigned rows, unsigned cols, unsigned channels) {
-  unsigned mask_middle = (mask_size/2+1);
-  unsigned middle = (cols+1)*mask_middle;
-
-  for(unsigned i = 0; i != rows-mask_size; ++i) {
-    for(unsigned j = 0; j != cols-mask_size; ++j) {
-      for(unsigned ch = 0; ch != channels; ++ch) {
-
-        long out_val = 0;
-        for(unsigned ii = 0; ii != mask_size; ++ii) {
-          for(unsigned jj = 0; jj != mask_size; ++jj) {
-            out_val += mask[ii*mask_size+jj] * in[((i+ii)*cols+j+jj)*channels+ch];
-          }
-        }
-        out[(i*cols+j+middle)*channels+ch] = out_val / mask_area;
-      }
-    }
-  }
-}
-
-static void apply_filter(const char *mask, unsigned mask_size, unsigned mask_area, cv::Mat &image, cv::Mat *&out) {
-  kernel(mask, mask_size, mask_area, image.ptr(0,0), out->ptr(0,0), image.rows, image.cols, image.channels());
-}
+</include camfilter.cpp ORIGINAL/>
 ```
 
 The main header for the library is ```easy/jit.h```, where the only core function
@@ -102,19 +78,14 @@ of the library is exported. This function is called -- guess how? -- ```easy::ji
 We add the corresponding include directive them in the top of the file.
 
 ```cpp
-#include <easy/jit.h>
+</include camfilter.cpp INCLUDE_EASY/>
 ```
 
 With the call to ```easy::jit```, we specialize the function and obtain a new
 one taking only two parameters (the input and the output frame).
 
 ```cpp
-static void apply_filter(const char *mask, unsigned mask_size, unsigned mask_area, cv::Mat &image, cv::Mat *&out) {
-  using namespace std::placeholders;
-
-  auto kernel_opt = easy::jit(kernel, mask, mask_size, mask_area, _1, _2, image.rows, image.cols, image.channels());
-  kernel_opt(image.ptr(0,0), out->ptr(0,0));
-}
+</include camfilter.cpp EASY/>
 ```
 
 #### Deducing which functions to expose at runtime
@@ -149,17 +120,11 @@ generated.
 Bellow we show the code from previous section, but adapted to use a code cache.
 
 ```cpp
-#include <easy/code_cache.h>
+</include camfilter.cpp INCLUDE_EASY_CACHE/>
 ```
 
 ```cpp
-static void apply_filter(const char *mask, unsigned mask_size, unsigned mask_area, cv::Mat &image, cv::Mat *&out) {
-  using namespace std::placeholders;
-
-  static easy::Cache cache;
-  auto const &kernel_opt = cache.jit(kernel, mask, mask_size, mask_area, _1, _2, image.rows, image.cols, image.channels());
-  kernel_opt(image.ptr(0,0), out->ptr(0,0));
-}
+</include camfilter.cpp EASY_CACHE/>
 ```
 
 License

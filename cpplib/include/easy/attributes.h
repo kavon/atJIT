@@ -9,7 +9,7 @@
 #define EASY_JIT_COMPILER_INTERFACE \
   __attribute__((noinline)) __attribute__((section(CI_SECTION)))
 
-#define TO_JIT \
+#define EASY_JIT_EXPOSE \
   __attribute__((section(JIT_SECTION)))
 
 #endif // NOINLINE
