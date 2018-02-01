@@ -313,7 +313,7 @@ namespace easy {
       }
       else {
         SmallVector<GlobalValue*, 16> ToRemove;
-        SmallPtrSet<GlobalValue*, 8> WhiteList(ToRemove.begin(), ToRemove.end());
+        SmallPtrSet<GlobalValue*, 8> WhiteList(Referenced.begin(), Referenced.end());
         WhiteList.insert(&Entry);
         for(auto& GV: M.global_values())
           if(WhiteList.count(&GV) == 0) {
