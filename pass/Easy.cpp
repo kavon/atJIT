@@ -44,6 +44,15 @@ namespace {
         return true;
       }
 
+      if(auto * CI = dyn_cast<CallInst>(V)) {
+        if(auto* F = CI->getCalledFunction()) {
+          if(F->getIntrinsicID() == Intrinsic::memcpy) {
+            if(mayAliasWithLoadedValues(CI->getArgOperand(1)))
+              return true;
+          }
+        }
+      }
+
       if(auto* SI = dyn_cast<StoreInst>(V)) {
         if(GlobalObject* G = dyn_cast<GlobalObject>(SI->getOperand(0))) {
           if(mayAliasWithLoadedValues(G))
@@ -51,12 +60,13 @@ namespace {
         }
       }
 
-      if(isa<AllocaInst>(V)||isa<GetElementPtrInst>(V)) {
+      if(isa<AllocaInst>(V)||isa<GetElementPtrInst>(V)||isa<BitCastInst>(V)) {
         for(User* U : V->users()) {
           if(mayAliasWithStoredValues(U))
             return true;
         }
       }
+
       return false;
     }
 
@@ -75,6 +85,18 @@ namespace {
       }
       if(auto *GEP = dyn_cast<GetElementPtrInst>(V)) {
         return mayAliasWithLoadedValues(GEP->getPointerOperand());
+      }
+      if(auto *BC = dyn_cast<BitCastInst>(V)) {
+        return mayAliasWithLoadedValues(BC->getOperand(0));
+      }
+      if(auto const* CE = dyn_cast<ConstantExpr const>(V)) {
+        switch(CE->getOpcode()) {
+          case Instruction::GetElementPtr:
+          case Instruction::BitCast:
+            return mayAliasWithLoadedValues(CE->getOperand(0));
+          default:
+            return false;
+        }
       }
       if(auto* OtherGV = dyn_cast<GlobalVariable>(V)) {
         if(!OtherGV->hasInitializer())
@@ -320,6 +342,11 @@ namespace easy {
             for(Value* Op : I.operands())
               if(User* OpU = dyn_cast<User>(Op))
                 ToVisit.push_back(OpU);
+        }
+        else if(GlobalVariable* GV = dyn_cast<GlobalVariable>(U)) {
+          if(GV->hasInitializer()) {
+            ToVisit.push_back(GV->getInitializer());
+          }
         }
 
         for(Value* Op : U->operands())
