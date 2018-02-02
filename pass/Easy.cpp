@@ -37,8 +37,12 @@ static cl::opt<std::string> RegexString("easy-export",
 namespace {
   class MayAliasTracer {
     SmallPtrSet<GlobalObject*, 32> GOs_;
+    SmallPtrSet<Value*, 32> VisitedLoaded_;
+    SmallPtrSet<Value*, 32> VisitedStored_;
 
     void mayAliasWithStoredValues(Value* V) {
+      if(!VisitedStored_.insert(V).second)
+        return;
       if(auto* GO = dyn_cast<GlobalObject>(V))
         GOs_.insert(GO);
 
@@ -64,6 +68,8 @@ namespace {
     }
 
     void mayAliasWithLoadedValues(Value * V) {
+      if(!VisitedLoaded_.insert(V).second)
+        return;
       if(auto* GO = dyn_cast<GlobalObject>(V))
         GOs_.insert(GO);
 
