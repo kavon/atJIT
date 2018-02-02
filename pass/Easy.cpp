@@ -36,58 +36,53 @@ static cl::opt<std::string> RegexString("easy-export",
 
 namespace {
   class MayAliasTracer {
-    GlobalObject & GO_;
-    bool const Result_;
+    SmallPtrSet<GlobalObject*, 32> GOs_;
 
-    bool mayAliasWithStoredValues(Value* V) {
-      if(V == &GO_) {
-        return true;
-      }
+    void mayAliasWithStoredValues(Value* V) {
+      if(auto* GO = dyn_cast<GlobalObject>(V))
+        GOs_.insert(GO);
 
       if(auto * CI = dyn_cast<CallInst>(V)) {
         if(auto* F = CI->getCalledFunction()) {
           if(F->getIntrinsicID() == Intrinsic::memcpy) {
-            if(mayAliasWithLoadedValues(CI->getArgOperand(1)))
-              return true;
+            mayAliasWithLoadedValues(CI->getArgOperand(1));
           }
         }
       }
 
       if(auto* SI = dyn_cast<StoreInst>(V)) {
         if(GlobalObject* G = dyn_cast<GlobalObject>(SI->getOperand(0))) {
-          if(mayAliasWithLoadedValues(G))
-            return true;
+          mayAliasWithLoadedValues(G);
         }
       }
 
       if(isa<AllocaInst>(V)||isa<GetElementPtrInst>(V)||isa<BitCastInst>(V)) {
         for(User* U : V->users()) {
-          if(mayAliasWithStoredValues(U))
-            return true;
+          mayAliasWithStoredValues(U);
         }
       }
-
-      return false;
     }
 
-    bool mayAliasWithLoadedValues(Value * V) {
-      if(V == &GO_)
-        return true;
+    void mayAliasWithLoadedValues(Value * V) {
+      if(auto* GO = dyn_cast<GlobalObject>(V))
+        GOs_.insert(GO);
+
       //TODO: generalize that
       if(auto* PHI = dyn_cast<PHINode>(V)) {
-        return std::any_of(PHI->op_begin(), PHI->op_end(), [this](Value* V) { return mayAliasWithLoadedValues(V);});
+        std::for_each(PHI->op_begin(), PHI->op_end(), [this](Value* V) { mayAliasWithLoadedValues(V);});
       }
       if(auto* Select = dyn_cast<SelectInst>(V)) {
-        return mayAliasWithLoadedValues(Select->getTrueValue()) || mayAliasWithLoadedValues(Select->getFalseValue());
+        mayAliasWithLoadedValues(Select->getTrueValue());
+        mayAliasWithLoadedValues(Select->getFalseValue());
       }
       if(auto* Alloca = dyn_cast<AllocaInst>(V)) {
-        return mayAliasWithStoredValues(Alloca);
+        mayAliasWithStoredValues(Alloca);
       }
       if(auto *GEP = dyn_cast<GetElementPtrInst>(V)) {
-        return mayAliasWithLoadedValues(GEP->getPointerOperand());
+        mayAliasWithLoadedValues(GEP->getPointerOperand());
       }
       if(auto *BC = dyn_cast<BitCastInst>(V)) {
-        return mayAliasWithLoadedValues(BC->getOperand(0));
+        mayAliasWithLoadedValues(BC->getOperand(0));
       }
       if(auto const* CE = dyn_cast<ConstantExpr const>(V)) {
         switch(CE->getOpcode()) {
@@ -95,24 +90,24 @@ namespace {
           case Instruction::BitCast:
             return mayAliasWithLoadedValues(CE->getOperand(0));
           default:
-            return false;
+            ;
         }
       }
       if(auto* OtherGV = dyn_cast<GlobalVariable>(V)) {
         if(!OtherGV->hasInitializer())
-          return false;
-        return mayAliasWithLoadedValues(OtherGV->getInitializer()) || mayAliasWithStoredValues(OtherGV);
+          return ;
+        mayAliasWithLoadedValues(OtherGV->getInitializer());
+        mayAliasWithStoredValues(OtherGV);
       }
       if(auto* CA = dyn_cast<ConstantArray>(V)) {
-        return std::any_of(CA->op_begin(), CA->op_end(), [this](Value* V) { return mayAliasWithLoadedValues(V); });
+        std::for_each(CA->op_begin(), CA->op_end(), [this](Value* V) { mayAliasWithLoadedValues(V); });
       }
-      return false;
     }
 
     public:
 
-    MayAliasTracer(GlobalObject& GO, Value* V) : GO_{GO}, Result_{mayAliasWithLoadedValues(V)} {}
-    operator bool() const { return Result_;}
+    MayAliasTracer(Value* V) { mayAliasWithLoadedValues(V); }
+    auto count(GlobalObject& GO) const { return GOs_.count(&GO);}
   };
 
 }
@@ -201,9 +196,9 @@ namespace easy {
           if(CallSite CS{U}) {
             for(Value* O : CS.args()) {
               O = O->stripPointerCastsNoFollowAliases();
-              // FIXME: O(2)
+              MayAliasTracer Tracer(O);
               for(GlobalObject& GO: M.global_objects()) {
-                if(isConstant(GO) and MayAliasTracer(GO, O)) {
+                if(isConstant(GO) and Tracer.count(GO)) {
                   GO.setSection(JIT_SECTION);
                 }
               }
