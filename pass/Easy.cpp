@@ -4,6 +4,7 @@
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/IntrinsicInst.h>
 
 #include <llvm/IR/LegacyPassManager.h>
 
@@ -46,18 +47,14 @@ namespace {
       if(auto* GO = dyn_cast<GlobalObject>(V))
         GOs_.insert(GO);
 
-      if(auto * CI = dyn_cast<CallInst>(V)) {
-        if(auto* F = CI->getCalledFunction()) {
-          if(F->getIntrinsicID() == Intrinsic::memcpy) {
-            mayAliasWithLoadedValues(CI->getArgOperand(1));
-          }
+      if(auto * II = dyn_cast<IntrinsicInst>(V)) {
+        if(II->getIntrinsicID() == Intrinsic::memcpy) {
+          mayAliasWithLoadedValues(II->getArgOperand(1));
         }
       }
 
       if(auto* SI = dyn_cast<StoreInst>(V)) {
-        if(GlobalObject* G = dyn_cast<GlobalObject>(SI->getOperand(0))) {
-          mayAliasWithLoadedValues(G);
-        }
+        mayAliasWithLoadedValues(SI->getValueOperand());
       }
 
       if(isa<AllocaInst>(V)||isa<GetElementPtrInst>(V)||isa<BitCastInst>(V)) {
@@ -100,9 +97,8 @@ namespace {
         }
       }
       if(auto* OtherGV = dyn_cast<GlobalVariable>(V)) {
-        if(!OtherGV->hasInitializer())
-          return ;
-        mayAliasWithLoadedValues(OtherGV->getInitializer());
+        if(OtherGV->hasInitializer())
+          mayAliasWithLoadedValues(OtherGV->getInitializer());
         mayAliasWithStoredValues(OtherGV);
       }
       if(auto* CA = dyn_cast<ConstantArray>(V)) {
