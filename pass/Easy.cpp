@@ -1,10 +1,10 @@
 #include <easy/attributes.h>
+#include "MayAliasTracer.h"
 
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/IRBuilder.h>
-#include <llvm/IR/IntrinsicInst.h>
 
 #include <llvm/IR/LegacyPassManager.h>
 
@@ -34,85 +34,6 @@ using namespace llvm;
 static cl::opt<std::string> RegexString("easy-export",
                                         cl::desc("A regular expression to describe functions to expose at runtime."),
                                         cl::init(""));
-
-namespace {
-  class MayAliasTracer {
-    SmallPtrSet<GlobalObject*, 32> GOs_;
-    SmallPtrSet<Value*, 32> VisitedLoaded_;
-    SmallPtrSet<Value*, 32> VisitedStored_;
-
-    void mayAliasWithStoredValues(Value* V) {
-      if(!VisitedStored_.insert(V).second)
-        return;
-      if(auto* GO = dyn_cast<GlobalObject>(V))
-        GOs_.insert(GO);
-
-      if(auto * II = dyn_cast<IntrinsicInst>(V)) {
-        if(II->getIntrinsicID() == Intrinsic::memcpy) {
-          mayAliasWithLoadedValues(II->getArgOperand(1));
-        }
-      }
-
-      if(auto* SI = dyn_cast<StoreInst>(V)) {
-        mayAliasWithLoadedValues(SI->getValueOperand());
-      }
-
-      if(isa<AllocaInst>(V)||isa<GetElementPtrInst>(V)||isa<BitCastInst>(V)) {
-        for(User* U : V->users()) {
-          mayAliasWithStoredValues(U);
-        }
-      }
-    }
-
-    void mayAliasWithLoadedValues(Value * V) {
-      if(!VisitedLoaded_.insert(V).second)
-        return;
-      if(auto* GO = dyn_cast<GlobalObject>(V))
-        GOs_.insert(GO);
-
-      //TODO: generalize that
-      if(auto* PHI = dyn_cast<PHINode>(V)) {
-        std::for_each(PHI->op_begin(), PHI->op_end(), [this](Value* V) { mayAliasWithLoadedValues(V);});
-      }
-      if(auto* Select = dyn_cast<SelectInst>(V)) {
-        mayAliasWithLoadedValues(Select->getTrueValue());
-        mayAliasWithLoadedValues(Select->getFalseValue());
-      }
-      if(auto* Alloca = dyn_cast<AllocaInst>(V)) {
-        mayAliasWithStoredValues(Alloca);
-      }
-      if(auto *GEP = dyn_cast<GetElementPtrInst>(V)) {
-        mayAliasWithLoadedValues(GEP->getPointerOperand());
-      }
-      if(auto *BC = dyn_cast<BitCastInst>(V)) {
-        mayAliasWithLoadedValues(BC->getOperand(0));
-      }
-      if(auto const* CE = dyn_cast<ConstantExpr const>(V)) {
-        switch(CE->getOpcode()) {
-          case Instruction::GetElementPtr:
-          case Instruction::BitCast:
-            return mayAliasWithLoadedValues(CE->getOperand(0));
-          default:
-            ;
-        }
-      }
-      if(auto* OtherGV = dyn_cast<GlobalVariable>(V)) {
-        if(OtherGV->hasInitializer())
-          mayAliasWithLoadedValues(OtherGV->getInitializer());
-        mayAliasWithStoredValues(OtherGV);
-      }
-      if(auto* CA = dyn_cast<ConstantArray>(V)) {
-        std::for_each(CA->op_begin(), CA->op_end(), [this](Value* V) { mayAliasWithLoadedValues(V); });
-      }
-    }
-
-    public:
-
-    MayAliasTracer(Value* V) { mayAliasWithLoadedValues(V); }
-    auto count(GlobalObject& GO) const { return GOs_.count(&GO);}
-  };
-
-}
 
 namespace easy {
   struct RegisterBitcode : public ModulePass {
