@@ -48,6 +48,8 @@ void Function::Optimize(llvm::Module& M, const char* Name, const easy::Context& 
   MPM.add(easy::createContextAnalysisPass(C));
   MPM.add(easy::createInlineParametersPass(Name));
   Builder.populateModulePassManager(MPM);
+  MPM.add(easy::createDevirtualizeConstantPass(Name));
+  Builder.populateModulePassManager(MPM);
 
   MPM.run(M);
 }
