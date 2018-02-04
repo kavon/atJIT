@@ -1,4 +1,5 @@
 #include <easy/attributes.h>
+#include "MayAliasTracer.h"
 
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Constants.h>
@@ -33,67 +34,6 @@ using namespace llvm;
 static cl::opt<std::string> RegexString("easy-export",
                                         cl::desc("A regular expression to describe functions to expose at runtime."),
                                         cl::init(""));
-
-namespace {
-  class MayAliasTracer {
-    GlobalObject & GO_;
-    bool const Result_;
-
-    bool mayAliasWithStoredValues(Value* V) {
-      if(V == &GO_) {
-        return true;
-      }
-
-      if(auto* SI = dyn_cast<StoreInst>(V)) {
-        if(GlobalObject* G = dyn_cast<GlobalObject>(SI->getOperand(0))) {
-          if(mayAliasWithLoadedValues(G))
-            return true;
-        }
-      }
-
-      if(isa<AllocaInst>(V)||isa<GetElementPtrInst>(V)) {
-        for(User* U : V->users()) {
-          if(mayAliasWithStoredValues(U))
-            return true;
-        }
-      }
-      return false;
-    }
-
-    bool mayAliasWithLoadedValues(Value * V) {
-      if(V == &GO_)
-        return true;
-      //TODO: generalize that
-      if(auto* PHI = dyn_cast<PHINode>(V)) {
-        return std::any_of(PHI->op_begin(), PHI->op_end(), [this](Value* V) { return mayAliasWithLoadedValues(V);});
-      }
-      if(auto* Select = dyn_cast<SelectInst>(V)) {
-        return mayAliasWithLoadedValues(Select->getTrueValue()) || mayAliasWithLoadedValues(Select->getFalseValue());
-      }
-      if(auto* Alloca = dyn_cast<AllocaInst>(V)) {
-        return mayAliasWithStoredValues(Alloca);
-      }
-      if(auto *GEP = dyn_cast<GetElementPtrInst>(V)) {
-        return mayAliasWithLoadedValues(GEP->getPointerOperand());
-      }
-      if(auto* OtherGV = dyn_cast<GlobalVariable>(V)) {
-        if(!OtherGV->hasInitializer())
-          return false;
-        return mayAliasWithLoadedValues(OtherGV->getInitializer()) || mayAliasWithStoredValues(OtherGV);
-      }
-      if(auto* CA = dyn_cast<ConstantArray>(V)) {
-        return std::any_of(CA->op_begin(), CA->op_end(), [this](Value* V) { return mayAliasWithLoadedValues(V); });
-      }
-      return false;
-    }
-
-    public:
-
-    MayAliasTracer(GlobalObject& GO, Value* V) : GO_{GO}, Result_{mayAliasWithLoadedValues(V)} {}
-    operator bool() const { return Result_;}
-  };
-
-}
 
 namespace easy {
   struct RegisterBitcode : public ModulePass {
@@ -179,9 +119,9 @@ namespace easy {
           if(CallSite CS{U}) {
             for(Value* O : CS.args()) {
               O = O->stripPointerCastsNoFollowAliases();
-              // FIXME: O(2)
+              MayAliasTracer Tracer(O);
               for(GlobalObject& GO: M.global_objects()) {
-                if(isConstant(GO) and MayAliasTracer(GO, O)) {
+                if(isConstant(GO) and Tracer.count(GO)) {
                   GO.setSection(JIT_SECTION);
                 }
               }
@@ -291,7 +231,7 @@ namespace easy {
       }
       else {
         SmallVector<GlobalValue*, 16> ToRemove;
-        SmallPtrSet<GlobalValue*, 8> WhiteList(ToRemove.begin(), ToRemove.end());
+        SmallPtrSet<GlobalValue*, 8> WhiteList(Referenced.begin(), Referenced.end());
         WhiteList.insert(&Entry);
         for(auto& GV: M.global_values())
           if(WhiteList.count(&GV) == 0) {
@@ -320,6 +260,11 @@ namespace easy {
             for(Value* Op : I.operands())
               if(User* OpU = dyn_cast<User>(Op))
                 ToVisit.push_back(OpU);
+        }
+        else if(GlobalVariable* GV = dyn_cast<GlobalVariable>(U)) {
+          if(GV->hasInitializer()) {
+            ToVisit.push_back(GV->getInitializer());
+          }
         }
 
         for(Value* Op : U->operands())
