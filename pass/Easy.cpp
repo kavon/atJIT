@@ -215,30 +215,25 @@ namespace easy {
     }
 
     static void cleanModule(GlobalValue &Entry, Module &M) {
+      bool ForFunction = isa<Function>(Entry);
+
       auto Referenced = getReferencedFromEntry(Entry);
       Referenced.push_back(&Entry);
-      if(isa<Function>(Entry)) {
-        Entry.setLinkage(GlobalValue::ExternalLinkage);
-        //clean the cloned module
-        legacy::PassManager Passes;
-        Passes.add(createGVExtractionPass(Referenced));
-        Passes.add(createGlobalDCEPass());
-        Passes.add(createStripDeadDebugInfoPass());
-        Passes.add(createStripDeadPrototypesPass());
-        Passes.run(M);
 
-        fixLinkages(Entry, M);
+      if(ForFunction) {
+        Entry.setLinkage(GlobalValue::ExternalLinkage);
       }
-      else {
-        SmallVector<GlobalValue*, 16> ToRemove;
-        SmallPtrSet<GlobalValue*, 8> WhiteList(Referenced.begin(), Referenced.end());
-        WhiteList.insert(&Entry);
-        for(auto& GV: M.global_values())
-          if(WhiteList.count(&GV) == 0) {
-            ToRemove.push_back(&GV);
-          }
-        for(auto* GV:ToRemove)
-          GV->eraseFromParent();
+
+      //clean the cloned module
+      legacy::PassManager Passes;
+      Passes.add(createGVExtractionPass(Referenced));
+      Passes.add(createGlobalDCEPass());
+      Passes.add(createStripDeadDebugInfoPass());
+      Passes.add(createStripDeadPrototypesPass());
+      Passes.run(M);
+
+      if(ForFunction) {
+        fixLinkages(Entry, M);
       }
     }
 
