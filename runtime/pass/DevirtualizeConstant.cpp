@@ -30,7 +30,7 @@ static ConstantInt* getVTableHostAddress(Value& V) {
       return nullptr;
 
     // that's a vtable
-    auto* Location = dyn_cast<Constant>(VTable->getPointerOperand());
+    auto* Location = dyn_cast<Constant>(VTable->getPointerOperand()->stripPointerCasts());
     if(!Location)
       return nullptr;
 
@@ -69,28 +69,29 @@ static Function* findFunctionAndLinkModules(Module& M, void* HostValue) {
     return nullptr;
 }
 
-bool easy::DevirtualizeConstant::runOnModule(llvm::Module &M) {
+bool easy::DevirtualizeConstant::runOnFunction(llvm::Function &F) {
+
+  if(F.getName() != TargetName_)
+    return false;
+
+  llvm::Module &M = *F.getParent();
 
   Context const &C = getAnalysis<ContextAnalysis>().getContext();
-  Function* F = M.getFunction(TargetName_);
-  assert(F);
 
-  for(auto& I: instructions(*F)) {
+  for(auto& I: instructions(F)) {
     auto* VTable = getVTableHostAddress(I);
     if(!VTable)
       continue;
-
-    auto* VTableTy = VTable->getType();
 
     void** RuntimeLoadedValue = *(void***)(uintptr_t)(VTable->getZExtValue());
 
     // that's generally the load from the table
     for(User* U : VTable->users()) {
-      if(auto* FPtr = dyn_cast<LoadInst>(U)) {
-        void* FPtrHostValue = *RuntimeLoadedValue;
-        Function* F = findFunctionAndLinkModules(M, FPtrHostValue);
-        if(F) {
-          FPtr->replaceAllUsesWith(F);
+      if(auto* CalledPtr = dyn_cast<LoadInst>(U)) {
+        void* CalledPtrHostValue = *RuntimeLoadedValue;
+        Function* Called = findFunctionAndLinkModules(M, CalledPtrHostValue);
+        if(Called) {
+          CalledPtr->replaceAllUsesWith(Called);
         }
 
       }

@@ -46,20 +46,20 @@ namespace easy {
   };
 
   struct DevirtualizeConstant :
-      public llvm::ModulePass {
+      public llvm::FunctionPass {
 
     static char ID;
 
     DevirtualizeConstant()
-      : llvm::ModulePass(ID) {}
+      : llvm::FunctionPass(ID) {}
     DevirtualizeConstant(llvm::StringRef TargetName)
-      : llvm::ModulePass(ID), TargetName_(TargetName) {}
+      : llvm::FunctionPass(ID), TargetName_(TargetName) {}
 
     void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
       AU.addRequired<ContextAnalysis>();
     }
 
-    bool runOnModule(llvm::Module &M) override;
+    bool runOnFunction(llvm::Function &F) override;
 
     private:
     llvm::StringRef TargetName_;
