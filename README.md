@@ -9,6 +9,10 @@ About
 Easy::jit is a _compiler-assisted_ library that enables simple Just-In-Time
 code generation for C++ codes.
 
+### Talks
+ 
+* [Easy::jit at FOSDEM'18](https://www.youtube.com/watch?v=5_rydTiB32I)
+
 Building
 --------
 
