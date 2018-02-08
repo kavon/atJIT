@@ -37,6 +37,18 @@ and add the flags ```-DEASY_JIT_BENCHMARK=1 -DBENCHMARK_DIR=<path_to_google_benc
 
 Everything is ready to go!
 
+### Docker
+
+If you want to give only a quick test to the project, everything is provided to use it with docker.
+To do this, generate a Dockerfile from the current directory using the scripts in ```<path_to_easy_jit_src>/misc/docker```, 
+then generate your docker instance.
+
+```bash
+python3 <path_to_easy_jit_src>/misc/docker/GenDockerfile.py  <path_to_easy_jit_src>/.travis.yml > Dockerfile
+docker build -t easy/test -f Dockerfile
+docker run -ti easy/test /bin/bash
+```
+
 Basic usage
 -----------
 
