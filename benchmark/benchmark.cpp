@@ -2,6 +2,7 @@
 #include <benchmark/benchmark.h>
 #include <easy/code_cache.h>
 #include <numeric>
+#include <algorithm>
 
 void __attribute__((noinline)) kernel(int n, int m, int * image, int const * mask, int* out) {
   for(int i = 0; i < n - m; ++i)

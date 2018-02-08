@@ -2,10 +2,11 @@
 #define FUNCTION
 
 #include "Context.h"
-#include "BitcodeTracker.h"
 #include "LLVMHolder.h"
 
 namespace easy {
+
+class GlobalMapping;
 
 class Function {
 
@@ -22,14 +23,6 @@ class Function {
   }
 
   static std::unique_ptr<Function> Compile(void *Addr, easy::Context const &C);
-
-  private:
-
-  static std::unique_ptr<llvm::TargetMachine> GetHostTargetMachine();
-  static void Optimize(llvm::Module& M, const char* Name, easy::Context const& C, unsigned OptLevel = 0, unsigned OptSize = 0);
-  static std::unique_ptr<llvm::ExecutionEngine> GetEngine(std::unique_ptr<llvm::Module> M, const char *Name);
-  static void MapGlobals(llvm::ExecutionEngine& EE, GlobalMapping* Globals);
-  static void WriteOptimizedToFile(llvm::Module const &M, std::string const& File);
 };
 
 }
