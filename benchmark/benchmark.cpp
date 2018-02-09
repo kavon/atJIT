@@ -98,7 +98,7 @@ BENCHMARK(BM_convolve_compile_jit);
 
 static void BM_convolve_cache_hit_jit(benchmark::State& state) {
   using namespace std::placeholders;
-  static easy::Cache cache;
+  static easy::Cache<> cache;
   cache.jit(kernel, 11, 3, _1, &mask[0][0], _2);
   benchmark::ClobberMemory();
 
@@ -150,7 +150,7 @@ BENCHMARK(BM_qsort_compile_jit);
 
 static void BM_qsort_cache_hit_jit(benchmark::State& state) {
   using namespace std::placeholders;
-  static easy::Cache cache;
+  static easy::Cache<> cache;
   cache.jit(Qsort, _1, _2, _3, int_cmp);
   benchmark::ClobberMemory();
   for (auto _ : state) {
