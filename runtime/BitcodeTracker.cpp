@@ -23,6 +23,13 @@ bool BitcodeTracker::hasGlobalMapping(void* FPtr) const {
   return InfoPtr != Functions.end();
 }
 
+void* BitcodeTracker::getAddress(std::string const &Name) {
+  auto Addr = NameToAddress.find(Name);
+  if(Addr == NameToAddress.end())
+    return nullptr;
+  return Addr->second;
+}
+
 std::tuple<const char*, GlobalMapping*> BitcodeTracker::getNameAndGlobalMapping(void* FPtr) {
   auto InfoPtr = Functions.find(FPtr);
   if(InfoPtr == Functions.end()) {

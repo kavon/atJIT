@@ -7,6 +7,7 @@
 #include <easy/meta.h>
 #include <easy/param.h>
 
+#include <iostream>
 #include <memory>
 #include <type_traits>
 #include <tuple>
@@ -38,6 +39,14 @@ class FunctionWrapperBase {
   void* getRawPointer() const {
     return Fun_->getRawPointer();
   } 
+
+  void serialize(std::ostream& os) const {
+    Fun_->serialize(os);
+  }
+  static FunctionWrapperBase deserialize(std::istream& is) {
+    std::unique_ptr<Function> Fun = Function::deserialize(is);
+    return FunctionWrapperBase{std::move(Fun)};
+  }
 };
 
 template<class FTy>
@@ -54,6 +63,11 @@ class FunctionWrapper<Ret(Params...)> :
   Ret operator()(Args&& ... args) const {
     return ((Ret(*)(Params...))getRawPointer())(std::forward<Args>(args)...);
   }
+
+  static FunctionWrapper<Ret(Params...)> deserialize(std::istream& is) {
+    std::unique_ptr<Function> Fun = Function::deserialize(is);
+    return FunctionWrapper<Ret(Params...)>{std::move(Fun)};
+  }
 };
 
 // specialization for void return
@@ -67,6 +81,11 @@ class FunctionWrapper<void(Params...)> :
   template<class ... Args>
   void operator()(Args&& ... args) const {
     return ((void(*)(Params...))getRawPointer())(std::forward<Args>(args)...);
+  }
+
+  static FunctionWrapper<void(Params...)> deserialize(std::istream& is) {
+    std::unique_ptr<Function> Fun = Function::deserialize(is);
+    return FunctionWrapper<void(Params...)>{std::move(Fun)};
   }
 };
 

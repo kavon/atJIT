@@ -2,9 +2,12 @@
 #include <easy/runtime/Function.h>
 #include <easy/runtime/RuntimePasses.h>
 #include <easy/runtime/LLVMHolderImpl.h>
+#include <easy/runtime/Utils.h>
 #include <easy/exceptions.h>
 
-#include <llvm/Transforms/IPO/PassManagerBuilder.h> 
+#include <llvm/Bitcode/BitcodeWriter.h>
+#include <llvm/Bitcode/BitcodeReader.h>
+#include <llvm/Transforms/IPO/PassManagerBuilder.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Support/Host.h> 
@@ -13,6 +16,7 @@
 #include <llvm/Analysis/TargetTransformInfo.h> 
 #include <llvm/Analysis/TargetLibraryInfo.h> 
 #include <llvm/Support/FileSystem.h>
+
 
 using namespace easy;
 
@@ -90,6 +94,24 @@ static void WriteOptimizedToFile(llvm::Module const &M, std::string const& File)
   Out << M;
 }
 
+std::unique_ptr<Function>
+CompileAndWrap(const char*Name, GlobalMapping* Globals,
+               std::unique_ptr<llvm::LLVMContext> Ctx,
+               std::unique_ptr<llvm::Module> M) {
+
+  llvm::Module* MPtr = M.get();
+  std::unique_ptr<llvm::ExecutionEngine> EE = GetEngine(std::move(M), Name);
+
+  if(Globals) {
+    MapGlobals(*EE, Globals);
+  }
+
+  void *Address = (void*)EE->getFunctionAddress(Name);
+
+  std::unique_ptr<LLVMHolder> Holder(new easy::LLVMHolderImpl{std::move(EE), std::move(Ctx), MPtr});
+  return std::unique_ptr<Function>(new Function(Address, std::move(Holder)));
+}
+
 std::unique_ptr<Function> Function::Compile(void *Addr, easy::Context const& C) {
 
   auto &BT = BitcodeTracker::GetTracker();
@@ -110,12 +132,41 @@ std::unique_ptr<Function> Function::Compile(void *Addr, easy::Context const& C) 
 
   WriteOptimizedToFile(*M, C.getDebugFile());
 
-  std::unique_ptr<llvm::ExecutionEngine> EE = GetEngine(std::move(M), Name);
+  return CompileAndWrap(Name, Globals, std::move(Ctx), std::move(M));
+}
 
-  MapGlobals(*EE, Globals);
+void easy::Function::serialize(std::ostream& os) const {
+  std::string buf;
+  llvm::raw_string_ostream stream(buf);
 
-  void *Address = (void*)EE->getFunctionAddress(Name);
+  LLVMHolderImpl const *H = reinterpret_cast<LLVMHolderImpl const*>(Holder.get());
+  llvm::WriteBitcodeToFile(H->M_, stream);
+  stream.flush();
 
-  std::unique_ptr<LLVMHolder> Holder(new easy::LLVMHolderImpl{std::move(EE), std::move(Ctx)});
-  return std::unique_ptr<Function>(new Function(Address, std::move(Holder)));
+  os << buf;
+}
+
+std::unique_ptr<easy::Function> easy::Function::deserialize(std::istream& is) {
+
+  auto &BT = BitcodeTracker::GetTracker();
+
+  std::string buf(std::istreambuf_iterator<char>(is), {}); // read the entire istream
+  auto MemBuf = llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(buf));
+
+  std::unique_ptr<llvm::LLVMContext> Ctx(new llvm::LLVMContext());
+  auto ModuleOrError = llvm::parseBitcodeFile(*MemBuf, *Ctx);
+  if(ModuleOrError.takeError()) {
+    return nullptr;
+  }
+
+  auto M = std::move(ModuleOrError.get());
+
+  std::string FunName = easy::GetEntryFunctionName(*M);
+
+  GlobalMapping* Globals = nullptr;
+  if(void* OrigFunPtr = BT.getAddress(FunName)) {
+    std::tie(std::ignore, Globals) = BT.getNameAndGlobalMapping(OrigFunPtr);
+  }
+
+  return CompileAndWrap(FunName.c_str(), Globals, std::move(Ctx), std::move(M));
 }
