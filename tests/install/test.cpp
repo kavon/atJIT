@@ -1,5 +1,5 @@
-// REQUIRE: install 
-// 
+// REQUIRES: install
+//
 // clean before, if not there may be unconsistencies 
 // RUN: rm -fr build.ninja CMakeCache.txt CMakeFiles cmake_install.cmake InstallTest rules.ninja
 //
