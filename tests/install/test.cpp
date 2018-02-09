@@ -21,7 +21,7 @@ void test(int a) {
 }
 
 int main() {
-  easy::Cache C;
+  easy::Cache<> C;
   auto test_jit0 = easy::jit(test, 0);
   auto const &test_jit1 = C.jit(test, 1);
 
