@@ -1,3 +1,4 @@
+#include <easy/runtime/BitcodeTracker.h>
 #include <easy/runtime/Function.h>
 #include <easy/runtime/RuntimePasses.h>
 #include <easy/runtime/LLVMHolderImpl.h>
@@ -24,12 +25,12 @@ Function::Function(void* Addr, std::unique_ptr<LLVMHolder> H)
   : Address(Addr), Holder(std::move(H)) {
 }
 
-std::unique_ptr<llvm::TargetMachine> Function::GetHostTargetMachine() {
+static std::unique_ptr<llvm::TargetMachine> GetHostTargetMachine() {
   std::unique_ptr<llvm::TargetMachine> TM(llvm::EngineBuilder().selectTarget());
   return TM;
 }
 
-void Function::Optimize(llvm::Module& M, const char* Name, const easy::Context& C, unsigned OptLevel, unsigned OptSize) {
+static void Optimize(llvm::Module& M, const char* Name, const easy::Context& C, unsigned OptLevel, unsigned OptSize) {
 
   llvm::Triple Triple{llvm::sys::getProcessTriple()};
 
@@ -54,7 +55,7 @@ void Function::Optimize(llvm::Module& M, const char* Name, const easy::Context& 
   MPM.run(M);
 }
 
-std::unique_ptr<llvm::ExecutionEngine> Function::GetEngine(std::unique_ptr<llvm::Module> M, const char *Name) {
+static std::unique_ptr<llvm::ExecutionEngine> GetEngine(std::unique_ptr<llvm::Module> M, const char *Name) {
   llvm::EngineBuilder ebuilder(std::move(M));
   std::string eeError;
 
@@ -71,10 +72,22 @@ std::unique_ptr<llvm::ExecutionEngine> Function::GetEngine(std::unique_ptr<llvm:
   return EE;
 }
 
-void Function::MapGlobals(llvm::ExecutionEngine& EE, GlobalMapping* Globals) {
+static void MapGlobals(llvm::ExecutionEngine& EE, GlobalMapping* Globals) {
   for(GlobalMapping *GM = Globals; GM->Name; ++GM) {
     EE.addGlobalMapping(GM->Name, (uint64_t)GM->Address);
   }
+}
+
+static void WriteOptimizedToFile(llvm::Module const &M, std::string const& File) {
+  if(File.empty())
+    return;
+  std::error_code Error;
+  llvm::raw_fd_ostream Out(File, Error, llvm::sys::fs::F_None);
+
+  if(Error)
+    throw CouldNotOpenFile(Error.message());
+
+  Out << M;
 }
 
 std::unique_ptr<Function> Function::Compile(void *Addr, easy::Context const& C) {
@@ -105,16 +118,4 @@ std::unique_ptr<Function> Function::Compile(void *Addr, easy::Context const& C) 
 
   std::unique_ptr<LLVMHolder> Holder(new easy::LLVMHolderImpl{std::move(EE), std::move(Ctx)});
   return std::unique_ptr<Function>(new Function(Address, std::move(Holder)));
-}
-
-void Function::WriteOptimizedToFile(llvm::Module const &M, std::string const& File) {
-  if(File.empty())
-    return;
-  std::error_code Error;
-  llvm::raw_fd_ostream Out(File, Error, llvm::sys::fs::F_None);
-
-  if(Error)
-    throw CouldNotOpenFile(Error.message());
-
-  Out << M;
 }

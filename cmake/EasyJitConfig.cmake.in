@@ -1,0 +1,10 @@
+# Try to find the easy::jit library, headers and compiler plugin.
+#  EasyJit_INCLUDE_DIRS - the easy::jit include directory
+#  EasyJit_LIBRARY_DIRS - library directory needed to use easy::jit 
+#  EasyJit_LIBRARY      - library needed to use easy::jit 
+#  EasyJit_PLUGIN       - compiler plugin 
+
+set(EasyJit_INCLUDE_DIRS "@CMAKE_INSTALL_PREFIX@/include")
+set(EasyJit_LIBRARY_DIRS "@CMAKE_INSTALL_PREFIX@/lib")
+set(EasyJit_LIBRARY "EasyJitRuntime")
+set(EasyJit_PLUGIN "@CMAKE_INSTALL_PREFIX@/lib/EasyJitPass@CMAKE_SHARED_LIBRARY_SUFFIX@")

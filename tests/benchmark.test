@@ -1,2 +1,2 @@
-REQUIRE: benchmark
+REQUIRES: benchmark
 RUN: %bin/easyjit-benchmark 
