@@ -11,7 +11,7 @@
 
 // only one function
 // reading from a global variable
-// CHECK-IR-NOT: = .*call
+// CHECK-IR-NOT: = tail call
 
 
 using namespace std::placeholders;

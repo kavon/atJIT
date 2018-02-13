@@ -77,6 +77,7 @@ bool easy::DevirtualizeConstant::runOnFunction(llvm::Function &F) {
   llvm::Module &M = *F.getParent();
 
   Context const &C = getAnalysis<ContextAnalysis>().getContext();
+  errs() << F << "\n";
 
   for(auto& I: instructions(F)) {
     auto* VTable = getVTableHostAddress(I);
@@ -87,13 +88,21 @@ bool easy::DevirtualizeConstant::runOnFunction(llvm::Function &F) {
 
     // that's generally the load from the table
     for(User* U : VTable->users()) {
-      if(auto* CalledPtr = dyn_cast<LoadInst>(U)) {
-        void* CalledPtrHostValue = *RuntimeLoadedValue;
-        Function* Called = findFunctionAndLinkModules(M, CalledPtrHostValue);
-        if(Called) {
-          CalledPtr->replaceAllUsesWith(Called);
-        }
+      ConstantExpr* CE = dyn_cast<ConstantExpr>(U);
+      if(!CE || !CE->isCast())
+        continue;
 
+      for(User* U : CE->users()) {
+        if(auto* CalledPtr = dyn_cast<LoadInst>(U)) {
+          void* CalledPtrHostValue = *RuntimeLoadedValue;
+          Function* Called = findFunctionAndLinkModules(M, CalledPtrHostValue);
+          if(Called) {
+            for(User* U2 : CalledPtr->users()) {
+              if(auto* LI = dyn_cast<LoadInst>(U2))
+                LI->replaceAllUsesWith(Called);
+            }
+          }
+        }
       }
     }
   }
