@@ -9,21 +9,33 @@
 namespace easy {
 
 struct ArgumentBase {
+
+  enum ArgumentKind {
+    AK_Forward,
+    AK_Int,
+    AK_Float,
+    AK_Ptr,
+    AK_Struct,
+  };
+
   ArgumentBase() = default;
   virtual ~ArgumentBase() = default;
 
   bool operator==(ArgumentBase const &Other) const {
-    return typeid(*this) == typeid(Other) &&
+    return this->kind() == Other.kind() &&
         this->compareWithSameType(Other);
   }
 
   template<class ArgTy>
   typename std::enable_if<std::is_base_of<ArgumentBase, ArgTy>::value, ArgTy const*>::type
   as() const {
-    return dynamic_cast<ArgTy const*>(this);
+    if(kind() == ArgTy::Kind) return static_cast<ArgTy const*>(this);
+    else return nullptr;
   }
 
   friend std::hash<easy::ArgumentBase>;
+
+  virtual ArgumentKind kind() const noexcept = 0;
 
   protected:
   virtual bool compareWithSameType(ArgumentBase const&) const = 0;
@@ -38,6 +50,8 @@ struct ArgumentBase {
     Name##Argument(Type D) : ArgumentBase(), Data_(D) {}; \
     virtual ~Name ## Argument() = default; \
     Type get() const { return Data_; } \
+    static constexpr ArgumentKind Kind = AK_##Name;\
+    ArgumentKind kind() const noexcept override  { return Kind; } \
     \
     protected: \
     bool compareWithSameType(ArgumentBase const& Other) const override { \
@@ -61,6 +75,8 @@ class StructArgument
     : ArgumentBase(), Data_(Str, Str+Size) {};
   virtual ~StructArgument() = default;
   std::vector<char> const & get() const { return Data_; }
+  static constexpr ArgumentKind Kind = AK_Struct;
+  ArgumentKind kind() const noexcept override  { return Kind; }
 
   protected:
   bool compareWithSameType(ArgumentBase const& Other) const override {

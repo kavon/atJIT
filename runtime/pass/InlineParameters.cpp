@@ -57,76 +57,91 @@ void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, Sma
   for(size_t i = 0, n = C.size(); i != n; ++i) {
     auto const &Arg = C.getArgumentMapping(i);
     Type* ParamTy = OldTy.getParamType(i);
-    if(auto const *Forward = Arg.as<ForwardArgument>()) {
-      Args.push_back(WrapperArgs[Forward->get()]);
-    } else if(auto const *Int = Arg.as<IntArgument>()) {
-      Args.push_back(ConstantInt::get(ParamTy, Int->get(), true));
-    } else if(auto const *Float = Arg.as<FloatArgument>()) {
-      Args.push_back(ConstantFP::get(ParamTy, Float->get()));
-    } else if(auto const *Ptr = Arg.as<PtrArgument>()) {
-      Constant* Repl = nullptr;
-      auto &BT = BitcodeTracker::GetTracker();
-      void* PtrValue = const_cast<void*>(Ptr->get());
-      if(BT.hasGlobalMapping(PtrValue)) {
-        const char* LName = std::get<0>(BT.getNameAndGlobalMapping(PtrValue));
-        std::unique_ptr<Module> LM = BT.getModuleWithContext(PtrValue, Ctx);
-        Module* M = Wrapper.getParent();
+    switch(Arg.kind()) {
 
-        if(!Linker::linkModules(*M, std::move(LM), Linker::OverrideFromSrc,
-                                [](Module &, const StringSet<> &){}))
-        {
-          GlobalValue *GV = M->getNamedValue(LName);
-          if(GlobalVariable* G = dyn_cast<GlobalVariable>(GV)) {
-            GV->setLinkage(Function::PrivateLinkage);
-            Repl = GV;
+      case ArgumentBase::AK_Forward: {
+        auto const *Forward = Arg.as<ForwardArgument>();
+        Args.push_back(WrapperArgs[Forward->get()]);
+      } break;
 
-            if(Repl->getType() != ParamTy) {
-              Repl = ConstantExpr::getPointerCast(Repl, ParamTy);
+      case ArgumentBase::AK_Int: {
+        auto const *Int = Arg.as<IntArgument>();
+        Args.push_back(ConstantInt::get(ParamTy, Int->get(), true));
+      } break;
+
+      case ArgumentBase::AK_Float: {
+        auto const *Float = Arg.as<FloatArgument>();
+        Args.push_back(ConstantFP::get(ParamTy, Float->get()));
+      } break;
+
+      case ArgumentBase::AK_Ptr: {
+        auto const *Ptr = Arg.as<PtrArgument>();
+        Constant* Repl = nullptr;
+        auto &BT = BitcodeTracker::GetTracker();
+        void* PtrValue = const_cast<void*>(Ptr->get());
+        if(BT.hasGlobalMapping(PtrValue)) {
+          const char* LName = std::get<0>(BT.getNameAndGlobalMapping(PtrValue));
+          std::unique_ptr<Module> LM = BT.getModuleWithContext(PtrValue, Ctx);
+          Module* M = Wrapper.getParent();
+
+          if(!Linker::linkModules(*M, std::move(LM), Linker::OverrideFromSrc,
+                                  [](Module &, const StringSet<> &){}))
+          {
+            GlobalValue *GV = M->getNamedValue(LName);
+            if(GlobalVariable* G = dyn_cast<GlobalVariable>(GV)) {
+              GV->setLinkage(Function::PrivateLinkage);
+              Repl = GV;
+
+              if(Repl->getType() != ParamTy) {
+                Repl = ConstantExpr::getPointerCast(Repl, ParamTy);
+              }
+            }
+            else if(Function* F = dyn_cast<Function>(GV)) {
+              F->setLinkage(Function::PrivateLinkage);
+              Repl = F;
+            }
+            else {
+              assert(false && "wtf");
             }
           }
-          else if(Function* F = dyn_cast<Function>(GV)) {
-            F->setLinkage(Function::PrivateLinkage);
-            Repl = F;
-          }
-          else {
-            assert(false && "wtf");
-          }
         }
-      }
-      if(!Repl) { // default
-        Repl =
-            ConstantExpr::getIntToPtr(
-              ConstantInt::get(Type::getInt64Ty(Ctx), (uintptr_t)Ptr->get(), false),
-              ParamTy);
-      }
+        if(!Repl) { // default
+          Repl =
+              ConstantExpr::getIntToPtr(
+                ConstantInt::get(Type::getInt64Ty(Ctx), (uintptr_t)Ptr->get(), false),
+                ParamTy);
+        }
 
-      Args.push_back(Repl);
+        Args.push_back(Repl);
+      } break;
 
-    } else if(auto const *Struct = Arg.as<StructArgument>()) {
-      Type* Int8 = Type::getInt8Ty(Ctx);
-      std::vector<char> const &Raw =  Struct->get();
-      std::vector<Constant*> Data(Raw.size());
-      for(size_t i = 0, n = Raw.size(); i != n; ++i)
-        Data[i] = ConstantInt::get(Int8, Raw[i], false);
-      Constant* CD = ConstantVector::get(Data);
+      case ArgumentBase::AK_Struct: {
+        auto const *Struct = Arg.as<StructArgument>();
+        Type* Int8 = Type::getInt8Ty(Ctx);
+        std::vector<char> const &Raw =  Struct->get();
+        std::vector<Constant*> Data(Raw.size());
+        for(size_t i = 0, n = Raw.size(); i != n; ++i)
+          Data[i] = ConstantInt::get(Int8, Raw[i], false);
+        Constant* CD = ConstantVector::get(Data);
 
-      bool PassedByPtr = ParamTy->isPointerTy();
-      Type* StructType = PassedByPtr ?
-                  ParamTy->getContainedType(0) : ParamTy;
+        bool PassedByPtr = ParamTy->isPointerTy();
+        Type* StructType = PassedByPtr ?
+                    ParamTy->getContainedType(0) : ParamTy;
 
-      if(ParamTy->isPointerTy()) {
-        // big structures are passed by pointer, create a local alloca
-        AllocaInst* Alloc = B.CreateAlloca(StructType, 0, "param_alloc");
-        Value* AllocCast =
-                B.CreatePointerCast(Alloc,
-                                    PointerType::getUnqual(CD->getType()));
-        B.CreateStore(CD, AllocCast);
-        Args.push_back(Alloc);
-      } else {
-        // small structures are passed by value, cast it directly
-        Constant* ConstantStruct = ConstantExpr::getBitCast(CD, StructType);
-        Args.push_back(ConstantStruct);
-      }
+        if(ParamTy->isPointerTy()) {
+          // big structures are passed by pointer, create a local alloca
+          AllocaInst* Alloc = B.CreateAlloca(StructType, 0, "param_alloc");
+          Value* AllocCast =
+                  B.CreatePointerCast(Alloc,
+                                      PointerType::getUnqual(CD->getType()));
+          B.CreateStore(CD, AllocCast);
+          Args.push_back(Alloc);
+        } else {
+          // small structures are passed by value, cast it directly
+          Constant* ConstantStruct = ConstantExpr::getBitCast(CD, StructType);
+          Args.push_back(ConstantStruct);
+        }
+      } break;
     }
   }
 }
