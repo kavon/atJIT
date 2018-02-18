@@ -17,12 +17,12 @@
 using namespace std::placeholders;
 
 struct Foo {
-  virtual int EASY_JIT_EXPOSE doit() { return 1; }
+  virtual int doit() { return 1; }
   virtual ~Foo() = default;
 };
 
 struct Bar : Foo {
-  int EASY_JIT_EXPOSE doit() override  { return 2; }
+  int doit() override  { return 2; }
 };
 
 int doit(Foo* f) {

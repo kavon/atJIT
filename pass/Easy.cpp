@@ -81,12 +81,52 @@ namespace easy {
       return Funs;
     }
 
+    static bool mayBeOverload(Function *FOverload, Function *F) {
+      auto *FOverloadTy = FOverload->getFunctionType();
+      auto *FTy = F->getFunctionType();
+      if (FTy->getReturnType() != FOverloadTy->getReturnType())
+        return false;
+      if (FTy->getNumParams() != FOverloadTy->getNumParams())
+        return false;
+      if (FOverloadTy->isVarArg())
+        return false;
+
+      auto FParamIter = FTy->param_begin();
+      auto FOverloadParamIter = FOverloadTy->param_begin();
+
+      // TODO: check that first parameter type are compatible?
+      if (!isa<PointerType>(*FOverloadParamIter))
+        return false;
+
+      for (++FParamIter, ++FOverloadParamIter; FParamIter != FTy->param_end();
+           ++FParamIter, ++FOverloadParamIter) {
+        if (*FParamIter != *FOverloadParamIter)
+          return false;
+      }
+
+      // an overload must be registered in a virtual table
+      for(User* U : F->users()) {
+        auto* CE = dyn_cast<ConstantExpr>(U);
+        if(!CE || !CE->isCast())
+          continue;
+
+        for(User* CEU : CE->users()) {
+          if(auto* Init = dyn_cast<ConstantAggregate>(CEU)) {
+            return true; // probably a vtable
+          }
+        }
+      }
+
+      return false;
+    }
+
     void collectObjectsToJIT(Module &M, SmallVectorImpl<GlobalObject*> &ObjectsToJIT) {
 
       // get **all** functions passed as parameter to easy jit calls
       //   not only the target function, but also its parameters
       deduceObjectsToJIT(M);
       regexFunctionsToJIT(M);
+      deduceVirtualMethodsToJIT(M);
 
       // get functions in section jit section
       for(GlobalObject &GO : M.global_objects()) {
@@ -104,6 +144,9 @@ namespace easy {
 
         ObjectsToJIT.push_back(&GO);
       }
+
+      // also collect virtual functions in two steps
+
     }
 
     static bool isConstant(GlobalObject const& GO) {
@@ -112,6 +155,68 @@ namespace easy {
       return cast<GlobalVariable>(GO).isConstant();
     }
 
+    void deduceVirtualMethodsToJIT(Module &M) {
+      // First collect all loaded types we could monitor stores but stores
+      // could be done at call site, outside of ObjectsToJIT's scopes
+
+      SmallPtrSet<Type*, 8> VirtualMethodTys;
+      for(Function& F: M) {
+        if(F.getSection() != JIT_SECTION)
+          continue;
+        for(auto& I : instructions(F)) {
+          auto* LI = dyn_cast<LoadInst>(&I);
+          if(!LI)
+            continue;
+
+          MDNode *Tag = I.getMetadata(LLVMContext::MD_tbaa);
+          if(!Tag || !Tag->isTBAAVtableAccess())
+            continue;
+
+          VirtualMethodTys.insert(cast<PointerType>(cast<PointerType>(LI->getType())->getElementType())->getElementType());
+        }
+      }
+
+      // Second look at functions that have a type compatible with the virtual one
+      for(GlobalObject &GO : M.global_objects()) {
+        GlobalVariable* GV = dyn_cast<GlobalVariable>(&GO);
+        if(!GV || ! GV->hasInitializer())
+          continue;
+
+        ConstantStruct* CS = dyn_cast<ConstantStruct>(GV->getInitializer());
+        if(!CS || CS->getNumOperands() != 1)
+          continue;
+
+        ConstantAggregate* CA = dyn_cast<ConstantAggregate>(CS->getOperand(0));
+        if(!CA)
+          continue;
+
+        for(Use& U : CA->operands()) {
+          Constant* C = dyn_cast<Constant>(U.get());
+          if(!C)
+            continue;
+          if(auto* CE = dyn_cast<ConstantExpr>(C)) {
+            if(CE->isCast()) {
+              C = CE->getOperand(0);
+            }
+          }
+          auto* F = dyn_cast<Function>(C);
+          if(!F)
+            continue;
+
+          auto* FTy = F->getFunctionType();
+          if(VirtualMethodTys.count(FTy)) {
+            F->setSection(JIT_SECTION);
+            // also look for overloads
+            for(auto& FOverload: M) {
+              if(&FOverload == F)
+                continue;
+              if(mayBeOverload(&FOverload, F))
+                FOverload.setSection(JIT_SECTION);
+            }
+          }
+        }
+      }
+    }
 
     void deduceObjectsToJIT(Module &M) {
       for(Function &EasyJitFun : compilerInterface(M)) {
