@@ -81,7 +81,7 @@ namespace cache {
 static void apply_filter(const char *mask, unsigned mask_size, unsigned mask_area, cv::Mat &image, cv::Mat *&out) {
   using namespace std::placeholders;
 
-  static easy::Cache cache;
+  static easy::Cache<> cache;
   auto const &kernel_opt = cache.jit(kernel, mask, mask_size, mask_area, _1, _2, image.rows, image.cols, image.channels());
   kernel_opt(image.ptr(0,0), out->ptr(0,0));
 }

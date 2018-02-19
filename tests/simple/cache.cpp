@@ -14,7 +14,7 @@ int add (int a, int b) {
 }
 
 int main() {
-  easy::Cache C;
+  easy::Cache<> C;
 
   // CHECK: inc(4) is 5
   // CHECK: inc(5) is 6
