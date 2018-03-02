@@ -112,6 +112,10 @@ CompileAndWrap(const char*Name, GlobalMapping* Globals,
   return std::unique_ptr<Function>(new Function(Address, std::move(Holder)));
 }
 
+llvm::Module const& Function::getLLVMModule() const {
+  return *static_cast<LLVMHolderImpl const&>(*this->Holder).M_;
+}
+
 std::unique_ptr<Function> Function::Compile(void *Addr, easy::Context const& C) {
 
   auto &BT = BitcodeTracker::GetTracker();
@@ -169,4 +173,16 @@ std::unique_ptr<easy::Function> easy::Function::deserialize(std::istream& is) {
   }
 
   return CompileAndWrap(FunName.c_str(), Globals, std::move(Ctx), std::move(M));
+}
+
+bool Function::operator==(easy::Function const& other) const {
+  LLVMHolderImpl& This = static_cast<LLVMHolderImpl&>(*this->Holder);
+  LLVMHolderImpl& Other = static_cast<LLVMHolderImpl&>(*other.Holder);
+  return This.M_ == Other.M_;
+}
+
+std::hash<easy::Function>::result_type
+std::hash<easy::Function>::operator()(argument_type const& F) const noexcept {
+  LLVMHolderImpl& This = static_cast<LLVMHolderImpl&>(*F.Holder);
+  return std::hash<llvm::Module*>{}(This.M_);
 }
