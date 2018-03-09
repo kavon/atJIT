@@ -1,5 +1,6 @@
 #include <easy/runtime/RuntimePasses.h>
 #include <easy/runtime/BitcodeTracker.h>
+#include <easy/runtime/Utils.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Constant.h>
@@ -187,6 +188,9 @@ bool easy::InlineParameters::runOnModule(llvm::Module &M) {
   auto FunAttrs = F->getAttributes().getFnAttributes();
   for(Attribute Attr : FunAttrs)
     WrapperFun->addFnAttr(Attr);
+
+  // add metadata to identify the entry function
+  easy::MarkAsEntry(*WrapperFun);
 
   return true;
 }

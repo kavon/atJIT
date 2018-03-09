@@ -23,6 +23,9 @@ class Function {
   }
 
   static std::unique_ptr<Function> Compile(void *Addr, easy::Context const &C);
+
+  void serialize(std::ostream&) const;
+  static std::unique_ptr<Function> deserialize(std::istream&);
 };
 
 }

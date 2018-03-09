@@ -30,13 +30,16 @@ class BitcodeTracker {
 
   // map function to all the info required for jit compilation
   std::unordered_map<void*, FunctionInfo> Functions;
+  std::unordered_map<std::string, void*> NameToAddress;
 
   public:
 
   void registerFunction(void* FPtr, const char* Name, GlobalMapping* Globals, const char* Bitcode, size_t BitcodeLen) {
     Functions.emplace(FPtr, FunctionInfo{Name, Globals, Bitcode, BitcodeLen});
+    NameToAddress.emplace(Name, FPtr);
   }
 
+  void* getAddress(std::string const &Name);
   std::tuple<const char*, GlobalMapping*> getNameAndGlobalMapping(void* FPtr);
   bool hasGlobalMapping(void* FPtr) const;
 

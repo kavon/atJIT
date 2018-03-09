@@ -8,12 +8,14 @@
 
 namespace easy {
 class LLVMHolderImpl : public easy::LLVMHolder {
-  std::unique_ptr<llvm::LLVMContext> Context;
-  std::unique_ptr<llvm::ExecutionEngine> Engine;
-
   public:
-  LLVMHolderImpl(std::unique_ptr<llvm::ExecutionEngine> EE, std::unique_ptr<llvm::LLVMContext> C)
-    : Context(std::move(C)), Engine(std::move(EE)) {
+
+  std::unique_ptr<llvm::LLVMContext> Context_;
+  std::unique_ptr<llvm::ExecutionEngine> Engine_;
+  llvm::Module* M_; // the execution engine has the ownership
+
+  LLVMHolderImpl(std::unique_ptr<llvm::ExecutionEngine> EE, std::unique_ptr<llvm::LLVMContext> C, llvm::Module* M)
+    : Context_(std::move(C)), Engine_(std::move(EE)), M_(M) {
   }
 
   virtual ~LLVMHolderImpl() = default;
