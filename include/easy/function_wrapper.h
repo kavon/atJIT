@@ -59,7 +59,11 @@ class FunctionWrapper<Ret(Params...)> :
 
   template<class ... Args>
   Ret operator()(Args&& ... args) const {
-    return ((Ret(*)(Params...))getRawPointer())(std::forward<Args>(args)...);
+    return getFunctionPointer()(std::forward<Args>(args)...);
+  }
+
+  auto getFunctionPointer() const {
+    return ((Ret(*)(Params...))getRawPointer());
   }
 
   static FunctionWrapper<Ret(Params...)> deserialize(std::istream& is) {
@@ -78,7 +82,11 @@ class FunctionWrapper<void(Params...)> :
 
   template<class ... Args>
   void operator()(Args&& ... args) const {
-    return ((void(*)(Params...))getRawPointer())(std::forward<Args>(args)...);
+    return getFunctionPointer()(std::forward<Args>(args)...);
+  }
+
+  auto getFunctionPointer() const {
+    return ((void(*)(Params...))getRawPointer());
   }
 
   static FunctionWrapper<void(Params...)> deserialize(std::istream& is) {
@@ -102,7 +110,7 @@ struct is_function_wrapper {
     using params = meta::type_list<Params...>;
   };
 
-  using helper = is_function_wrapper_helper<typename std::remove_reference<T>::type>;
+  using helper = is_function_wrapper_helper<std::remove_reference_t<T>>;
 
   static constexpr bool value = helper::value;
 };

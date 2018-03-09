@@ -24,7 +24,7 @@ template<class T, class ... Args>
 auto jit_with_context(easy::Context const &C, T &&Fun) {
 
   auto* FunPtr = meta::get_as_pointer(Fun);
-  using FunOriginalTy = typename std::remove_pointer<typename std::decay<T>::type>::type;
+  using FunOriginalTy = std::remove_pointer_t<std::decay_t<T>>;
 
   using new_type_traits = meta::new_function_traits<FunOriginalTy, meta::type_list<Args...>>;
   using new_return_type = typename new_type_traits::return_type;
@@ -41,7 +41,7 @@ auto jit_with_context(easy::Context const &C, T &&Fun) {
 
 template<class T, class ... Args>
 easy::Context get_context_for(Args&& ... args) {
-  using FunOriginalTy = typename std::remove_pointer<typename std::decay<T>::type>::type;
+  using FunOriginalTy = std::remove_pointer_t<std::decay_t<T>>;
   static_assert(std::is_function<FunOriginalTy>::value,
                 "easy::jit: supports only on functions and function pointers");
 

@@ -30,7 +30,7 @@ struct ArgumentBase {
   }
 
   template<class ArgTy>
-  typename std::enable_if<std::is_base_of<ArgumentBase, ArgTy>::value, ArgTy const*>::type
+  std::enable_if_t<std::is_base_of<ArgumentBase, ArgTy>::value, ArgTy const*>
   as() const {
     if(kind() == ArgTy::Kind) return static_cast<ArgTy const*>(this);
     else return nullptr;
@@ -49,7 +49,7 @@ struct ArgumentBase {
   class Name##Argument \
     : public ArgumentBase { \
     \
-    using HashType = typename std::remove_const<typename std::remove_reference<Type>::type>::type; \
+    using HashType = std::remove_const_t<std::remove_reference_t<Type>>; \
     \
     Type Data_; \
     public: \
