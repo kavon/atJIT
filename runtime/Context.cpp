@@ -2,31 +2,24 @@
 
 using namespace easy;
 
-void Context::initDefaultArgumentMapping() {
-  // identity mapping
-  for(size_t i = 0, n = ArgumentMapping_.size(); i != n; ++i) {
-    setParameterIndex(i,i);
-  }
+Context& Context::setParameterIndex(unsigned param_idx) {
+  return setArg<ForwardArgument>(param_idx);
 }
 
-Context& Context::setParameterIndex(unsigned arg_idx, unsigned param_idx) {
-  return setArg<ForwardArgument>(arg_idx, param_idx);
+Context& Context::setParameterInt(int64_t val) {
+  return setArg<IntArgument>(val);
 }
 
-Context& Context::setParameterInt(unsigned arg_idx, int64_t val) {
-  return setArg<IntArgument>(arg_idx, val);
+Context& Context::setParameterFloat(double val) {
+  return setArg<FloatArgument>(val);
 }
 
-Context& Context::setParameterFloat(unsigned arg_idx, double val) {
-  return setArg<FloatArgument>(arg_idx, val);
+Context& Context::setParameterPointer(const void* val) {
+  return setArg<PtrArgument>(val);
 }
 
-Context& Context::setParameterPtrVoid(unsigned arg_idx, const void* val) {
-  return setArg<PtrArgument>(arg_idx, val);
-}
-
-Context& Context::setParameterPlainStruct(unsigned arg_idx, char const* ptr, size_t size) {
-  return setArg<StructArgument>(arg_idx, ptr, size);
+Context& Context::setParameterStruct(char const* ptr, size_t size) {
+  return setArg<StructArgument>(ptr, size);
 }
 
 bool Context::operator==(const Context& Other) const {

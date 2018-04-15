@@ -122,12 +122,12 @@ easy::Context get_context_for(Args&& ... args) {
                 "easy::jit: supports only on functions and function pointers");
 
   using parameter_list = typename meta::function_traits<FunOriginalTy>::parameter_list;
-  constexpr size_t nparams = parameter_list::size;
 
-  static_assert(nparams <= sizeof...(Args), "easy::jit: not providing enough argument to actual call");
+  static_assert(parameter_list::size <= sizeof...(Args),
+                "easy::jit: not providing enough argument to actual call");
 
-  easy::Context C(nparams);
-  easy::set_parameters<parameter_list, Args&&...>(parameter_list(), C, 0,
+  easy::Context C;
+  easy::set_parameters<parameter_list, Args&&...>(parameter_list(), C,
                                                   std::forward<Args>(args)...);
   return C;
 }

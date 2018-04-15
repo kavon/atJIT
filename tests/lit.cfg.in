@@ -16,8 +16,8 @@ runtime_lib = os.path.basename("@EASY_JIT_RUNTIME@").split('.')[0].replace("lib"
 runtime_lib_dir = os.path.dirname("@EASY_JIT_RUNTIME@")
 llvm_lib_dir = os.path.join(os.path.dirname("@LLVM_TOOLS_BINARY_DIR@"), "lib")
 
-includes = ["cpplib"]
-include_flags = " ".join(["-I'" + os.path.abspath(dir) + "'" for dir in "@LLVM_INCLUDE_DIRS@".split()] + ["-I'" + os.path.join("@EASY_JIT_ROOT@", dir, "include") + "'" for dir in includes] )
+includes = ["@EASY_JIT_ROOT@"]
+include_flags = " ".join(["-I'" + os.path.abspath(dir) + "'" for dir in "@LLVM_INCLUDE_DIRS@".split()] + ["-I'" + os.path.join(dir, "include") + "'" for dir in includes] )
 
 ld_paths = [runtime_lib_dir, llvm_lib_dir]
 ld_flags = ""
