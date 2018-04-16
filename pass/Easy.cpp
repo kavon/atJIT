@@ -5,6 +5,7 @@
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/DebugInfo.h>
 
 #include <llvm/IR/LegacyPassManager.h>
 
@@ -320,6 +321,9 @@ namespace easy {
     }
 
     static void cleanModule(GlobalValue &Entry, Module &M) {
+
+      llvm::StripDebugInfo(M);
+
       bool ForFunction = isa<Function>(Entry);
 
       auto Referenced = getReferencedFromEntry(Entry);
