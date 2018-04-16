@@ -31,10 +31,13 @@ config.substitutions.append(('%bin', "@CMAKE_ARCHIVE_OUTPUT_DIRECTORY@"))
 config.substitutions.append(('%install_dir', "@CMAKE_INSTALL_PREFIX@"))
 config.substitutions.append(('%llvm_tools_dir', "@LLVM_TOOLS_BINARY_DIR@"))
 
+common_flags =  "-g -Xclang -disable-O0-optnone "
+
 config.substitutions.append(('%clangxx', os.path.join("@LLVM_TOOLS_BINARY_DIR@", "clang++")))
 config.substitutions.append(('%clang', os.path.join("@LLVM_TOOLS_BINARY_DIR@", "clang")))
 config.substitutions.append(('%opt', os.path.join("@LLVM_TOOLS_BINARY_DIR@", "opt")))
-config.substitutions.append(('%cxxflags', "--std=c++14 -Xclang -disable-O0-optnone"))
+config.substitutions.append(('%cxxflags', common_flags + "--std=c++14"))
+config.substitutions.append(('%cflags', common_flags))
 config.substitutions.append(('%include_flags', include_flags))
 config.substitutions.append(('%lib_pass', "@EASY_JIT_PASS@"))
 config.substitutions.append(('%lib_runtime', "@EASY_JIT_RUNTIME@"))

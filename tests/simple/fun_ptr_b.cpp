@@ -10,7 +10,7 @@
 #include <cstdio>
 
 // only one function, without any call
-// CHECK-IR-NOT: call{{ }}
+// CHECK-IR-NOT: call{{.*@.*}}
 
 
 using namespace std::placeholders;
