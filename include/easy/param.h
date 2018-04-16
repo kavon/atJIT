@@ -13,8 +13,8 @@ template<bool is_placeholder>
 struct set_parameter_helper {
 
   template<class _, class Arg>
-  static void set_param(Context &C, size_t idx, Arg &&) {
-    C.setParameterIndex(idx, std::is_placeholder<typename std::decay<Arg>::type>::value-1);
+  static void set_param(Context &C, Arg &&) {
+    C.setParameterIndex(std::is_placeholder<typename std::decay<Arg>::type>::value-1);
   }
 };
 
@@ -25,33 +25,33 @@ struct set_parameter_helper<false> {
   using enable_if = typename std::enable_if<B, T>::type;
 
   template<class Param, class Arg>
-  static void set_param(Context &C, size_t idx,
+  static void set_param(Context &C,
                         enable_if<std::is_integral<Param>::value, Arg> &&arg) {
-    C.setParameterInt(idx, std::forward<Arg>(arg));
+    C.setParameterInt(std::forward<Arg>(arg));
   }
 
   template<class Param, class Arg>
-  static void set_param(Context &C, size_t idx,
+  static void set_param(Context &C,
                         enable_if<std::is_floating_point<Param>::value, Arg> &&arg) {
-    C.setParameterFloat(idx, std::forward<Arg>(arg));
+    C.setParameterFloat(std::forward<Arg>(arg));
   }
 
   template<class Param, class Arg>
-  static void set_param(Context &C, size_t idx,
+  static void set_param(Context &C,
                         enable_if<std::is_pointer<Param>::value, Arg> &&arg) {
-    C.setParameterPtr(idx, std::forward<Arg>(arg));
+    C.setParameterTypedPointer(std::forward<Arg>(arg));
   }
 
   template<class Param, class Arg>
-  static void set_param(Context &C, size_t idx,
+  static void set_param(Context &C,
                         enable_if<std::is_reference<Param>::value, Arg> &&arg) {
-    C.setParameterPtr(idx, std::addressof(arg));
+    C.setParameterTypedPointer(std::addressof(arg));
   }
 
   template<class Param, class Arg>
-  static void set_param(Context &C, size_t idx,
+  static void set_param(Context &C,
                         enable_if<std::is_class<Param>::value, Arg> &&arg) {
-    C.setParameterStruct(idx, std::addressof(arg));
+    C.setParameterTypedStruct(std::addressof(arg));
   }
 };
 
@@ -81,19 +81,19 @@ void set_options(Context &C, Option0&& Opt, Options&& ... Opts) {
 template<class ParameterList, class ... Options>
 typename std::enable_if<ParameterList::empty>::type
 set_parameters(ParameterList,
-               Context& C, size_t, Options&& ... opts) {
+               Context& C, Options&& ... opts) {
   set_options<Options...>(C, std::forward<Options>(opts)...);
 }
 
 template<class ParameterList, class Arg0, class ... Args>
 typename std::enable_if<!ParameterList::empty>::type
 set_parameters(ParameterList,
-               Context &C, size_t idx, Arg0 &&arg0, Args&& ... args) {
+               Context &C, Arg0 &&arg0, Args&& ... args) {
   using Param0 = typename ParameterList::head;
   using ParametersTail = typename ParameterList::tail;
 
-  set_parameter<Param0, Arg0>::template set_param<Param0, Arg0>(C, idx, std::forward<Arg0>(arg0));
-  set_parameters<ParametersTail, Args&&...>(ParametersTail(), C, idx+1, std::forward<Args>(args)...);
+  set_parameter<Param0, Arg0>::template set_param<Param0, Arg0>(C, std::forward<Arg0>(arg0));
+  set_parameters<ParametersTail, Args&&...>(ParametersTail(), C, std::forward<Args>(args)...);
 }
 
 }

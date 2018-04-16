@@ -1,2 +1,2 @@
-install(DIRECTORY include/easy
+install(DIRECTORY easy
         DESTINATION include FILES_MATCHING PATTERN "*.h")

@@ -101,40 +101,32 @@ class Context {
   std::string DebugFile_;
 
   template<class ArgTy, class ... Args>
-  inline Context& setArg(size_t i, Args && ... args) {
-    ArgumentMapping_[i] =
-        std::unique_ptr<ArgumentBase>(new ArgTy(std::forward<Args>(args)...));
+  inline Context& setArg(Args && ... args) {
+    ArgumentMapping_.emplace_back(new ArgTy(std::forward<Args>(args)...));
     return *this;
   }
 
   public:
 
-  Context(int nargs) 
-    : ArgumentMapping_(nargs) { 
-    initDefaultArgumentMapping(); 
-  }
+  Context() = default;
 
   bool operator==(const Context&) const;
   
   // set the mapping between
-  Context& setParameterIndex(unsigned, unsigned);
-  Context& setParameterInt(unsigned, int64_t);
-  Context& setParameterFloat(unsigned, double);
-  Context& setParameterPtrVoid(unsigned, void const*);
-  Context& setParameterPlainStruct(unsigned, char const*, size_t);
+  Context& setParameterIndex(unsigned);
+  Context& setParameterInt(int64_t);
+  Context& setParameterFloat(double);
+  Context& setParameterPointer(void const*);
+  Context& setParameterStruct(char const*, size_t);
 
   template<class T>
-  Context& setParameterPtr(unsigned idx, T* ptr) {
-    return setParameterPtrVoid(idx, reinterpret_cast<const void*>(ptr));
-  }
-  template<class T>
-  Context& setParameterPtr(unsigned idx, T const* ptr) {
-    return setParameterPtrVoid(idx, reinterpret_cast<void const*>(ptr));
+  Context& setParameterTypedPointer(T* ptr) {
+    return setParameterPointer(reinterpret_cast<const void*>(ptr));
   }
 
   template<class T>
-  Context& setParameterStruct(unsigned idx, T* ptr) {
-    return setParameterPlainStruct(idx, reinterpret_cast<char const*>(ptr), sizeof(T));
+  Context& setParameterTypedStruct(T* ptr) {
+    return setParameterStruct(reinterpret_cast<char const*>(ptr), sizeof(T));
   }
 
   Context& setOptLevel(unsigned OptLevel, unsigned OptSize) {
@@ -165,9 +157,6 @@ class Context {
   }
 
   friend bool operator<(easy::Context const &C1, easy::Context const &C2);
-
-  private:
-  void initDefaultArgumentMapping();
 }; 
 
 }
