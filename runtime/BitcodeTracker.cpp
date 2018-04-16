@@ -67,8 +67,9 @@ BitcodeTracker::ModuleContextPair BitcodeTracker::getModule(void* FPtr) {
 }
 
 // function to interface with the generated code
+extern "C" {
 void easy_register(void* FPtr, const char* Name, GlobalMapping* Globals, const char* Bitcode, size_t BitcodeLen) {
   BitcodeTracker::GetTracker().registerFunction(FPtr, Name, Globals, Bitcode, BitcodeLen);
 }
-
+}
 
