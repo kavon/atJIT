@@ -1,6 +1,10 @@
 #include <llvm/IR/Metadata.h>
 #include <llvm/IR/Module.h>
 #include <llvm/ADT/SmallVector.h>
+
+#include <llvm/Bitcode/BitcodeWriter.h>
+#include <llvm/Bitcode/BitcodeReader.h>
+
 #include <string>
 
 #include <easy/runtime/Utils.h>
@@ -36,4 +40,33 @@ void easy::MarkAsEntry(llvm::Function &F) {
   MDNode* Node = MDNode::get(Ctx, { MDString::get(Ctx, EntryTag),
                                     MDString::get(Ctx, F.getName())});
   MD->addOperand(Node);
+}
+
+void easy::UnmarkEntry(llvm::Module &M) {
+  NamedMDNode* MD = M.getOrInsertNamedMetadata(EasyJitMD);
+  M.eraseNamedMetadata(MD);
+}
+
+std::unique_ptr<llvm::Module>
+easy::CloneModuleWithContext(llvm::Module const &LM, llvm::LLVMContext &C) {
+  // I have not found a better way to do this withouth having to fully reimplement
+  // CloneModule
+
+  std::string buf;
+
+  // write module
+  {
+    llvm::raw_string_ostream stream(buf);
+    llvm::WriteBitcodeToFile(&LM, stream);
+    stream.flush();
+  }
+
+  // read the module
+  auto MemBuf = llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(buf));
+  auto ModuleOrError = llvm::parseBitcodeFile(*MemBuf, C);
+  if(ModuleOrError.takeError())
+    return nullptr;
+
+  auto LMCopy = std::move(ModuleOrError.get());
+  return std::move(LMCopy);
 }

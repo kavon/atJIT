@@ -13,7 +13,6 @@
 #include <numeric>
 
 using namespace llvm;
-using namespace easy;
 
 char easy::DevirtualizeConstant::ID = 0;
 
@@ -46,7 +45,7 @@ static ConstantInt* getVTableHostAddress(Value& V) {
 }
 
 static Function* findFunctionAndLinkModules(Module& M, void* HostValue) {
-    auto &BT = BitcodeTracker::GetTracker();
+    auto &BT = easy::BitcodeTracker::GetTracker();
     const char* FName = std::get<0>(BT.getNameAndGlobalMapping(HostValue));
 
     if(!FName)
@@ -76,7 +75,7 @@ bool easy::DevirtualizeConstant::runOnFunction(llvm::Function &F) {
 
   llvm::Module &M = *F.getParent();
 
-  Context const &C = getAnalysis<ContextAnalysis>().getContext();
+  easy::Context const &C = getAnalysis<ContextAnalysis>().getContext();
 
   for(auto& I: instructions(F)) {
     auto* VTable = getVTableHostAddress(I);
@@ -94,7 +93,7 @@ bool easy::DevirtualizeConstant::runOnFunction(llvm::Function &F) {
       for(User* U : CE->users()) {
         if(auto* CalledPtr = dyn_cast<LoadInst>(U)) {
           void* CalledPtrHostValue = *RuntimeLoadedValue;
-          Function* Called = findFunctionAndLinkModules(M, CalledPtrHostValue);
+          llvm::Function* Called = findFunctionAndLinkModules(M, CalledPtrHostValue);
           if(Called) {
             for(User* U2 : CalledPtr->users()) {
               if(auto* LI = dyn_cast<LoadInst>(U2))

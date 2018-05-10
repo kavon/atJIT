@@ -41,18 +41,17 @@ struct type_list<Head, Tail ...> {
   template<class New>
   using push_back = struct type_list<Head, Tail ..., New>;
   template<size_t I>
-  using at = typename std::conditional<I==0, head, typename tail::template at<I-1>>::type;
+  using at = std::conditional_t<I==0, head, typename tail::template at<I-1>>;
 
   template<size_t I, class T>
-  using set = typename std::conditional<I==0,
-                                        typename tail::template push_front<T>,
-                                        typename tail::template set<I-1, T>::template push_front<head>>::type;
+  using set = std::conditional_t<I==0,
+                                 typename tail::template push_front<T>,
+                                 typename tail::template set<I-1, T>::template push_front<head>>;
 
   template<class T>
-  using remove = typename std::conditional<std::is_same<head, T>::value,
+  using remove = std::conditional_t<std::is_same<head, T>::value,
                                     typename tail::template remove<T>,
-                                    typename tail::template remove<T>::template push_front<head>
-                                    >::type;
+                                    typename tail::template remove<T>::template push_front<head>>;
   template<class T>
   static constexpr bool has = std::is_same<T, head>::value || tail:: template has<T>;
 
@@ -86,7 +85,7 @@ T* get_as_pointer(T* A) { return A; }
 namespace  {
 
 template<class T>
-using is_ph = std::is_placeholder<typename std::decay<T>::type>;
+using is_ph = std::is_placeholder<std::decay_t<T>>;
 
 template<class ArgList>
 struct discard_options {
@@ -101,11 +100,11 @@ struct discard_options {
     using head = typename AL::head;
     using tail = typename AL::tail;
     static bool constexpr is_opt =
-        options::is_option<typename std::decay<head>::type>::value;
+        options::is_option<std::decay_t<head>>::value;
     using recursive = typename helper<tail, tail::empty>::type;
-    using type = typename std::conditional<is_opt,
-                                           recursive,
-                                           typename recursive::template push_front<head>>::type;
+    using type = std::conditional_t<is_opt,
+                                    recursive,
+                                    typename recursive::template push_front<head>>;
   };
 
   using type = typename helper<ArgList, ArgList::empty>::type;
@@ -160,8 +159,8 @@ struct map_placeholder_to_type {
 
     static_assert(PL::size >= AL::size, "easy::jit: More parameters than arguments specified");
     static_assert(result_idx < Result::size, "easy::jit: Cannot have a placeholder outside the maximum");
-    using new_result = typename std::conditional<parse_placeholder, typename Result::template set<result_idx, pl_at_idx>, Result>::type;
-    using new_seen = typename std::conditional<parse_placeholder, typename Seen::template push_back<al_head>, Seen>::type;
+    using new_result = std::conditional_t<parse_placeholder, typename Result::template set<result_idx, pl_at_idx>, Result>;
+    using new_seen = std::conditional_t<parse_placeholder, typename Seen::template push_back<al_head>, Seen>;
 
     using type = typename helper<PL, al_tail, new_result, new_seen, N, new_seen::size == N>::type;
   };
@@ -191,7 +190,7 @@ type_list<Args...> get_parameter_list(Ret(*)(Args...));
 template<class FunTy>
 struct function_traits {
   static_assert(std::is_function<FunTy>::value, "function expected.");
-  using ptr_ty = typename std::decay<FunTy>::type;
+  using ptr_ty = std::decay_t<FunTy>;
   using return_type = decltype(get_return_type(std::declval<ptr_ty>()));
   using parameter_list = decltype(get_parameter_list(std::declval<ptr_ty>()));
 };

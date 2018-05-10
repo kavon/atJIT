@@ -13,7 +13,6 @@
 #include <numeric>
 
 using namespace llvm;
-using namespace easy;
 
 char easy::InlineParameters::ID = 0;
 
@@ -31,7 +30,7 @@ static size_t GetNewArgCount(easy::Context const &C) {
   return Max;
 }
 
-FunctionType* GetWrapperTy(FunctionType *FTy, Context const &C) {
+FunctionType* GetWrapperTy(FunctionType *FTy, easy::Context const &C) {
 
   Type* RetTy = FTy->getReturnType();
 
@@ -49,7 +48,7 @@ FunctionType* GetWrapperTy(FunctionType *FTy, Context const &C) {
   return FunctionType::get(RetTy, Args, FTy->isVarArg());
 }
 
-void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, SmallVectorImpl<Value*> &Args, IRBuilder<> &B) {
+void GetInlineArgs(easy::Context const &C, FunctionType& OldTy, Function &Wrapper, SmallVectorImpl<Value*> &Args, IRBuilder<> &B) {
   LLVMContext &Ctx = OldTy.getContext();
   SmallVector<Value*, 8> WrapperArgs(Wrapper.getFunctionType()->getNumParams());
   std::transform(Wrapper.arg_begin(), Wrapper.arg_end(),
@@ -60,25 +59,25 @@ void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, Sma
     Type* ParamTy = OldTy.getParamType(i);
     switch(Arg.kind()) {
 
-      case ArgumentBase::AK_Forward: {
-        auto const *Forward = Arg.as<ForwardArgument>();
+      case easy::ArgumentBase::AK_Forward: {
+        auto const *Forward = Arg.as<easy::ForwardArgument>();
         Args.push_back(WrapperArgs[Forward->get()]);
       } break;
 
-      case ArgumentBase::AK_Int: {
-        auto const *Int = Arg.as<IntArgument>();
+      case easy::ArgumentBase::AK_Int: {
+        auto const *Int = Arg.as<easy::IntArgument>();
         Args.push_back(ConstantInt::get(ParamTy, Int->get(), true));
       } break;
 
-      case ArgumentBase::AK_Float: {
-        auto const *Float = Arg.as<FloatArgument>();
+      case easy::ArgumentBase::AK_Float: {
+        auto const *Float = Arg.as<easy::FloatArgument>();
         Args.push_back(ConstantFP::get(ParamTy, Float->get()));
       } break;
 
-      case ArgumentBase::AK_Ptr: {
-        auto const *Ptr = Arg.as<PtrArgument>();
+      case easy::ArgumentBase::AK_Ptr: {
+        auto const *Ptr = Arg.as<easy::PtrArgument>();
         Constant* Repl = nullptr;
-        auto &BT = BitcodeTracker::GetTracker();
+        auto &BT = easy::BitcodeTracker::GetTracker();
         void* PtrValue = const_cast<void*>(Ptr->get());
         if(BT.hasGlobalMapping(PtrValue)) {
           const char* LName = std::get<0>(BT.getNameAndGlobalMapping(PtrValue));
@@ -116,8 +115,8 @@ void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, Sma
         Args.push_back(Repl);
       } break;
 
-      case ArgumentBase::AK_Struct: {
-        auto const *Struct = Arg.as<StructArgument>();
+      case easy::ArgumentBase::AK_Struct: {
+        auto const *Struct = Arg.as<easy::StructArgument>();
         Type* Int8 = Type::getInt8Ty(Ctx);
         std::vector<char> const &Raw =  Struct->get();
         std::vector<Constant*> Data(Raw.size());
@@ -143,11 +142,36 @@ void GetInlineArgs(Context const &C, FunctionType& OldTy, Function &Wrapper, Sma
           Args.push_back(ConstantStruct);
         }
       } break;
+
+      case easy::ArgumentBase::AK_Module: {
+        easy::Function const &Function = Arg.as<easy::ModuleArgument>()->get();
+        llvm::Module const& FunctionModule = Function.getLLVMModule();
+        auto FunctionName = easy::GetEntryFunctionName(FunctionModule);
+
+        std::unique_ptr<llvm::Module> LM =
+            easy::CloneModuleWithContext(FunctionModule, Wrapper.getContext());
+
+        assert(LM);
+
+        easy::UnmarkEntry(*LM);
+
+        llvm::Module* M = Wrapper.getParent();
+        if(Linker::linkModules(*M, std::move(LM), Linker::OverrideFromSrc,
+                                [](Module &, const StringSet<> &){})) {
+          llvm::report_fatal_error("Failed to link with another module!", true);
+        }
+
+        llvm::Function* FunctionInM = M->getFunction(FunctionName);
+        FunctionInM->setLinkage(Function::PrivateLinkage);
+
+        Args.push_back(FunctionInM);
+
+      } break;
     }
   }
 }
 
-Function* CreateWrapperFun(Module &M, FunctionType &WrapperTy, Function &F, Context const &C) {
+Function* CreateWrapperFun(Module &M, FunctionType &WrapperTy, Function &F, easy::Context const &C) {
   LLVMContext &CC = M.getContext();
 
   Function* Wrapper = Function::Create(&WrapperTy, Function::ExternalLinkage, "", &M);
@@ -170,18 +194,18 @@ Function* CreateWrapperFun(Module &M, FunctionType &WrapperTy, Function &F, Cont
 
 bool easy::InlineParameters::runOnModule(llvm::Module &M) {
 
-  Context const &C = getAnalysis<ContextAnalysis>().getContext();
-  Function* F = M.getFunction(TargetName_);
+  easy::Context const &C = getAnalysis<ContextAnalysis>().getContext();
+  llvm::Function* F = M.getFunction(TargetName_);
   assert(F);
 
   FunctionType* FTy = F->getFunctionType();
   assert(FTy->getNumParams() == C.size());
 
   FunctionType* WrapperTy = GetWrapperTy(FTy, C);
-  Function* WrapperFun = CreateWrapperFun(M, *WrapperTy, *F, C);
+  llvm::Function* WrapperFun = CreateWrapperFun(M, *WrapperTy, *F, C);
 
   // privatize F, steal its name, copy its attributes, and its cc
-  F->setLinkage(Function::PrivateLinkage);
+  F->setLinkage(llvm::Function::PrivateLinkage);
   WrapperFun->takeName(F);
   WrapperFun->setCallingConv(F->getCallingConv());
 

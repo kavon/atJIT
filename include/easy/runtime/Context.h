@@ -6,6 +6,8 @@
 #include <cstdint>
 #include <cstring>
 
+#include <easy/runtime/Function.h>
+
 namespace easy {
 
 struct ArgumentBase {
@@ -16,6 +18,7 @@ struct ArgumentBase {
     AK_Float,
     AK_Ptr,
     AK_Struct,
+    AK_Module,
   };
 
   ArgumentBase() = default;
@@ -27,7 +30,7 @@ struct ArgumentBase {
   }
 
   template<class ArgTy>
-  typename std::enable_if<std::is_base_of<ArgumentBase, ArgTy>::value, ArgTy const*>::type
+  std::enable_if_t<std::is_base_of<ArgumentBase, ArgTy>::value, ArgTy const*>
   as() const {
     if(kind() == ArgTy::Kind) return static_cast<ArgTy const*>(this);
     else return nullptr;
@@ -45,6 +48,9 @@ struct ArgumentBase {
 #define DeclareArgument(Name, Type) \
   class Name##Argument \
     : public ArgumentBase { \
+    \
+    using HashType = std::remove_const_t<std::remove_reference_t<Type>>; \
+    \
     Type Data_; \
     public: \
     Name##Argument(Type D) : ArgumentBase(), Data_(D) {}; \
@@ -59,13 +65,14 @@ struct ArgumentBase {
       return Data_ == OtherCast.Data_; \
     } \
     \
-    size_t hash() const noexcept override  { return std::hash<Type>{}(Data_); } \
+    size_t hash() const noexcept override  { return std::hash<HashType>{}(Data_); } \
   }
 
 DeclareArgument(Forward, unsigned);
 DeclareArgument(Int, int64_t);
 DeclareArgument(Float, double);
 DeclareArgument(Ptr, void const*);
+DeclareArgument(Module, easy::Function const&);
 
 class StructArgument
     : public ArgumentBase {
@@ -118,6 +125,7 @@ class Context {
   Context& setParameterFloat(double);
   Context& setParameterPointer(void const*);
   Context& setParameterStruct(char const*, size_t);
+  Context& setParameterModule(easy::Function const&);
 
   template<class T>
   Context& setParameterTypedPointer(T* ptr) {
