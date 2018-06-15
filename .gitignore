@@ -10,3 +10,5 @@
 */.ninja_log
 build/
 install/
+__pycache__/
+*.py[cod]
