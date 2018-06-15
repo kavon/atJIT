@@ -8,7 +8,7 @@
 */cmake_install.cmake
 */rules.ninja
 */.ninja_log
-build/
-install/
+/build/
+/install/
 __pycache__/
 *.py[cod]
