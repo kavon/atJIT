@@ -8,3 +8,5 @@
 */cmake_install.cmake
 */rules.ninja
 */.ninja_log
+build/
+install/
