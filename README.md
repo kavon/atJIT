@@ -70,7 +70,7 @@ You can use `easycc` as if it were `clang++`.
 Here's an example:
 
 ```bash
-➤ install/bin/easycc tests/simple/int_a.cpp -o int_a
+➤ install/bin/easycc -O2 tests/simple/int_a.cpp -o int_a
 ➤ ./int_a
 inc(4) is 5
 inc(5) is 6
