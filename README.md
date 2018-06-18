@@ -1,4 +1,3 @@
-~/anl/atJIT/doc/readme ~/anl/atJIT
 Easy::jit: A just-in-time compiler for C++
 ==========================================
 
