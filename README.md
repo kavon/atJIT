@@ -7,7 +7,11 @@ About
 -----
 
 atJIT is an _extremely_ early-phase experiment in just-in-time autotuning that
-is based on the Easy::jit project. 
+<<<<<<< HEAD
+is based on the Easy::jit project.
+=======
+is based on the Easy::jit project.
+>>>>>>> 4a257f68d0ce2b32c21a236375aee94b49f6bdc5
 
 [Easy::jit](https://github.com/jmmartinez/easy-just-in-time) is a
 _compiler-assisted_ library that enables simple Just-In-Time
@@ -27,7 +31,8 @@ Then, configure and compile the project.
 ```bash
 mkdir build install
 cd build
-cmake -G Ninja -DCMAKE_INSTALL_PREFIX=../install ..
+cmake -G Ninja -DCMAKE_INSTALL_PREFIX=../install \
+    -DCMAKE_CXX_COMPILER=clang++-5.0 -DCMAKE_C_COMPILER=clang-5.0 ..
 ninja install
 ```
 <!--
@@ -66,6 +71,16 @@ Look in your install directory for the `bin/easycc` executable, which is a
 thin wrapper around `clang++` with the correct arguments to run the
 clang plugin and dynamically link in the runtime system.
 You can use `easycc` as if it were `clang++`.
+Here's an example:
+
+```bash
+➤ install/bin/easycc tests/simple/int_a.cpp -o int_a
+➤ ./int_a
+inc(4) is 5
+inc(5) is 6
+inc(6) is 7
+inc(7) is 8
+```
 
 <!--
 Since the Easy::Jit library relies on assistance from the compiler, its
