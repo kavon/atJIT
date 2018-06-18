@@ -7,11 +7,7 @@ About
 -----
 
 atJIT is an _extremely_ early-phase experiment in just-in-time autotuning that
-<<<<<<< HEAD
 is based on the Easy::jit project.
-=======
-is based on the Easy::jit project.
->>>>>>> 4a257f68d0ce2b32c21a236375aee94b49f6bdc5
 
 [Easy::jit](https://github.com/jmmartinez/easy-just-in-time) is a
 _compiler-assisted_ library that enables simple Just-In-Time
