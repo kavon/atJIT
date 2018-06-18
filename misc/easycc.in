@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -x
+set -e
+
+${CMAKE_CXX_COMPILER} --std=c++${CMAKE_CXX_STANDARD} "$@" \
+  -Xclang -load -Xclang ${CMAKE_INSTALL_PREFIX}/lib/EasyJitPass.so \
+  -I${CMAKE_INSTALL_PREFIX}/include \
+  -L${CMAKE_INSTALL_PREFIX}/lib -lEasyJitRuntime
