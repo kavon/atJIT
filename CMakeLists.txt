@@ -10,9 +10,14 @@ list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/c
 include(AddLLVM)
 include(Python)
 
-add_definitions(${LLVM_DEFINITIONS})
-include_directories(${LLVM_INCLUDE_DIRS})
+option(LLVM_ENABLE_PLUGINS "Generate build targets for LLVM plugins." ON)
+
+include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
 include_directories(include)
+
+link_directories(${LLVM_LIBRARY_DIRS})
+add_definitions(${LLVM_DEFINITIONS})
+
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
