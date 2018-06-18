@@ -1,18 +1,17 @@
-Easy::jit: A just-in-time compiler for C++
+atJIT: A just-in-time autotuning compiler for C++
 ==========================================
 
-[![Build Status](https://travis-ci.org/jmmartinez/easy-just-in-time.svg?branch=master)](https://travis-ci.org/jmmartinez/easy-just-in-time)
+[![Build Status](https://travis-ci.org/kavon/atJIT.svg?branch=master)](https://travis-ci.org/kavon/atJIT)
 
 About
 -----
 
-Easy::jit is a _compiler-assisted_ library that enables simple Just-In-Time
+atJIT is an _extremely_ early-phase experiment in just-in-time autotuning that
+is based on the Easy::jit project. 
+
+[Easy::jit](https://github.com/jmmartinez/easy-just-in-time) is a
+_compiler-assisted_ library that enables simple Just-In-Time
 code generation for C++ codes.
-
-### Talks
-
-* [Easy::jit at EuroLLVM'18](https://www.youtube.com/watch?v=sFxqI6Z_bhE)
-* [Easy::jit at FOSDEM'18](https://www.youtube.com/watch?v=5_rydTiB32I)
 
 Building
 --------
@@ -44,6 +43,7 @@ and add the flags ```-DEASY_JIT_BENCHMARK=1 -DBENCHMARK_DIR=<path_to_google_benc
 
 Everything is ready to go!
 
+<!--
 ### Docker
 
 If you want to give only a quick test to the project, everything is provided to use it with docker.
@@ -55,12 +55,19 @@ python3 <path_to_easy_jit_src>/misc/docker/GenDockerfile.py  <path_to_easy_jit_s
 docker build -t easy/test -f Dockerfile
 docker run -ti easy/test /bin/bash
 ```
+-->
 
 Basic usage
 -----------
 
-### Compiling my project with Easy::Jit
+### Compiling my project with atJIT
 
+Look in your install directory for the `bin/easycc` executable, which is a
+thin wrapper around `clang++` with the correct arguments to run the
+clang plugin and dynamically link in the runtime system.
+You can use `easycc` as if it were `clang++`.
+
+<!--
 Since the Easy::Jit library relies on assistance from the compiler, its
 mandatory to load a compiler plugin in order to use it.
 The flag ```-Xclang -load -Xclang <path_to_easy_jit_build>/bin/EasyJitPass.so```
@@ -80,11 +87,12 @@ clang++-5.0 --std=c++14 <my_file.cpp> \
   -I<path_to_easy_jit_src>/cpplib/include \
   -L<path_to_easy_jit_build>/bin -lEasyJitRuntime
 ```
+-->
 
-### Using Easy::Jit inside my project
+### Using atJIT inside my project
 
 Consider the code below from a software that applies image filters on a video stream.
-In the following sections we are going to adapt it to use the Easy::jit library.
+In the following sections we are going to adapt it to use the atJIT library.
 The function to optimize is ```kernel```, which applies a mask on the entire image.
 
 The mask, its dimensions and area do not change often, so specializing the function for
@@ -113,11 +121,11 @@ one taking only two parameters (the input and the output frame).
 
 #### Deducing which functions to expose at runtime
 
-Easy::jit embeds the [LLVM bitcode](https://llvm.org/docs/LangRef.html)
+atJIT embeds the [LLVM bitcode](https://llvm.org/docs/LangRef.html)
 representation of the functions to specialize at runtime in the binary code.
 To perform this, the library requires access to the implementation of these
 functions.
-Easy::jit does an effort to deduce which functions are specialized at runtime,
+atJIT does an effort to deduce which functions are specialized at runtime,
 still in many cases this is not possible.
 
 In this case, it's possible to use the ```EASY_JIT_EXPOSE``` macro, as shown in
@@ -160,9 +168,5 @@ Thanks
 
 Special thanks to Quarkslab for their support on working in personal projects.
 
-Warriors
---------
-
-Serge Guelton (serge_sans_paille)
-
-Juan Manuel Martinez Caamaño (jmmartinez)
+In addition, thanks to Serge Guelton and Juan Manuel Martinez Caamaño for
+originally developing Easy::jit.
