@@ -10,5 +10,6 @@
 */.ninja_log
 /build/
 /install/
+/playground/
 __pycache__/
 *.py[cod]
