@@ -106,6 +106,7 @@ class Context {
   std::vector<std::unique_ptr<ArgumentBase>> ArgumentMapping_;
   unsigned OptLevel_ = 2, OptSize_ = 0;
   std::string DebugFile_;
+  std::unique_ptr<std::string> DebugBeforeFile_;
 
   template<class ArgTy, class ... Args>
   inline Context& setArg(Args && ... args) {
@@ -118,7 +119,7 @@ class Context {
   Context() = default;
 
   bool operator==(const Context&) const;
-  
+
   // set the mapping between
   Context& setParameterIndex(unsigned);
   Context& setParameterInt(int64_t);
@@ -145,6 +146,10 @@ class Context {
 
   Context& setDebugFile(std::string const &File) {
     DebugFile_ = File;
+
+    DebugBeforeFile_ = std::unique_ptr<std::string>(new std::string(File));
+    DebugBeforeFile_->append(".before");
+
     return *this;
   }
 
@@ -156,6 +161,10 @@ class Context {
     return DebugFile_;
   }
 
+  std::string const& getDebugBeforeFile() const {
+    return *DebugBeforeFile_;
+  }
+
   auto begin() const { return ArgumentMapping_.begin(); }
   auto end() const { return ArgumentMapping_.end(); }
   size_t size() const { return ArgumentMapping_.size(); }
@@ -165,7 +174,7 @@ class Context {
   }
 
   friend bool operator<(easy::Context const &C1, easy::Context const &C2);
-}; 
+};
 
 }
 

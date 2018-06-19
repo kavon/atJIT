@@ -10,11 +10,11 @@
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/IR/LegacyPassManager.h>
-#include <llvm/Support/Host.h> 
-#include <llvm/Target/TargetMachine.h> 
-#include <llvm/Support/TargetRegistry.h> 
-#include <llvm/Analysis/TargetTransformInfo.h> 
-#include <llvm/Analysis/TargetLibraryInfo.h> 
+#include <llvm/Support/Host.h>
+#include <llvm/Target/TargetMachine.h>
+#include <llvm/Support/TargetRegistry.h>
+#include <llvm/Analysis/TargetTransformInfo.h>
+#include <llvm/Analysis/TargetLibraryInfo.h>
 #include <llvm/Support/FileSystem.h>
 
 
@@ -131,6 +131,8 @@ std::unique_ptr<Function> Function::Compile(void *Addr, easy::Context const& C) 
   unsigned OptLevel;
   unsigned OptSize;
   std::tie(OptLevel, OptSize) = C.getOptLevel();
+
+  WriteOptimizedToFile(*M, C.getDebugBeforeFile());
 
   Optimize(*M, Name, C, OptLevel, OptSize);
 
