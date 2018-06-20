@@ -75,7 +75,7 @@ bool easy::DevirtualizeConstant::runOnFunction(llvm::Function &F) {
 
   llvm::Module &M = *F.getParent();
 
-  easy::Context const &C = getAnalysis<ContextAnalysis>().getContext();
+  // easy::Context const &C = getAnalysis<ContextAnalysis>().getContext();
 
   for(auto& I: instructions(F)) {
     auto* VTable = getVTableHostAddress(I);

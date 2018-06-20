@@ -68,5 +68,5 @@ easy::CloneModuleWithContext(llvm::Module const &LM, llvm::LLVMContext &C) {
     return nullptr;
 
   auto LMCopy = std::move(ModuleOrError.get());
-  return std::move(LMCopy);
+  return LMCopy;
 }

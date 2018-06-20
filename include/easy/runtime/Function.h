@@ -24,12 +24,12 @@ namespace std {
 namespace easy {
 
 class Context;
-class GlobalMapping;
+struct GlobalMapping;
 
 class Function {
 
   // do not reorder the fields and do not add virtual methods!
-  void* Address; 
+  void* Address;
   std::unique_ptr<easy::LLVMHolder> Holder;
 
   public:
