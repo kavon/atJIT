@@ -106,7 +106,7 @@ class Context {
   std::vector<std::unique_ptr<ArgumentBase>> ArgumentMapping_;
   unsigned OptLevel_ = 2, OptSize_ = 0;
   std::string DebugFile_;
-  std::unique_ptr<std::string> DebugBeforeFile_;
+  std::string DebugBeforeFile_;
 
   template<class ArgTy, class ... Args>
   inline Context& setArg(Args && ... args) {
@@ -146,10 +146,11 @@ class Context {
 
   Context& setDebugFile(std::string const &File) {
     DebugFile_ = File;
+    return *this;
+  }
 
-    DebugBeforeFile_ = std::unique_ptr<std::string>(new std::string(File));
-    DebugBeforeFile_->append(".before");
-
+  Context& setDebugBeforeFile(std::string const &File) {
+    DebugBeforeFile_ = File;
     return *this;
   }
 
@@ -162,7 +163,7 @@ class Context {
   }
 
   std::string const& getDebugBeforeFile() const {
-    return *DebugBeforeFile_;
+    return DebugBeforeFile_;
   }
 
   auto begin() const { return ArgumentMapping_.begin(); }

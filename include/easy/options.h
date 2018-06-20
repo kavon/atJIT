@@ -35,14 +35,16 @@ namespace options{
   // option used for writing the ir to a file, useful for debugging
   EASY_NEW_OPTION_STRUCT(dump_ir) {
     dump_ir(std::string const &file)
-               : file_(file) {}
+               : file_(file), beforeFile_(file + ".before") {}
 
     EASY_HANDLE_OPTION_STRUCT(dump_ir, C) {
       C.setDebugFile(file_);
+      C.setDebugBeforeFile(beforeFile_);
     }
 
     private:
     std::string file_;
+    std::string beforeFile_;
   };
 }
 }
