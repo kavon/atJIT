@@ -33,6 +33,8 @@ config.substitutions.append(('%llvm_tools_dir', "@LLVM_TOOLS_BINARY_DIR@"))
 
 common_flags =  "-g -Xclang -disable-O0-optnone "
 
+config.substitutions.append(('%easycc', "@CMAKE_ARCHIVE_OUTPUT_DIRECTORY@/easycc"))
+
 config.substitutions.append(('%clangxx', os.path.join("@LLVM_TOOLS_BINARY_DIR@", "clang++")))
 config.substitutions.append(('%clang', os.path.join("@LLVM_TOOLS_BINARY_DIR@", "clang")))
 config.substitutions.append(('%opt', os.path.join("@LLVM_TOOLS_BINARY_DIR@", "opt")))

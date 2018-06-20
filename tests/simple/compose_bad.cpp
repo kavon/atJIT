@@ -1,4 +1,4 @@
-// RUN: %not %clangxx %cxxflags %include_flags %ld_flags %s -Xclang -load -Xclang %lib_pass -o %t
+// RUN: %not %easycc   %s -o %t
 
 #include <easy/jit.h>
 

@@ -1,4 +1,4 @@
-// RUN: %clangxx %cxxflags -O2 %include_flags %ld_flags %s -Xclang -load -Xclang %lib_pass -o %t
+// RUN: %easycc  -O2  %s -o %t
 // RUN: %t "%t.ll" > %t.out
 // RUN: %FileCheck %s < %t.out
 // RUN: %FileCheck --check-prefix=CHECK-IR %s < %t.ll

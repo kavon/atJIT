@@ -1,4 +1,4 @@
-// RUN: %clangxx %cxxflags %include_flags %ld_flags %s -Xclang -load -Xclang %lib_pass -o %t
+// RUN: %easycc   %s -o %t
 // RUN: %t > %t.out
 // RUN: %FileCheck %s < %t.out
 
