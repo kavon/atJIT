@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.4.3)
 
-find_package(LLVM 5.0 REQUIRED CONFIG)
+find_package(LLVM 6.0 REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in ${LLVM_DIR}")
 message(STATUS "LLVM Root: ${LLVM_TOOLS_BINARY_DIR}")

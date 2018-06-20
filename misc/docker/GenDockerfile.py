@@ -1,5 +1,5 @@
 import yaml
-import sys 
+import sys
 
 Head = "# Dockerfile derived from easy::jit's .travis.yml"
 From = "ubuntu:latest"
@@ -14,7 +14,7 @@ script = travis['script']
 
 # I could not get a better way to do this
 AddSourceCmd = {
-  "llvm-toolchain-trusty-5.0" : "deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-5.0 main | tee -a /etc/apt/sources.list > /dev/null",
+  "llvm-toolchain-trusty-6.0" : "deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-6.0 main | tee -a /etc/apt/sources.list > /dev/null",
   "ubuntu-toolchain-r-test" : "apt-add-repository -y \"ppa:ubuntu-toolchain-r/test\""
 }
 
@@ -23,16 +23,16 @@ Sources = ["RUN {cmd} \n".format(cmd=AddSourceCmd[source]) for source in travis_
 Apt = """# add sources
 RUN apt-get update
 RUN apt-get install -y software-properties-common
-{AddSources} 
+{AddSources}
 # install apt packages, base first, then travis
-RUN apt-get update 
-RUN apt-get upgrade -y 
+RUN apt-get update
+RUN apt-get upgrade -y
 RUN apt-get install -y {base_packages} && \\
     apt-get install -y {travis_packages}
 """.format(AddSources = "".join(Sources), base_packages = " ".join(base_packages), travis_packages=" ".join(travis_packages))
 
 Checkout = "RUN git clone --depth=50 --branch=${branch} https://github.com/jmmartinez/easy-just-in-time.git easy-just-in-time && cd easy-just-in-time\n"
-BeforeInstall = "".join(["RUN cd /easy-just-in-time && {0} \n".format(cmd) for cmd in before_install]) 
+BeforeInstall = "".join(["RUN cd /easy-just-in-time && {0} \n".format(cmd) for cmd in before_install])
 Run = "RUN cd easy-just-in-time && \\\n" + "".join(["  {cmd} && \\ \n".format(cmd=cmd) for cmd in script]) + "  echo ok!"
 
 Template = """{Head}
