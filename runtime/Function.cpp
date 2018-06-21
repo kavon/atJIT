@@ -5,6 +5,8 @@
 #include <easy/runtime/Utils.h>
 #include <easy/exceptions.h>
 
+#include <tuner/TunableInliner.h>
+
 #include <llvm/Bitcode/BitcodeWriter.h>
 #include <llvm/Bitcode/BitcodeReader.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
@@ -42,7 +44,7 @@ static void Optimize(llvm::Module& M, const char* Name, const easy::Context& C, 
   Builder.OptLevel = OptLevel;
   Builder.SizeLevel = OptSize;
   Builder.LibraryInfo = new llvm::TargetLibraryInfoImpl(Triple);
-  Builder.Inliner = llvm::createFunctionInliningPass(OptLevel, OptSize, false);
+  Builder.Inliner = new tuner::TunableInliner(OptLevel, OptSize);
 
   std::unique_ptr<llvm::TargetMachine> TM = GetHostTargetMachine();
   assert(TM);
