@@ -40,3 +40,10 @@ void tuner::TunableInliner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetTransformInfoWrapperPass>();
   LegacyInlinerBase::getAnalysisUsage(AU);
 }
+
+char tuner::TunableInliner::ID = 0;
+static RegisterPass<tuner::TunableInliner> X("tuned-inliner", "Tunable Function Integration/Inlining");
+
+// TODO: look in PassSupport.h and figure out how to register all of the
+// same analysis passes required by SimpleInliner. Those macros do not seem to
+// work out for us so we'll need to figure out what to do by hand.

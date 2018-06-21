@@ -10,26 +10,24 @@
 
 namespace tuner {
 
-  using namespace llvm;
-
   // NOTE: a better version of this knob would specialize on
   // a vector that represents all of the InlineParams fields.
-  class TunableInliner : public Knob<int>, public LegacyInlinerBase {
-    char ID = 0;
-    InlineParams Params;
-    std::unique_ptr<Pass> Inliner;
+  class TunableInliner : public Knob<int>, public llvm::LegacyInlinerBase {
+    llvm::InlineParams Params;
 
-    TargetTransformInfoWrapperPass *TTIWP;
+    llvm::TargetTransformInfoWrapperPass *TTIWP;
 
   public:
+    TunableInliner()
+      : llvm::LegacyInlinerBase(ID),
+        Params(llvm::getInlineParams()) {}
+
     TunableInliner(unsigned OptLevel, unsigned SizeOptLevel)
-      : LegacyInlinerBase(ID),
-        Params(getInlineParams(OptLevel, SizeOptLevel)),
-        Inliner(createFunctionInliningPass(Params)) {}
+      : llvm::LegacyInlinerBase(ID),
+        Params(llvm::getInlineParams(OptLevel, SizeOptLevel)) {}
 
     void setVal(int Threshold) override {
       Params.DefaultThreshold = Threshold;
-      Inliner.reset(createFunctionInliningPass(Params));
     }
 
     int getVal() const override {
@@ -40,12 +38,17 @@ namespace tuner {
     // the below need to be reimplemented because SimpleInliner
     // is not accessable for us to inherit.
 
-    InlineCost getInlineCost(CallSite CS) override;
-    bool runOnSCC(CallGraphSCC &SCC) override;
-    void getAnalysisUsage(AnalysisUsage &AU) const override;
+    llvm::InlineCost getInlineCost(llvm::CallSite CS) override;
+    bool runOnSCC(llvm::CallGraphSCC &SCC) override;
+    void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
+
+    static char ID;
 
   }; // end class
 
 } // end namespace
+
+
+
 
 #endif // TUNER_TUNABLE_INLINER
