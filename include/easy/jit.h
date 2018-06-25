@@ -21,7 +21,7 @@ WrapFunction(std::unique_ptr<Function> F, meta::type_list<Ret, Params ...>) {
 }
 
 template<class T, class ... Args>
-auto jit_with_context(easy::Context const &C, T &&Fun) {
+auto jit_with_context(easy::Context &Cxt, T &&Fun) {
 
   auto* FunPtr = meta::get_as_pointer(Fun);
   using FunOriginalTy = std::remove_pointer_t<std::decay_t<T>>;
@@ -31,7 +31,7 @@ auto jit_with_context(easy::Context const &C, T &&Fun) {
   using new_parameter_types = typename new_type_traits::parameter_list;
 
   auto CompiledFunction =
-      Function::Compile(reinterpret_cast<void*>(FunPtr), C);
+      Function::Compile(reinterpret_cast<void*>(FunPtr), Cxt);
 
   auto Wrapper =
       WrapFunction(std::move(CompiledFunction),

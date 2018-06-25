@@ -32,6 +32,20 @@ namespace options{
     }
   };
 
+  // tuner kind option & correspondence.
+  EASY_NEW_OPTION_STRUCT(tuner_kind) {
+
+    tuner_kind(AutoTuner kind)
+               : kind_(kind) {}
+
+    EASY_HANDLE_OPTION_STRUCT(IGNORED, C) {
+      C.setTunerKind(kind_);
+    }
+
+    private:
+      AutoTuner kind_;
+  };
+
   // option used for writing the ir to a file, useful for debugging
   EASY_NEW_OPTION_STRUCT(dump_ir) {
     dump_ir(std::string const &file)

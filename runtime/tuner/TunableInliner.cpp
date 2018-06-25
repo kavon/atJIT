@@ -10,7 +10,10 @@
 
 using namespace llvm;
 
+#include <iostream>
+
 InlineCost tuner::TunableInliner::getInlineCost(CallSite CS) {
+    std::cout << "calculating inline cost...\n";
     Function *Callee = CS.getCalledFunction();
     TargetTransformInfo &TTI = TTIWP->getTTI(*Callee);
 
@@ -49,7 +52,12 @@ void tuner::TunableInliner::getAnalysisUsage(AnalysisUsage &AU) const {
 char tuner::TunableInliner::ID = 0;
 static RegisterPass<tuner::TunableInliner> X("tuned-inliner", "Tunable Function Integration/Inlining");
 
-llvm::Pass* tuner::createTunableInlinerPass(unsigned OptLevel, unsigned OptSize) {
+tuner::TunableInliner* tuner::createTunableInlinerPass(unsigned OptLevel, unsigned OptSize) {
+  static tuner::TunableInliner* ThePass = nullptr;
+
+  if (ThePass)
+    return ThePass;
+
   // NOTE: do not change variable name "Registry" ,
   // the macros following that statement need it.
   PassRegistry &Registry = *PassRegistry::getPassRegistry();

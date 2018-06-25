@@ -8,7 +8,14 @@
 
 #include <easy/runtime/Function.h>
 
+#include <tuner/RandomTuner.h>
+
 namespace easy {
+
+  enum AutoTuner {
+    AT_None,
+    AT_Random
+  };
 
 struct ArgumentBase {
 
@@ -108,6 +115,9 @@ class Context {
   std::string DebugFile_;
   std::string DebugBeforeFile_;
 
+  AutoTuner TunerKind_ = AT_None;
+  tuner::Tuner *Tuner_ = nullptr;
+
   template<class ArgTy, class ... Args>
   inline Context& setArg(Args && ... args) {
     ArgumentMapping_.emplace_back(new ArgTy(std::forward<Args>(args)...));
@@ -137,6 +147,37 @@ class Context {
   Context& setParameterTypedStruct(T* ptr) {
     return setParameterStruct(reinterpret_cast<char const*>(ptr), sizeof(T));
   }
+
+  Context& setTunerKind(AutoTuner AT) {
+    TunerKind_ = AT;
+    return *this;
+  }
+
+  AutoTuner getTunerKind() const {
+    return TunerKind_;
+  }
+
+  tuner::Tuner * getTuner() const {
+    return Tuner_;
+  }
+
+  // Will only initialized once per instance of a context.
+  void initializeTuner(UniqueIntKnobsTy Knobs) {
+    if (Tuner_)
+      return;
+
+    switch (TunerKind_) {
+      case AT_Random: Tuner_ = new tuner::RandomTuner(std::move(Knobs)); break;
+
+      case AT_None:
+        break;
+
+      default:
+        throw std::runtime_error("attempting to initialize an unimplemented TunerKind");
+    };
+  }
+
+
 
   Context& setOptLevel(unsigned OptLevel, unsigned OptSize) {
     OptLevel_ = OptLevel;

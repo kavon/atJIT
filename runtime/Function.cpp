@@ -6,6 +6,7 @@
 #include <easy/exceptions.h>
 
 #include <tuner/TunableInliner.h>
+#include <tuner/Tuner.h>
 
 #include <llvm/Bitcode/BitcodeWriter.h>
 #include <llvm/Bitcode/BitcodeReader.h>
@@ -36,15 +37,23 @@ static std::unique_ptr<llvm::TargetMachine> GetHostTargetMachine() {
   return TM;
 }
 
-static void Optimize(llvm::Module& M, const char* Name, const easy::Context& C, unsigned OptLevel, unsigned OptSize) {
+static void Optimize(llvm::Module& M, const char* Name, easy::Context& C, unsigned OptLevel, unsigned OptSize) {
 
   llvm::Triple Triple{llvm::sys::getProcessTriple()};
+
+  // get all knobs
+  auto Inliner = tuner::createTunableInlinerPass(OptLevel, OptSize);
+
+  // setup tuner
+  auto Knobs = std::make_unique<IntKnobsTy>(10);
+  Knobs->push_back(static_cast<tuner::Knob<int>*>(Inliner));
+  C.initializeTuner(std::move(Knobs));
 
   llvm::PassManagerBuilder Builder;
   Builder.OptLevel = OptLevel;
   Builder.SizeLevel = OptSize;
   Builder.LibraryInfo = new llvm::TargetLibraryInfoImpl(Triple);
-  Builder.Inliner = tuner::createTunableInlinerPass(OptLevel, OptSize);
+  Builder.Inliner = Inliner;
 
   std::unique_ptr<llvm::TargetMachine> TM = GetHostTargetMachine();
   assert(TM);
@@ -118,7 +127,7 @@ llvm::Module const& Function::getLLVMModule() const {
   return *static_cast<LLVMHolderImpl const&>(*this->Holder).M_;
 }
 
-std::unique_ptr<Function> Function::Compile(void *Addr, easy::Context const& C) {
+std::unique_ptr<Function> Function::Compile(void *Addr, easy::Context &C) {
 
   auto &BT = BitcodeTracker::GetTracker();
 

@@ -48,7 +48,7 @@ namespace tuner {
 
   // use this instead of constructing the pass directly.
   // NOTE: its likely to break things if you call this more than once.
-  llvm::Pass* createTunableInlinerPass(unsigned OptLevel, unsigned OptSize);
+  TunableInliner* createTunableInlinerPass(unsigned OptLevel, unsigned OptSize);
 
 } // end namespace
 
