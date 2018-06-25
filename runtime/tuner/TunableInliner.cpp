@@ -2,8 +2,9 @@
 #include <tuner/TunableInliner.h>
 
 ///////
-// other less-interesting methods of TunableInliner.
-// NOTE: this code was lifted from SimpleInliner in LLVM.
+// other less-interesting methods / utilities of the TunableInliner.
+//
+// NOTE: much of this code was lifted from SimpleInliner in LLVM.
 
 #define DEBUG_TYPE "tunable-inliner"
 
@@ -41,9 +42,21 @@ void tuner::TunableInliner::getAnalysisUsage(AnalysisUsage &AU) const {
   LegacyInlinerBase::getAnalysisUsage(AU);
 }
 
+
+///////////////
+// Pass Registration and Initialization function.
+
 char tuner::TunableInliner::ID = 0;
 static RegisterPass<tuner::TunableInliner> X("tuned-inliner", "Tunable Function Integration/Inlining");
 
-// TODO: look in PassSupport.h and figure out how to register all of the
-// same analysis passes required by SimpleInliner. Those macros do not seem to
-// work out for us so we'll need to figure out what to do by hand.
+llvm::Pass* tuner::createTunableInlinerPass(unsigned OptLevel, unsigned OptSize) {
+  // NOTE: do not change variable name "Registry" ,
+  // the macros following that statement need it.
+  PassRegistry &Registry = *PassRegistry::getPassRegistry();
+  INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
+  INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
+  INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
+  INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+  INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+  return new tuner::TunableInliner(OptLevel, OptSize);
+}

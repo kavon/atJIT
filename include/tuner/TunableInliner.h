@@ -10,7 +10,7 @@
 
 namespace tuner {
 
-  // NOTE: a better version of this knob would specialize on
+  // TODO: a better version of this knob would expose
   // a vector that represents all of the InlineParams fields.
   class TunableInliner : public Knob<int>, public llvm::LegacyInlinerBase {
     llvm::InlineParams Params;
@@ -45,6 +45,10 @@ namespace tuner {
     static char ID;
 
   }; // end class
+
+  // use this instead of constructing the pass directly.
+  // NOTE: its likely to break things if you call this more than once.
+  llvm::Pass* createTunableInlinerPass(unsigned OptLevel, unsigned OptSize);
 
 } // end namespace
 

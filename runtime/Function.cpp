@@ -44,7 +44,7 @@ static void Optimize(llvm::Module& M, const char* Name, const easy::Context& C, 
   Builder.OptLevel = OptLevel;
   Builder.SizeLevel = OptSize;
   Builder.LibraryInfo = new llvm::TargetLibraryInfoImpl(Triple);
-  Builder.Inliner = new tuner::TunableInliner(OptLevel, OptSize);
+  Builder.Inliner = tuner::createTunableInlinerPass(OptLevel, OptSize);
 
   std::unique_ptr<llvm::TargetMachine> TM = GetHostTargetMachine();
   assert(TM);
