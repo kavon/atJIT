@@ -29,7 +29,11 @@ Context& Context::setParameterModule(easy::Function const &F) {
 bool Context::operator==(const Context& Other) const {
   if(getOptLevel() != Other.getOptLevel())
     return false;
+
   if(size() != Other.size())
+    return false;
+
+  if(getTunerKind() != Other.getTunerKind())
     return false;
 
   for(auto this_it = begin(), other_it = Other.begin();

@@ -47,7 +47,7 @@ static void Optimize(llvm::Module& M, const char* Name, easy::Context& C, unsign
   // setup tuner
   auto Knobs = std::make_unique<IntKnobsTy>(10);
   Knobs->push_back(static_cast<tuner::Knob<int>*>(Inliner));
-  C.initializeTuner(std::move(Knobs));
+  // C.initializeTuner(std::move(Knobs));  // TODO: Tuner will be passed in here, not kept in the Context
 
   llvm::PassManagerBuilder Builder;
   Builder.OptLevel = OptLevel;

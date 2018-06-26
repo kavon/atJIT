@@ -8,13 +8,12 @@
 
 namespace tuner {
 
-  // Base class for knob tuning
-  class Tuner {
+  class TunerBase {
 
   public:
-    virtual void applyConfiguration(Feedback &prior) = 0;
+    virtual void applyConfiguration(Feedback &prior) { };
 
-  }; // end class Tuner
+  }; // end class TunerBase
 
 } // namespace tuner
 

@@ -11,7 +11,7 @@ using UniqueIntKnobsTy = std::unique_ptr<IntKnobsTy>;
 namespace tuner {
 
   // a silly tuner that randomly perturbs the knobs
-  class RandomTuner : public Tuner {
+  class RandomTuner : public TunerBase {
 
 
     UniqueIntKnobsTy knobs_;
