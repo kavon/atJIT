@@ -40,6 +40,7 @@ class BitcodeTracker {
   }
 
   void* getAddress(std::string const &Name);
+  const char* getName(void*);
   std::tuple<const char*, GlobalMapping*> getNameAndGlobalMapping(void* FPtr);
   bool hasGlobalMapping(void* FPtr) const;
 

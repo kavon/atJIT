@@ -58,7 +58,7 @@ class Function {
 
   static std::unique_ptr<Function> Compile(void *Addr, easy::Context const&);
 
-  static std::unique_ptr<Function> Compile(void *Addr, tuner::Optimizer&);
+  static std::unique_ptr<Function> Compile(tuner::Optimizer&);
 
   friend
   std::hash<easy::Function>::result_type std::hash<easy::Function>::operator()(argument_type const& F) const noexcept;

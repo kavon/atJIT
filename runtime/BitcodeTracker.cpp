@@ -39,6 +39,15 @@ std::tuple<const char*, GlobalMapping*> BitcodeTracker::getNameAndGlobalMapping(
   return std::make_tuple(InfoPtr->second.Name, InfoPtr->second.Globals);
 }
 
+const char* BitcodeTracker::getName(void* FPtr) {
+  auto InfoPtr = Functions.find(FPtr);
+  if(InfoPtr == Functions.end()) {
+    throw easy::BitcodeNotRegistered();
+  }
+
+  return InfoPtr->second.Name;
+}
+
 std::unique_ptr<llvm::Module> BitcodeTracker::getModuleWithContext(void* FPtr, llvm::LLVMContext &C) {
   auto InfoPtr = Functions.find(FPtr);
   if(InfoPtr == Functions.end()) {
@@ -72,4 +81,3 @@ void easy_register(void* FPtr, const char* Name, GlobalMapping* Globals, const c
   BitcodeTracker::GetTracker().registerFunction(FPtr, Name, Globals, Bitcode, BitcodeLen);
 }
 }
-

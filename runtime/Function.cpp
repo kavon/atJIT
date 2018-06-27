@@ -89,13 +89,14 @@ llvm::Module const& Function::getLLVMModule() const {
 
 std::unique_ptr<Function> Function::Compile(void *Addr, easy::Context const& C)
 {
-  tuner::Optimizer Opt(C);
-  return Function::Compile(Addr, Opt);
+  tuner::Optimizer Opt(Addr, C);
+  return Function::Compile(Opt);
 }
 
-std::unique_ptr<Function> Function::Compile(void *Addr, tuner::Optimizer &Opt) {
+std::unique_ptr<Function> Function::Compile(tuner::Optimizer &Opt) {
 
   easy::Context const& C = Opt.getContext();
+  void* Addr = Opt.getAddr();
 
   auto &BT = BitcodeTracker::GetTracker();
 
@@ -109,7 +110,7 @@ std::unique_ptr<Function> Function::Compile(void *Addr, tuner::Optimizer &Opt) {
 
   WriteOptimizedToFile(*M, C.getDebugBeforeFile());
 
-  Opt.optimize(*M, Name);
+  Opt.optimize(*M);
 
   WriteOptimizedToFile(*M, C.getDebugFile());
 
