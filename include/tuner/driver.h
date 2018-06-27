@@ -26,6 +26,7 @@ class ATDriver {
 
     easy::FunctionWrapperBase &FWB = EntryVals.second;
     tuner::TunerBase &ATB = EntryVals.first;
+
     easy::Context const& Cxt = KeyVals.second;
 
     if(WasNotInCache) {
@@ -36,8 +37,8 @@ class ATDriver {
     // TODO dispatch to a jit_with_autotuning, which will ask the tuner
     // whether recompilation is needed.
     auto FW = easy::jit_with_context(Cxt, std::forward<T>(Fun));
-    FWB = std::move(FW);
 
+    FWB = std::move(FW); // need to keep this alive
     return reinterpret_cast<wrapper_ty&>(FWB);
   }
 

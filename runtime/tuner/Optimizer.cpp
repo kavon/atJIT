@@ -1,10 +1,10 @@
-#ifndef TUNER_OPTIMIZER
-#define TUNER_OPTIMIZER
-
 #include <tuple>
 
 #include <easy/runtime/Context.h>
 #include <easy/runtime/BitcodeTracker.h>
+#include <easy/runtime/RuntimePasses.h>
+
+#include <tuner/TunableInliner.h>
 
 #include <llvm/IR/Module.h>
 #include <llvm/IR/LegacyPassManager.h>
@@ -94,5 +94,3 @@ namespace tuner {
   }; // end class Optimizer
 
 } // namespace tuner
-
-#endif // TUNER_OPTIMIZER
