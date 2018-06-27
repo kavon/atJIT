@@ -1,8 +1,13 @@
 #ifndef FUNCTION
 #define FUNCTION
 
-#include "LLVMHolder.h"
 #include <memory>
+
+#include <easy/runtime/LLVMHolder.h>
+
+// NOTE(kavon): everything somehow breaks if you try to include any
+// type definitions here. you need to forward-declare anything
+// you need here instead.
 
 namespace easy {
   class Function;
@@ -10,6 +15,10 @@ namespace easy {
 
 namespace llvm {
   class Module;
+}
+
+namespace tuner {
+  class Optimizer;
 }
 
 namespace std {
@@ -47,7 +56,9 @@ class Function {
 
   llvm::Module const& getLLVMModule() const;
 
-  static std::unique_ptr<Function> Compile(void *Addr, easy::Context &C);
+  static std::unique_ptr<Function> Compile(void *Addr, easy::Context const&);
+
+  static std::unique_ptr<Function> Compile(void *Addr, tuner::Optimizer&);
 
   friend
   std::hash<easy::Function>::result_type std::hash<easy::Function>::operator()(argument_type const& F) const noexcept;

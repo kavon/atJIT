@@ -7,12 +7,10 @@
 
 #include <tuner/TunableInliner.h>
 #include <tuner/Tuner.h>
+#include <tuner/Optimizer.h>
 
 #include <llvm/Bitcode/BitcodeWriter.h>
 #include <llvm/Bitcode/BitcodeReader.h>
-#include <llvm/Transforms/IPO/PassManagerBuilder.h>
-#include <llvm/Transforms/IPO.h>
-#include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Support/Host.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Support/TargetRegistry.h>
@@ -30,44 +28,6 @@ namespace easy {
 
 Function::Function(void* Addr, std::unique_ptr<LLVMHolder> H)
   : Address(Addr), Holder(std::move(H)) {
-}
-
-static std::unique_ptr<llvm::TargetMachine> GetHostTargetMachine() {
-  std::unique_ptr<llvm::TargetMachine> TM(llvm::EngineBuilder().selectTarget());
-  return TM;
-}
-
-static void Optimize(llvm::Module& M, const char* Name, easy::Context& C, unsigned OptLevel, unsigned OptSize) {
-
-  llvm::Triple Triple{llvm::sys::getProcessTriple()};
-
-  // get all knobs
-  auto Inliner = tuner::createTunableInlinerPass(OptLevel, OptSize);
-
-  // setup tuner
-  auto Knobs = std::make_unique<IntKnobsTy>(10);
-  Knobs->push_back(static_cast<tuner::Knob<int>*>(Inliner));
-  // C.initializeTuner(std::move(Knobs));  // TODO: Tuner will be passed in here, not kept in the Context
-
-  llvm::PassManagerBuilder Builder;
-  Builder.OptLevel = OptLevel;
-  Builder.SizeLevel = OptSize;
-  Builder.LibraryInfo = new llvm::TargetLibraryInfoImpl(Triple);
-  Builder.Inliner = Inliner;
-
-  std::unique_ptr<llvm::TargetMachine> TM = GetHostTargetMachine();
-  assert(TM);
-  TM->adjustPassManager(Builder);
-
-  llvm::legacy::PassManager MPM;
-  MPM.add(llvm::createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
-  MPM.add(easy::createContextAnalysisPass(C));
-  MPM.add(easy::createInlineParametersPass(Name));
-  Builder.populateModulePassManager(MPM);
-  MPM.add(easy::createDevirtualizeConstantPass(Name));
-  Builder.populateModulePassManager(MPM);
-
-  MPM.run(M);
 }
 
 static std::unique_ptr<llvm::ExecutionEngine> GetEngine(std::unique_ptr<llvm::Module> M, const char *Name) {
@@ -127,7 +87,15 @@ llvm::Module const& Function::getLLVMModule() const {
   return *static_cast<LLVMHolderImpl const&>(*this->Holder).M_;
 }
 
-std::unique_ptr<Function> Function::Compile(void *Addr, easy::Context &C) {
+std::unique_ptr<Function> Function::Compile(void *Addr, easy::Context const& C)
+{
+  tuner::Optimizer Opt(C);
+  return Function::Compile(Addr, Opt);
+}
+
+std::unique_ptr<Function> Function::Compile(void *Addr, tuner::Optimizer &Opt) {
+
+  easy::Context const& C = Opt.getContext();
 
   auto &BT = BitcodeTracker::GetTracker();
 
@@ -139,13 +107,9 @@ std::unique_ptr<Function> Function::Compile(void *Addr, easy::Context &C) {
   std::unique_ptr<llvm::LLVMContext> Ctx;
   std::tie(M, Ctx) = BT.getModule(Addr);
 
-  unsigned OptLevel;
-  unsigned OptSize;
-  std::tie(OptLevel, OptSize) = C.getOptLevel();
-
   WriteOptimizedToFile(*M, C.getDebugBeforeFile());
 
-  Optimize(*M, Name, C, OptLevel, OptSize);
+  Opt.optimize(*M, Name);
 
   WriteOptimizedToFile(*M, C.getDebugFile());
 
