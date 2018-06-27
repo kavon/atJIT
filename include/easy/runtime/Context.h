@@ -8,8 +8,6 @@
 
 #include <easy/runtime/Function.h>
 
-#include <tuner/RandomTuner.h>
-
 namespace easy {
 
   enum AutoTuner {

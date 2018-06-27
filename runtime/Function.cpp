@@ -5,9 +5,7 @@
 #include <easy/runtime/Utils.h>
 #include <easy/exceptions.h>
 
-#include <tuner/TunableInliner.h>
-#include <tuner/Tuner.h>
-#include <tuner/Optimizer.h>
+#include <tuner/optimizer.h>
 
 #include <llvm/Bitcode/BitcodeWriter.h>
 #include <llvm/Bitcode/BitcodeReader.h>
@@ -17,6 +15,7 @@
 #include <llvm/Analysis/TargetTransformInfo.h>
 #include <llvm/Analysis/TargetLibraryInfo.h>
 #include <llvm/Support/FileSystem.h>
+#include <llvm/IR/LegacyPassManager.h>
 
 
 using namespace easy;
