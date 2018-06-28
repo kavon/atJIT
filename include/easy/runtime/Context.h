@@ -220,13 +220,22 @@ namespace std
     typedef easy::Context argument_type;
     typedef std::size_t result_type;
     result_type operator()(argument_type const& C) const noexcept {
-      size_t H = 0;
+      size_t H = (size_t) C.getTunerKind();
       std::hash<easy::ArgumentBase> ArgHash;
       std::hash<std::pair<unsigned, unsigned>> OptHash;
       for(auto const &Arg : C)
         H ^= ArgHash(*Arg);
       H ^= OptHash(C.getOptLevel());
       return H;
+    }
+  };
+
+  template<> struct hash<std::shared_ptr<easy::Context>>
+  {
+    typedef std::shared_ptr<easy::Context> argument_type;
+    typedef std::size_t result_type;
+    result_type operator()(argument_type const& s) const noexcept {
+      return std::hash<easy::Context>{}(*(s.get()));
     }
   };
 }
