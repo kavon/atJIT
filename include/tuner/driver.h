@@ -4,6 +4,8 @@
 #include <easy/jit.h>
 #include <unordered_map>
 
+#include <tuner/Tuner.h>
+
 namespace tuner {
 
 class ATDriver {
