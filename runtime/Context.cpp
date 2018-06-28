@@ -27,6 +27,7 @@ Context& Context::setParameterModule(easy::Function const &F) {
 }
 
 bool Context::operator==(const Context& Other) const {
+  std::cout << "..........comparing a Context\n";
   if(getOptLevel() != Other.getOptLevel())
     return false;
 

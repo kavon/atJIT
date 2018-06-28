@@ -39,7 +39,12 @@ class ATDriver {
     Entry &EntryVals = EmplaceResult.first->second;
     easy::FunctionWrapperBase &FWB = EntryVals.second;
     tuner::Optimizer &OptFromEntry = EntryVals.first;
-    // bool WasNotInCache = EmplaceResult.second;
+    bool WasNotInCache = EmplaceResult.second;
+
+    if (WasNotInCache)
+      std::cout << "cache MISS\n";
+    else
+      std::cout << "*********** cache HIT ***********\n";
 
     auto FW = easy::jit_with_optimizer<T, Args...>(OptFromEntry, std::forward<T>(Fun));
 

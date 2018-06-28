@@ -1,4 +1,5 @@
 #include <tuple>
+#include <iostream>
 
 #include <tuner/optimizer.h>
 
@@ -23,6 +24,7 @@ namespace {
 namespace tuner {
 
   void Optimizer::setupPassManager() {
+    // std::cout << "setup pass manager\n";
     auto &BT = easy::BitcodeTracker::GetTracker();
     const char* Name = BT.getName(Addr_);
 
@@ -57,11 +59,12 @@ namespace tuner {
     Builder_.populateModulePassManager(*MPM_);
     MPM_->add(easy::createDevirtualizeConstantPass(Name));
     Builder_.populateModulePassManager(*MPM_);
+
+    InitializedPassMgr_ = true;
   }
 
-  Optimizer::Optimizer(void* Addr, std::shared_ptr<easy::Context> Cxt) : Cxt_(Cxt), Addr_(Addr) {
-    setupPassManager();
-  }
+  Optimizer::Optimizer(void* Addr, std::shared_ptr<easy::Context> Cxt) :
+      Cxt_(Cxt), Addr_(Addr), InitializedPassMgr_(false) {}
 
   easy::Context const* Optimizer::getContext() const {
     return Cxt_.get();
@@ -74,6 +77,10 @@ namespace tuner {
   void Optimizer::optimize(llvm::Module &M) {
     // NOTE(kavon): right now we throw away the indicator saying whether
     // the module changed. Perhaps its useful to tell the tuner about that?
+    // std::cout << "OPTIMIZING\n";
+    if (!InitializedPassMgr_)
+      setupPassManager();
+
     MPM_->run(M);
   }
 

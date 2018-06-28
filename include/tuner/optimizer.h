@@ -22,6 +22,7 @@ private:
   // members related to the pass manager that we need to keep alive.
   std::unique_ptr<llvm::legacy::PassManager> MPM_;
   std::unique_ptr<llvm::TargetMachine> TM_;
+  bool InitializedPassMgr_;
 
   void setupPassManager();
 
