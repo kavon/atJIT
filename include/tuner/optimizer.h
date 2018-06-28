@@ -3,12 +3,8 @@
 
 #include <easy/runtime/Context.h>
 
-namespace llvm {
-  namespace legacy {
-    class PassManager;
-  }
-  class TargetMachine;
-}
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/Target/TargetMachine.h>
 
 namespace tuner {
 
