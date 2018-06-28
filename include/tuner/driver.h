@@ -46,6 +46,8 @@ class ATDriver {
     else
       std::cout << "*********** cache HIT ***********\n";
 
+    std::cout << "cache size: " << Cache_.size() << "\n";
+
     auto FW = easy::jit_with_optimizer<T, Args...>(OptFromEntry, std::forward<T>(Fun));
 
     FWB = std::move(FW); // need to keep this alive
