@@ -86,12 +86,6 @@ llvm::Module const& Function::getLLVMModule() const {
   return *static_cast<LLVMHolderImpl const&>(*this->Holder).M_;
 }
 
-std::unique_ptr<Function> Function::Compile(void *Addr, easy::Context const& C)
-{
-  tuner::Optimizer Opt(Addr, C);
-  return Function::Compile(Opt);
-}
-
 std::unique_ptr<Function> Function::Compile(tuner::Optimizer &Opt) {
 
   easy::Context const& C = Opt.getContext();

@@ -56,8 +56,6 @@ class Function {
 
   llvm::Module const& getLLVMModule() const;
 
-  static std::unique_ptr<Function> Compile(void *Addr, easy::Context const&);
-
   static std::unique_ptr<Function> Compile(tuner::Optimizer&);
 
   friend

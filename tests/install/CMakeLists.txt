@@ -9,7 +9,11 @@ message("Easy::Jit lib dir: " ${EasyJit_LIBRARY_DIRS})
 message("Easy::Jit runtime: " ${EasyJit_LIBRARY})
 message("Easy::Jit plugin: " ${EasyJit_PLUGIN})
 
-include_directories(${EasyJit_INCLUDE_DIRS})
+find_package(LLVM 6.0 REQUIRED CONFIG)
+
+message(STATUS "LLVM Include dirs: ${LLVM_INCLUDE_DIRS}")
+
+include_directories(${EasyJit_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS})
 link_directories(${EasyJit_LIBRARY_DIRS})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++14 -Xclang -disable-O0-optnone -Xclang -load -Xclang ${EasyJit_PLUGIN}")
