@@ -13,16 +13,16 @@ namespace easy {
 
     ContextAnalysis()
       : llvm::ImmutablePass(ID), C_(nullptr) {}
-    ContextAnalysis(Context const &C)
-      : llvm::ImmutablePass(ID), C_(&C) {}
+    ContextAnalysis(std::shared_ptr<easy::Context> C)
+      : llvm::ImmutablePass(ID), C_(std::move(C)) {}
 
-    easy::Context const& getContext() const {
-      return *C_;
+    easy::Context const* getContext() const {
+      return C_.get();
     }
 
     private:
 
-    easy::Context const *C_;
+    std::shared_ptr<easy::Context> C_;
   };
 
   struct InlineParameters:
@@ -65,7 +65,7 @@ namespace easy {
     llvm::StringRef TargetName_;
   };
 
-  llvm::Pass* createContextAnalysisPass(easy::Context const &C);
+  llvm::Pass* createContextAnalysisPass(std::shared_ptr<easy::Context> C);
   llvm::Pass* createInlineParametersPass(llvm::StringRef Name);
   llvm::Pass* createDevirtualizeConstantPass(llvm::StringRef Name);
 }

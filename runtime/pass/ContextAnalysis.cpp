@@ -5,8 +5,8 @@ using namespace easy;
 
 char easy::ContextAnalysis::ID = 0;
 
-llvm::Pass* easy::createContextAnalysisPass(easy::Context const &C) {
-  return new ContextAnalysis(C);
+llvm::Pass* easy::createContextAnalysisPass(std::shared_ptr<easy::Context> C) {
+  return new ContextAnalysis(std::move(C));
 }
 
 static RegisterPass<easy::ContextAnalysis> X("", "", true, true);

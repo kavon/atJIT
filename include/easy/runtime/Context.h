@@ -108,7 +108,7 @@ class StructArgument
 // class that holds information about the just-in-time context
 class Context {
 
-  std::vector<std::unique_ptr<ArgumentBase>> ArgumentMapping_;
+  std::vector<std::shared_ptr<ArgumentBase>> ArgumentMapping_;
   unsigned OptLevel_ = 2, OptSize_ = 0;
   std::string DebugFile_;
   std::string DebugBeforeFile_;

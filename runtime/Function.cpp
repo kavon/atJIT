@@ -66,7 +66,7 @@ static void WriteOptimizedToFile(llvm::Module const &M, std::string const& File)
 
 std::unique_ptr<Function>
 CompileAndWrap(const char*Name, GlobalMapping* Globals,
-               std::unique_ptr<llvm::LLVMContext> Ctx,
+               std::unique_ptr<llvm::LLVMContext> LLVMCxt,
                std::unique_ptr<llvm::Module> M) {
 
   llvm::Module* MPtr = M.get();
@@ -78,7 +78,7 @@ CompileAndWrap(const char*Name, GlobalMapping* Globals,
 
   void *Address = (void*)EE->getFunctionAddress(Name);
 
-  std::unique_ptr<LLVMHolder> Holder(new easy::LLVMHolderImpl{std::move(EE), std::move(Ctx), MPtr});
+  std::unique_ptr<LLVMHolder> Holder(new easy::LLVMHolderImpl{std::move(EE), std::move(LLVMCxt), MPtr});
   return std::unique_ptr<Function>(new Function(Address, std::move(Holder)));
 }
 
@@ -88,7 +88,7 @@ llvm::Module const& Function::getLLVMModule() const {
 
 std::unique_ptr<Function> Function::Compile(tuner::Optimizer &Opt) {
 
-  easy::Context const& C = Opt.getContext();
+  easy::Context const* Cxt = Opt.getContext();
   void* Addr = Opt.getAddr();
 
   auto &BT = BitcodeTracker::GetTracker();
@@ -98,16 +98,16 @@ std::unique_ptr<Function> Function::Compile(tuner::Optimizer &Opt) {
   std::tie(Name, Globals) = BT.getNameAndGlobalMapping(Addr);
 
   std::unique_ptr<llvm::Module> M;
-  std::unique_ptr<llvm::LLVMContext> Ctx;
-  std::tie(M, Ctx) = BT.getModule(Addr);
+  std::unique_ptr<llvm::LLVMContext> LLVMCxt;
+  std::tie(M, LLVMCxt) = BT.getModule(Addr);
 
-  WriteOptimizedToFile(*M, C.getDebugBeforeFile());
+  WriteOptimizedToFile(*M, Cxt->getDebugBeforeFile());
 
   Opt.optimize(*M);
 
-  WriteOptimizedToFile(*M, C.getDebugFile());
+  WriteOptimizedToFile(*M, Cxt->getDebugFile());
 
-  return CompileAndWrap(Name, Globals, std::move(Ctx), std::move(M));
+  return CompileAndWrap(Name, Globals, std::move(LLVMCxt), std::move(M));
 }
 
 void easy::Function::serialize(std::ostream& os) const {

@@ -194,15 +194,15 @@ Function* CreateWrapperFun(Module &M, FunctionType &WrapperTy, Function &F, easy
 
 bool easy::InlineParameters::runOnModule(llvm::Module &M) {
 
-  easy::Context const &C = getAnalysis<ContextAnalysis>().getContext();
+  easy::Context const *Cxt = getAnalysis<ContextAnalysis>().getContext();
   llvm::Function* F = M.getFunction(TargetName_);
   assert(F);
 
   FunctionType* FTy = F->getFunctionType();
-  assert(FTy->getNumParams() == C.size());
+  assert(FTy->getNumParams() == Cxt->size());
 
-  FunctionType* WrapperTy = GetWrapperTy(FTy, C);
-  llvm::Function* WrapperFun = CreateWrapperFun(M, *WrapperTy, *F, C);
+  FunctionType* WrapperTy = GetWrapperTy(FTy, *Cxt);
+  llvm::Function* WrapperFun = CreateWrapperFun(M, *WrapperTy, *F, *Cxt);
 
   // privatize F, steal its name, copy its attributes, and its cc
   F->setLinkage(llvm::Function::PrivateLinkage);

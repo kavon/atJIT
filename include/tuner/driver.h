@@ -9,7 +9,7 @@
 namespace tuner {
 
 class ATDriver {
-  using Key = std::pair<void*, easy::Context>;
+  using Key = std::pair<void*, std::shared_ptr<easy::Context>>;
   using Entry = std::pair<tuner::Optimizer, easy::FunctionWrapperBase>;
 
   using iterator = typename std::unordered_map<Key, Entry>::iterator;
@@ -24,24 +24,24 @@ class ATDriver {
     void* FunPtr = reinterpret_cast<void*>(easy::meta::get_as_pointer(Fun));
     using wrapper_ty = decltype(easy::jit(std::forward<T>(Fun), std::forward<Args>(args)...));
 
-    easy::Context Cxt = easy::get_context_for<T, Args...>(std::forward<Args>(args)...);
+    std::shared_ptr<easy::Context> Cxt = easy::get_sharable_context_for<T, Args...>(std::forward<Args>(args)...);
 
-    // FIXME: is it okay to pass Cxt into optimizer by ref and then have a move afterwards?
+    tuner::Optimizer Opt(FunPtr, Cxt);
     auto DummyEntry =
-            std::make_pair(tuner::Optimizer(FunPtr, Cxt), easy::FunctionWrapperBase());
+            std::make_pair(std::move(Opt), easy::FunctionWrapperBase());
 
     std::pair<iterator, bool> EmplaceResult =
-            Cache_.emplace(Key(FunPtr, std::move(Cxt)), std::move(DummyEntry));
+            Cache_.emplace(Key(FunPtr, Cxt), std::move(DummyEntry));
+
 
     // pull out data from the emplace
     Key const &KeyVals = EmplaceResult.first->first;
     Entry &EntryVals = EmplaceResult.first->second;
     easy::FunctionWrapperBase &FWB = EntryVals.second;
-    tuner::Optimizer &Opt = EntryVals.first;
-    easy::Context const& CxtFromKey = KeyVals.second;
+    tuner::Optimizer &OptFromEntry = EntryVals.first;
     // bool WasNotInCache = EmplaceResult.second;
 
-    auto FW = easy::jit_with_context<T, Args...>(CxtFromKey, std::forward<T>(Fun));
+    auto FW = easy::jit_with_optimizer<T, Args...>(OptFromEntry, std::forward<T>(Fun));
 
     FWB = std::move(FW); // need to keep this alive
     return reinterpret_cast<wrapper_ty&>(FWB);

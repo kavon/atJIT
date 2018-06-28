@@ -49,7 +49,7 @@ template<class T, class ... Args>
 auto jit_with_context(easy::Context const& Cxt, T &&Fun) {
 
   auto* FunPtr = meta::get_as_pointer(Fun);
-  tuner::Optimizer Opt(reinterpret_cast<void*>(FunPtr), Cxt);
+  tuner::Optimizer Opt(reinterpret_cast<void*>(FunPtr), std::make_shared<easy::Context>(Cxt));
 
   return jit_with_optimizer<T, Args...>(Opt, std::forward<T>(Fun));
 }
@@ -70,7 +70,15 @@ easy::Context get_context_for(Args&& ... args) {
                                                   std::forward<Args>(args)...);
   return C;
 }
+
+template<class T, class ... Args>
+std::shared_ptr<easy::Context> get_sharable_context_for(Args&& ... args) {
+  easy::Context C = get_context_for<T, Args...>(std::forward<Args>(args)...);
+  auto SharableC = std::make_shared<easy::Context>(std::move(C));
+  return SharableC;
 }
+
+} // end anonymous namespace
 
 template<class T, class ... Args>
 auto EASY_JIT_COMPILER_INTERFACE jit(T &&Fun, Args&& ... args) {

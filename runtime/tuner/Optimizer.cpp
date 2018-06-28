@@ -28,7 +28,7 @@ namespace tuner {
 
     unsigned OptLevel;
     unsigned OptSize;
-    std::tie(OptLevel, OptSize) = Cxt_.getOptLevel();
+    std::tie(OptLevel, OptSize) = Cxt_->getOptLevel();
 
     llvm::Triple Triple{llvm::sys::getProcessTriple()};
 
@@ -59,12 +59,12 @@ namespace tuner {
     Builder_.populateModulePassManager(*MPM_);
   }
 
-  Optimizer::Optimizer(void* Addr, easy::Context const& Cxt) : Cxt_(Cxt), Addr_(Addr) {
+  Optimizer::Optimizer(void* Addr, std::shared_ptr<easy::Context> Cxt) : Cxt_(Cxt), Addr_(Addr) {
     setupPassManager();
   }
 
-  easy::Context const& Optimizer::getContext() const {
-    return Cxt_;
+  easy::Context const* Optimizer::getContext() const {
+    return Cxt_.get();
   }
 
   void* Optimizer::getAddr() const {

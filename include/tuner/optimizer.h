@@ -16,7 +16,7 @@ namespace tuner {
 // feedback information, and context of the function.
 class Optimizer {
 private:
-  easy::Context const& Cxt_;
+  std::shared_ptr<easy::Context> Cxt_;
   void* Addr_; // the function pointer
 
   // members related to the pass manager that we need to keep alive.
@@ -26,9 +26,9 @@ private:
   void setupPassManager();
 
 public:
-  Optimizer(void* Addr, easy::Context const& Cxt);
+  Optimizer(void* Addr, std::shared_ptr<easy::Context> Cxt);
 
-  easy::Context const& getContext() const;
+  easy::Context const* getContext() const;
 
   void* getAddr() const;
 
