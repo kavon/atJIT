@@ -15,7 +15,7 @@ class ATDriver {
   using iterator = typename std::unordered_map<Key, Entry>::iterator;
 
   protected:
-  std::unordered_map<Key, Entry> Cache_;
+  std::unordered_map<Key, Entry> DriverState_;
 
   public:
 
@@ -31,7 +31,7 @@ class ATDriver {
             std::make_pair(std::move(Opt), easy::FunctionWrapperBase());
 
     std::pair<iterator, bool> EmplaceResult =
-            Cache_.emplace(Key(FunPtr, Cxt), std::move(DummyEntry));
+            DriverState_.emplace(Key(FunPtr, Cxt), std::move(DummyEntry));
 
 
     // pull out data from the emplace
@@ -46,7 +46,7 @@ class ATDriver {
     else
       std::cout << "*********** cache HIT ***********\n";
 
-    std::cout << "cache size: " << Cache_.size() << "\n";
+    std::cout << "cache size: " << DriverState_.size() << "\n";
 
     auto FW = easy::jit_with_optimizer<T, Args...>(OptFromEntry, std::forward<T>(Fun));
 
