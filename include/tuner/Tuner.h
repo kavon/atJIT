@@ -1,19 +1,24 @@
 #ifndef TUNER_TUNER
 #define TUNER_TUNER
 
-#include <vector>
-
-#include <tuner/Knob.h>
 #include <tuner/Feedback.h>
 
 namespace tuner {
 
-  class TunerBase {
+  class Tuner {
 
   public:
-    virtual void applyConfiguration(Feedback &prior) { };
+    // ensures derived destructors are called
+    virtual ~Tuner() = default;
 
-  }; // end class TunerBase
+    virtual void applyConfiguration (Feedback &prior) = 0;
+
+  }; // end class Tuner
+
+  class NoOpTuner : public Tuner {
+
+    void applyConfiguration (Feedback &prior) override {}
+  };
 
 } // namespace tuner
 

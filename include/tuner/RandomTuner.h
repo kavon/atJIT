@@ -11,16 +11,18 @@ using UniqueIntKnobsTy = std::unique_ptr<IntKnobsTy>;
 namespace tuner {
 
   // a silly tuner that randomly perturbs the knobs
-  class RandomTuner : public TunerBase {
+  class RandomTuner : public Tuner {
 
 
-    UniqueIntKnobsTy knobs_;
+    // UniqueIntKnobsTy knobs_;
 
   public:
 
-    RandomTuner(UniqueIntKnobsTy knobs) : knobs_(std::move(knobs)) {
-      std::cout << "the RandomTuner was constructed\n";
-    }
+    RandomTuner() {}
+
+    // RandomTuner(UniqueIntKnobsTy knobs) : knobs_(std::move(knobs)) {
+    //   std::cout << "the RandomTuner was constructed\n";
+    // }
     ~RandomTuner() {}
 
     void applyConfiguration(Feedback &prior) override {

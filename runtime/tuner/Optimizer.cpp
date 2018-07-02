@@ -8,6 +8,7 @@
 #include <easy/runtime/RuntimePasses.h>
 
 #include <tuner/TunableInliner.h>
+#include <tuner/RandomTuner.h>
 
 #include <llvm/IR/Module.h>
 #include <llvm/IR/LegacyPassManager.h>
@@ -64,11 +65,17 @@ namespace tuner {
   // state map, because of how unordered_map is setup. Thus, you'll want to
   // call "initialize" once the object is known to be needed to actually
   // get it setup, since the work is non-trivial.
-  Optimizer::Optimizer(void* Addr, std::shared_ptr<easy::Context> Cxt, bool LazyInit) :
-      Cxt_(Cxt), Addr_(Addr), InitializedSelf_(false) {
+  Optimizer::Optimizer(void* Addr,
+                       std::shared_ptr<easy::Context> Cxt,
+                       bool LazyInit)
+                       : Cxt_(Cxt), Addr_(Addr), InitializedSelf_(false), Tuner_(nullptr) {
         if (!LazyInit)
           initialize();
       }
+
+  Optimizer::~Optimizer() {
+    delete Tuner_;
+  }
 
   // the "lazy" initializer
   void Optimizer::initialize() {
@@ -78,6 +85,17 @@ namespace tuner {
     std::cout << "initializing optimizer\n";
 
     setupPassManager();
+
+    switch (Cxt_->getTunerKind()) {
+
+      case easy::AT_Random:
+        Tuner_ = new RandomTuner();
+        break;
+
+      case easy::AT_None:
+      default:
+        Tuner_ = new NoOpTuner();
+    }
 
     InitializedSelf_ = true;
   }

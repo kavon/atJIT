@@ -10,7 +10,7 @@ namespace tuner {
 
 class ATDriver {
   using Key = std::pair<void*, std::shared_ptr<easy::Context>>;
-  using Entry = std::pair<tuner::Optimizer, easy::FunctionWrapperBase>;
+  using Entry = std::pair<std::unique_ptr<tuner::Optimizer>, easy::FunctionWrapperBase>;
 
   using iterator = typename std::unordered_map<Key, Entry>::iterator;
 
@@ -26,19 +26,18 @@ class ATDriver {
 
     std::shared_ptr<easy::Context> Cxt = easy::get_sharable_context_for<T, Args...>(std::forward<Args>(args)...);
 
-    tuner::Optimizer Opt(FunPtr, Cxt, /*LazyInit=*/true);
-    auto DummyEntry =
-            std::make_pair(std::move(Opt), easy::FunctionWrapperBase());
+    auto Opt = std::make_unique<tuner::Optimizer>(FunPtr, Cxt, /*LazyInit=*/true);
 
     std::pair<iterator, bool> EmplaceResult =
-            DriverState_.emplace(Key(FunPtr, Cxt), std::move(DummyEntry));
+            DriverState_.emplace(Key(FunPtr, Cxt),
+            std::make_pair(std::move(Opt), easy::FunctionWrapperBase()));
 
 
     // pull out data from the emplace
     Key const &KeyVals = EmplaceResult.first->first;
     Entry &EntryVals = EmplaceResult.first->second;
     easy::FunctionWrapperBase &FWB = EntryVals.second;
-    tuner::Optimizer &OptFromEntry = EntryVals.first;
+    tuner::Optimizer &OptFromEntry = *(EntryVals.first);
 
     bool WasNotInCache = EmplaceResult.second;
     if (WasNotInCache)

@@ -6,6 +6,8 @@
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Target/TargetMachine.h>
 
+#include <tuner/Tuner.h>
+
 namespace tuner {
 
 /////
@@ -26,8 +28,12 @@ private:
 
   void setupPassManager();
 
+  // members related to automatic tuning
+  Tuner *Tuner_;
+
 public:
   Optimizer(void* Addr, std::shared_ptr<easy::Context> Cxt, bool LazyInit = false);
+  ~Optimizer();
 
   // the "lazy" initializer that must be called manually if LazyInit == true
   void initialize();
