@@ -24,7 +24,6 @@ namespace {
 namespace tuner {
 
   void Optimizer::setupPassManager() {
-    // std::cout << "setup pass manager\n";
     auto &BT = easy::BitcodeTracker::GetTracker();
     const char* Name = BT.getName(Addr_);
 
@@ -59,12 +58,29 @@ namespace tuner {
     Builder_.populateModulePassManager(*MPM_);
     MPM_->add(easy::createDevirtualizeConstantPass(Name));
     Builder_.populateModulePassManager(*MPM_);
-
-    InitializedPassMgr_ = true;
   }
 
-  Optimizer::Optimizer(void* Addr, std::shared_ptr<easy::Context> Cxt) :
-      Cxt_(Cxt), Addr_(Addr), InitializedPassMgr_(false) {}
+  // currently, this constructor is called every time we query the ATDriver's
+  // state map, because of how unordered_map is setup. Thus, you'll want to
+  // call "initialize" once the object is known to be needed to actually
+  // get it setup, since the work is non-trivial.
+  Optimizer::Optimizer(void* Addr, std::shared_ptr<easy::Context> Cxt, bool LazyInit) :
+      Cxt_(Cxt), Addr_(Addr), InitializedSelf_(false) {
+        if (!LazyInit)
+          initialize();
+      }
+
+  // the "lazy" initializer
+  void Optimizer::initialize() {
+    if (InitializedSelf_)
+      return;
+
+    std::cout << "initializing optimizer\n";
+
+    setupPassManager();
+
+    InitializedSelf_ = true;
+  }
 
   easy::Context const* Optimizer::getContext() const {
     return Cxt_.get();
@@ -77,10 +93,7 @@ namespace tuner {
   void Optimizer::optimize(llvm::Module &M) {
     // NOTE(kavon): right now we throw away the indicator saying whether
     // the module changed. Perhaps its useful to tell the tuner about that?
-    // std::cout << "OPTIMIZING\n";
-    if (!InitializedPassMgr_)
-      setupPassManager();
-
+    std::cout << "... optimizing\n";
     MPM_->run(M);
   }
 

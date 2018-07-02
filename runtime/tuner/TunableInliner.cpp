@@ -13,7 +13,7 @@ using namespace llvm;
 #include <iostream>
 
 InlineCost tuner::TunableInliner::getInlineCost(CallSite CS) {
-    std::cout << "calculating inline cost...\n";
+    std::cout << "    calculating inline cost\n";
     Function *Callee = CS.getCalledFunction();
     TargetTransformInfo &TTI = TTIWP->getTTI(*Callee);
 

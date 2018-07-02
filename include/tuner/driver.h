@@ -26,7 +26,7 @@ class ATDriver {
 
     std::shared_ptr<easy::Context> Cxt = easy::get_sharable_context_for<T, Args...>(std::forward<Args>(args)...);
 
-    tuner::Optimizer Opt(FunPtr, Cxt);
+    tuner::Optimizer Opt(FunPtr, Cxt, /*LazyInit=*/true);
     auto DummyEntry =
             std::make_pair(std::move(Opt), easy::FunctionWrapperBase());
 
@@ -39,14 +39,10 @@ class ATDriver {
     Entry &EntryVals = EmplaceResult.first->second;
     easy::FunctionWrapperBase &FWB = EntryVals.second;
     tuner::Optimizer &OptFromEntry = EntryVals.first;
+
     bool WasNotInCache = EmplaceResult.second;
-
     if (WasNotInCache)
-      std::cout << "cache MISS\n";
-    else
-      std::cout << "*********** cache HIT ***********\n";
-
-    std::cout << "cache size: " << DriverState_.size() << "\n";
+      OptFromEntry.initialize();
 
     auto FW = easy::jit_with_optimizer<T, Args...>(OptFromEntry, std::forward<T>(Fun));
 

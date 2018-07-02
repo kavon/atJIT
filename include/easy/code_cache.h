@@ -28,11 +28,8 @@ class CacheBase {
 
     FunctionWrapperBase &FWB = CacheEntry.first->second;
     if(CacheEntry.second) {
-      std::cout << "cache MISS\n";
       auto FW = easy::jit(std::forward<T>(Fun), std::forward<Args>(args)...);
       FWB = std::move(FW);
-    } else {
-      std::cout << "------------- cache HIT -----------\n";
     }
     return reinterpret_cast<wrapper_ty&>(FWB);
   }

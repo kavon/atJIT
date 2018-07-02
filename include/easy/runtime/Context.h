@@ -205,7 +205,6 @@ namespace std
     typedef std::size_t result_type;
     result_type operator()(argument_type const& s) const noexcept {
       result_type H = std::hash<L>{}(s.first) ^ std::hash<R>{}(s.second);
-      cout << "..........hashed a pair to " << H << "\n";
       return H;
     }
   };
@@ -215,7 +214,6 @@ namespace std
     typedef easy::ArgumentBase argument_type;
     typedef std::size_t result_type;
     result_type operator()(argument_type const& s) const noexcept {
-      cout << "..........hashing a ArgumentBase\n";
       return s.hash();
     }
   };
@@ -231,7 +229,6 @@ namespace std
       for(auto const &Arg : C)
         H ^= ArgHash(*Arg);
       H ^= OptHash(C.getOptLevel());
-      cout << "..........hashed a Context to: " << H << "\n" ;
       return H;
     }
   };
@@ -242,11 +239,30 @@ namespace std
     typedef std::size_t result_type;
     result_type operator()(argument_type const& s) const noexcept {
       result_type H = std::hash<easy::Context>{}(*(s.get()));
-      std::cout << "..........hashed a shared_ptr<Context> to: " << H << "\n";
       return H;
     }
   };
-}
+
+  template<> struct equal_to<std::shared_ptr<easy::Context>>
+  {
+    typedef std::shared_ptr<easy::Context> argument_type;
+    bool operator()(argument_type const& lhs, argument_type const& rhs) const noexcept {
+      // operator== is defined for Contexts
+      return *lhs == *rhs;
+    }
+  };
+
+  template<> struct equal_to<std::pair<void*, std::shared_ptr<easy::Context>>>
+  {
+    typedef std::pair<void*, std::shared_ptr<easy::Context>> argument_type;
+    bool operator()(argument_type const& lhs, argument_type const& rhs) const noexcept {
+      std::equal_to<std::shared_ptr<easy::Context>> SharedCxtEqualTo;
+
+      return (lhs.first == rhs.first) && (SharedCxtEqualTo(lhs.second, rhs.second));
+    }
+  };
+
+} // end namespace std
 
 
 #endif

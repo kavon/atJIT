@@ -22,12 +22,15 @@ private:
   // members related to the pass manager that we need to keep alive.
   std::unique_ptr<llvm::legacy::PassManager> MPM_;
   std::unique_ptr<llvm::TargetMachine> TM_;
-  bool InitializedPassMgr_;
+  bool InitializedSelf_;
 
   void setupPassManager();
 
 public:
-  Optimizer(void* Addr, std::shared_ptr<easy::Context> Cxt);
+  Optimizer(void* Addr, std::shared_ptr<easy::Context> Cxt, bool LazyInit = false);
+
+  // the "lazy" initializer that must be called manually if LazyInit == true
+  void initialize();
 
   easy::Context const* getContext() const;
 
