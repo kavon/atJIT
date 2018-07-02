@@ -1,6 +1,9 @@
 #ifndef AT_DRIVER
 #define AT_DRIVER
 
+#include <ctime>
+#include <cstdlib>
+
 #include <easy/jit.h>
 #include <unordered_map>
 

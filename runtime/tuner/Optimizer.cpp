@@ -24,7 +24,7 @@ namespace {
 
 namespace tuner {
 
-  void Optimizer::setupPassManager() {
+  ScalarKnob<int>* Optimizer::setupPassManager() {
     auto &BT = easy::BitcodeTracker::GetTracker();
     const char* Name = BT.getName(Addr_);
 
@@ -59,6 +59,8 @@ namespace tuner {
     Builder_.populateModulePassManager(*MPM_);
     MPM_->add(easy::createDevirtualizeConstantPass(Name));
     Builder_.populateModulePassManager(*MPM_);
+
+    return Inliner;
   }
 
   // currently, this constructor is called every time we query the ATDriver's
@@ -82,14 +84,20 @@ namespace tuner {
     if (InitializedSelf_)
       return;
 
-    std::cout << "initializing optimizer\n";
+      // steps:
+      // 1. collect all knobs
+      // 2. initialize the desired tuner with those knobs.
 
-    setupPassManager();
+    std::cout << "initializing optimizer\n";
+    std::vector<ScalarKnob<int>*> IntKnobs;
+
+    auto K = setupPassManager();
+    IntKnobs.push_back(K);
 
     switch (Cxt_->getTunerKind()) {
 
       case easy::AT_Random:
-        Tuner_ = new RandomTuner();
+        Tuner_ = new RandomTuner(std::move(IntKnobs));
         break;
 
       case easy::AT_None:
@@ -112,6 +120,8 @@ namespace tuner {
     // NOTE(kavon): right now we throw away the indicator saying whether
     // the module changed. Perhaps its useful to tell the tuner about that?
     std::cout << "... optimizing\n";
+    Feedback Empty;
+    Tuner_->applyConfiguration(Empty);
     MPM_->run(M);
   }
 

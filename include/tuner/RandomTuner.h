@@ -4,31 +4,39 @@
 #include <tuner/Tuner.h>
 
 #include <iostream>
+#include <random>
+#include <chrono>
 
 using IntKnobsTy = std::vector<tuner::Knob<int>*>;
 using UniqueIntKnobsTy = std::unique_ptr<IntKnobsTy>;
 
 namespace tuner {
 
-  // a silly tuner that randomly perturbs the knobs
+  // a tuner that randomly perturbs its knobs
   class RandomTuner : public Tuner {
+    using IntKnob = tuner::ScalarKnob<int>*;
 
+    std::vector<IntKnob> IntKnobs_;
 
-    // UniqueIntKnobsTy knobs_;
+    std::mt19937 Gen_; // // 32-bit mersenne twister random number generator
+
 
   public:
+    RandomTuner(std::vector<IntKnob> IntKnobs)
+      : IntKnobs_(IntKnobs) {
+        unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+        Gen_ = std::mt19937(seed);
+      }
 
-    RandomTuner() {}
-
-    // RandomTuner(UniqueIntKnobsTy knobs) : knobs_(std::move(knobs)) {
-    //   std::cout << "the RandomTuner was constructed\n";
-    // }
+    // we do not free any knobs, since MPM or other objects
+    // should end up freeing them.
     ~RandomTuner() {}
 
     void applyConfiguration(Feedback &prior) override {
-      // go over the knobs and set them randomly
-      std::cout << "TODO: implement applyConfiguration\n";
-      return;
+      for (auto Knob : IntKnobs_) {
+        std::uniform_int_distribution<> dist(Knob->min(), Knob->max());
+        Knob->setVal(dist(Gen_));
+      }
     }
 
   }; // end class RandomTuner
