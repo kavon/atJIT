@@ -3,8 +3,11 @@
 
 #include <iostream>
 #include <memory>
+#include <cassert>
 #include <easy/runtime/Function.h>
 #include <easy/meta.h>
+
+#include <tuner/Feedback.h>
 
 namespace easy {
 
@@ -13,19 +16,23 @@ class FunctionWrapperBase {
   protected:
   std::unique_ptr<Function> Fun_;
 
+  std::shared_ptr<tuner::Feedback> FB_;
+
   public:
   // null object
   FunctionWrapperBase() = default;
 
   // default constructor
-  FunctionWrapperBase(std::unique_ptr<Function> F)
-    : Fun_(std::move(F)) {}
+  FunctionWrapperBase(std::unique_ptr<Function> F, std::shared_ptr<tuner::Feedback> FB)
+    : Fun_(std::move(F)), FB_(std::move(FB)) { }
 
   // steal the implementation
   FunctionWrapperBase(FunctionWrapperBase &&FW)
-    : Fun_(std::move(FW.Fun_)) {}
+    : Fun_(std::move(FW.Fun_)), FB_(std::move(FW.FB_)) { }
+
   FunctionWrapperBase& operator=(FunctionWrapperBase &&FW) {
     Fun_ = std::move(FW.Fun_);
+    FB_ = std::move(FW.FB_);
     return *this;
   }
 
@@ -43,7 +50,7 @@ class FunctionWrapperBase {
 
   static FunctionWrapperBase deserialize(std::istream& is) {
     std::unique_ptr<Function> Fun = Function::deserialize(is);
-    return FunctionWrapperBase{std::move(Fun)};
+    return FunctionWrapperBase{std::move(Fun), std::make_shared<tuner::NoOpFeedback>()};
   }
 };
 
@@ -54,12 +61,20 @@ template<class Ret, class ... Params>
 class FunctionWrapper<Ret(Params...)> :
     public FunctionWrapperBase {
   public:
-  FunctionWrapper(std::unique_ptr<Function> F)
-    : FunctionWrapperBase(std::move(F)) {}
+    FunctionWrapper(std::unique_ptr<Function> F)
+      : FunctionWrapperBase(std::move(F), std::make_shared<tuner::NoOpFeedback>()) {}
+
+  FunctionWrapper(std::unique_ptr<Function> F, std::shared_ptr<tuner::Feedback> FB)
+    : FunctionWrapperBase(std::move(F), std::move(FB)) {}
 
   template<class ... Args>
   Ret operator()(Args&& ... args) const {
-    return getFunctionPointer()(std::forward<Args>(args)...);
+    auto Token = FB_->startMeasurement();
+
+    auto Result = getFunctionPointer()(std::forward<Args>(args)...);
+
+    FB_->endMeasurement(Token);
+    return Result;
   }
 
   auto getFunctionPointer() const {
@@ -78,11 +93,18 @@ class FunctionWrapper<void(Params...)> :
     public FunctionWrapperBase {
   public:
   FunctionWrapper(std::unique_ptr<Function> F)
-    : FunctionWrapperBase(std::move(F)) {}
+    : FunctionWrapperBase(std::move(F), std::make_shared<tuner::NoOpFeedback>()) {}
+
+  FunctionWrapper(std::unique_ptr<Function> F, std::shared_ptr<tuner::Feedback> FB)
+    : FunctionWrapperBase(std::move(F), std::move(FB)) {}
 
   template<class ... Args>
   void operator()(Args&& ... args) const {
-    return getFunctionPointer()(std::forward<Args>(args)...);
+    auto Token = FB_->startMeasurement();
+
+    getFunctionPointer()(std::forward<Args>(args)...);
+
+    FB_->endMeasurement(Token);
   }
 
   auto getFunctionPointer() const {

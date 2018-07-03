@@ -11,13 +11,13 @@ namespace tuner {
     // ensures derived destructors are called
     virtual ~Tuner() = default;
 
-    virtual void applyConfiguration (Feedback &prior) = 0;
+    virtual void applyConfiguration (std::shared_ptr<Feedback> current) = 0;
 
   }; // end class Tuner
 
   class NoOpTuner : public Tuner {
 
-    void applyConfiguration (Feedback &prior) override {}
+    void applyConfiguration (std::shared_ptr<Feedback> current) override {}
   };
 
 } // namespace tuner

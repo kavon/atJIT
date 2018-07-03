@@ -8,6 +8,7 @@
 
 #include <tuner/Tuner.h>
 #include <tuner/Knob.h>
+#include <tuner/Feedback.h>
 
 namespace tuner {
 
@@ -31,6 +32,7 @@ private:
 
   // members related to automatic tuning
   Tuner *Tuner_;
+  std::shared_ptr<Feedback> FB_;
 
 public:
   Optimizer(void* Addr, std::shared_ptr<easy::Context> Cxt, bool LazyInit = false);
@@ -43,7 +45,7 @@ public:
 
   void* getAddr() const;
 
-  void optimize(llvm::Module &M);
+  std::shared_ptr<Feedback> optimize(llvm::Module &M);
 
 }; // end class
 

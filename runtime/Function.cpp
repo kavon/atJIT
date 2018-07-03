@@ -6,6 +6,7 @@
 #include <easy/exceptions.h>
 
 #include <tuner/optimizer.h>
+#include <tuner/Feedback.h>
 
 #include <llvm/Bitcode/BitcodeWriter.h>
 #include <llvm/Bitcode/BitcodeReader.h>
@@ -86,7 +87,7 @@ llvm::Module const& Function::getLLVMModule() const {
   return *static_cast<LLVMHolderImpl const&>(*this->Holder).M_;
 }
 
-std::unique_ptr<Function> Function::Compile(tuner::Optimizer &Opt) {
+std::pair<std::unique_ptr<Function>, std::shared_ptr<tuner::Feedback>> Function::Compile(tuner::Optimizer &Opt) {
 
   easy::Context const* Cxt = Opt.getContext();
   void* Addr = Opt.getAddr();
@@ -103,11 +104,12 @@ std::unique_ptr<Function> Function::Compile(tuner::Optimizer &Opt) {
 
   WriteOptimizedToFile(*M, Cxt->getDebugBeforeFile());
 
-  Opt.optimize(*M);
+  auto FB = Opt.optimize(*M);
 
   WriteOptimizedToFile(*M, Cxt->getDebugFile());
 
-  return CompileAndWrap(Name, Globals, std::move(LLVMCxt), std::move(M));
+  std::unique_ptr<Function> Fun = CompileAndWrap(Name, Globals, std::move(LLVMCxt), std::move(M));
+  return {std::move(Fun), std::move(FB)};
 }
 
 void easy::Function::serialize(std::ostream& os) const {

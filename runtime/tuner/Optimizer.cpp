@@ -70,7 +70,8 @@ namespace tuner {
   Optimizer::Optimizer(void* Addr,
                        std::shared_ptr<easy::Context> Cxt,
                        bool LazyInit)
-                       : Cxt_(Cxt), Addr_(Addr), InitializedSelf_(false), Tuner_(nullptr) {
+                       : Cxt_(Cxt), Addr_(Addr), InitializedSelf_(false),
+                         Tuner_(nullptr), FB_(nullptr) {
         if (!LazyInit)
           initialize();
       }
@@ -86,13 +87,27 @@ namespace tuner {
 
       // steps:
       // 1. collect all knobs
-      // 2. initialize the desired tuner with those knobs.
+      // 2. create feedback object
+      // 3. initialize the desired tuner with those knobs.
 
     std::cout << "initializing optimizer\n";
+
+    /////////
+    // collect knobs
+
     std::vector<ScalarKnob<int>*> IntKnobs;
 
     auto K = setupPassManager();
     IntKnobs.push_back(K);
+
+    /////////
+    // create feedback
+
+    // TODO: pick a better one.
+    FB_ = std::make_shared<NoOpFeedback>();
+
+    /////////
+    // create tuner
 
     switch (Cxt_->getTunerKind()) {
 
@@ -116,13 +131,22 @@ namespace tuner {
     return Addr_;
   }
 
-  void Optimizer::optimize(llvm::Module &M) {
+  std::shared_ptr<Feedback> Optimizer::optimize(llvm::Module &M) {
     // NOTE(kavon): right now we throw away the indicator saying whether
-    // the module changed. Perhaps its useful to tell the tuner about that?
+    // the module changed. Perhaps its useful to store that in the Feedback?
+
     std::cout << "... optimizing\n";
-    Feedback Empty;
-    Tuner_->applyConfiguration(Empty);
+
+    Tuner_->applyConfiguration(FB_);
+
     MPM_->run(M);
+
+    // TODO(kavon) perform some sort of "new config mode" operation
+    // so that the subsequent measurements are not mixed with the prior config's?
+    // maybe we need to keep a list/stack of Feedback objects and allocate
+    // a new one here?
+
+    return FB_;
   }
 
 } // namespace tuner

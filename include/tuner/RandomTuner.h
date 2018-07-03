@@ -32,7 +32,7 @@ namespace tuner {
     // should end up freeing them.
     ~RandomTuner() {}
 
-    void applyConfiguration(Feedback &prior) override {
+    void applyConfiguration(std::shared_ptr<Feedback> IGNORED) override {
       for (auto Knob : IntKnobs_) {
         std::uniform_int_distribution<> dist(Knob->min(), Knob->max());
         Knob->setVal(dist(Gen_));

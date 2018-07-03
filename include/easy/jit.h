@@ -15,6 +15,7 @@
 
 namespace tuner {
   class Optimizer;
+  class Feedback;
 }
 
 namespace easy {
@@ -22,8 +23,8 @@ namespace easy {
 namespace {
 template<class Ret, class ... Params>
 FunctionWrapper<Ret(Params ...)>
-WrapFunction(std::unique_ptr<Function> F, meta::type_list<Ret, Params ...>) {
-  return FunctionWrapper<Ret(Params ...)>(std::move(F));
+WrapFunction(std::unique_ptr<Function> F, std::shared_ptr<tuner::Feedback> FB, meta::type_list<Ret, Params ...>) {
+  return FunctionWrapper<Ret(Params ...)>(std::move(F), std::move(FB));
 }
 
 template<class T, class ... Args>
@@ -40,7 +41,7 @@ auto jit_with_optimizer(tuner::Optimizer &Opt, T &&Fun) {
       Function::Compile(Opt);
 
   auto Wrapper =
-      WrapFunction(std::move(CompiledFunction),
+      WrapFunction(std::move(CompiledFunction.first), std::move(CompiledFunction.second),
                    typename new_parameter_types::template push_front<new_return_type> ());
   return Wrapper;
 }

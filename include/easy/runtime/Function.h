@@ -19,6 +19,7 @@ namespace llvm {
 
 namespace tuner {
   class Optimizer;
+  class Feedback;
 }
 
 namespace std {
@@ -56,7 +57,7 @@ class Function {
 
   llvm::Module const& getLLVMModule() const;
 
-  static std::unique_ptr<Function> Compile(tuner::Optimizer&);
+  static std::pair<std::unique_ptr<Function>, std::shared_ptr<tuner::Feedback>> Compile(tuner::Optimizer&);
 
   friend
   std::hash<easy::Function>::result_type std::hash<easy::Function>::operator()(argument_type const& F) const noexcept;

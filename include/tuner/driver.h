@@ -48,7 +48,7 @@ class ATDriver {
 
     auto FW = easy::jit_with_optimizer<T, Args...>(OptFromEntry, std::forward<T>(Fun));
 
-    FWB = std::move(FW); // need to keep this alive
+    FWB = std::move(FW);
     return reinterpret_cast<wrapper_ty&>(FWB);
   }
 
