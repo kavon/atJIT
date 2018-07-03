@@ -7,9 +7,6 @@
 #include <random>
 #include <chrono>
 
-using IntKnobsTy = std::vector<tuner::Knob<int>*>;
-using UniqueIntKnobsTy = std::unique_ptr<IntKnobsTy>;
-
 namespace tuner {
 
   // a tuner that randomly perturbs its knobs

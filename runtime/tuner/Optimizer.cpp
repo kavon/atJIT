@@ -104,7 +104,7 @@ namespace tuner {
     // create feedback
 
     // TODO: pick a better one.
-    FB_ = std::make_shared<NoOpFeedback>();
+    FB_ = std::make_shared<DebuggingFB>();
 
     /////////
     // create tuner
