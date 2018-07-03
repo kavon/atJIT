@@ -84,8 +84,8 @@ mandatory to load a compiler plugin in order to use it.
 The flag ```-Xclang -load -Xclang <path_to_easy_jit_build>/bin/EasyJitPass.so```
 loads the plugin.
 
-The included headers require C++14 support, and remember to add the include directories!
-Use ```--std=c++14 -I<path_to_easy_jit_src>/cpplib/include```.
+The included headers require C++17 support, and remember to add the include directories!
+Use ```--std=c++17 -I<path_to_easy_jit_src>/cpplib/include```.
 
 Finaly, the binary must be linked against the Easy::Jit runtime library, using
 ```-L<path_to_easy_jit_build>/bin -lEasyJitRuntime```.
@@ -93,7 +93,7 @@ Finaly, the binary must be linked against the Easy::Jit runtime library, using
 Putting all together we get the command bellow.
 
 ```bash
-clang++-6.0 --std=c++14 <my_file.cpp> \
+clang++-6.0 --std=c++17 <my_file.cpp> \
   -Xclang -load -Xclang /path/to/easy/jit/build/bin/bin/EasyJitPass.so \
   -I<path_to_easy_jit_src>/cpplib/include \
   -L<path_to_easy_jit_build>/bin -lEasyJitRuntime

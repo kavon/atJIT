@@ -38,7 +38,7 @@ config.substitutions.append(('%easycc', "@CMAKE_ARCHIVE_OUTPUT_DIRECTORY@/easycc
 config.substitutions.append(('%clangxx', os.path.join("@LLVM_TOOLS_BINARY_DIR@", "clang++")))
 config.substitutions.append(('%clang', os.path.join("@LLVM_TOOLS_BINARY_DIR@", "clang")))
 config.substitutions.append(('%opt', os.path.join("@LLVM_TOOLS_BINARY_DIR@", "opt")))
-config.substitutions.append(('%cxxflags', common_flags + "--std=c++14"))
+config.substitutions.append(('%cxxflags', common_flags + "--std=c++17"))
 config.substitutions.append(('%cflags', common_flags))
 config.substitutions.append(('%include_flags', include_flags))
 config.substitutions.append(('%lib_pass', "@EASY_JIT_PASS@"))
