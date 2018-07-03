@@ -46,6 +46,13 @@ namespace {
     virtual ValTy max() const = 0;
   }; // end class ScalarKnob
 
+
+// handy type aliases.
+namespace knob_type {
+  using Int = tuner::ScalarKnob<int>;
+}
+
+
 } // namespace tuner
 
 #endif // TUNER_KNOBS

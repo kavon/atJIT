@@ -2,6 +2,7 @@
 #define TUNER_RANDOM_TUNER
 
 #include <tuner/Tuner.h>
+#include <tuner/KnobSet.h>
 
 #include <iostream>
 #include <random>
@@ -11,16 +12,11 @@ namespace tuner {
 
   // a tuner that randomly perturbs its knobs
   class RandomTuner : public Tuner {
-    using IntKnob = tuner::ScalarKnob<int>*;
-
-    std::vector<IntKnob> IntKnobs_;
-
+    KnobSet KS_;
     std::mt19937 Gen_; // // 32-bit mersenne twister random number generator
 
-
   public:
-    RandomTuner(std::vector<IntKnob> IntKnobs)
-      : IntKnobs_(IntKnobs) {
+    RandomTuner(KnobSet KS) : KS_(KS) {
         unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
         Gen_ = std::mt19937(seed);
       }
@@ -30,7 +26,7 @@ namespace tuner {
     ~RandomTuner() {}
 
     void applyConfiguration(std::shared_ptr<Feedback> IGNORED) override {
-      for (auto Knob : IntKnobs_) {
+      for (auto Knob : KS_.IntKnobs) {
         std::uniform_int_distribution<> dist(Knob->min(), Knob->max());
         Knob->setVal(dist(Gen_));
       }

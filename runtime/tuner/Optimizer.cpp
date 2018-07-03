@@ -24,7 +24,7 @@ namespace {
 
 namespace tuner {
 
-  ScalarKnob<int>* Optimizer::setupPassManager() {
+  knob_type::Int* Optimizer::setupPassManager() {
     auto &BT = easy::BitcodeTracker::GetTracker();
     const char* Name = BT.getName(Addr_);
 
@@ -90,10 +90,10 @@ namespace tuner {
     /////////
     // collect knobs
 
-    std::vector<ScalarKnob<int>*> IntKnobs;
+    KnobSet KS;
 
     auto K = setupPassManager();
-    IntKnobs.push_back(K);
+    KS.IntKnobs.push_back(K);
 
     /////////
     // create feedback
@@ -107,7 +107,7 @@ namespace tuner {
     switch (Cxt_->getTunerKind()) {
 
       case easy::AT_Random:
-        Tuner_ = new RandomTuner(std::move(IntKnobs));
+        Tuner_ = new RandomTuner(std::move(KS));
         break;
 
       case easy::AT_None:
