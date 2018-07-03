@@ -37,11 +37,6 @@ namespace tuner {
     // get all knobs
     auto Inliner = tuner::createTunableInlinerPass(OptLevel, OptSize);
 
-    // TODO remove this. setup tuner
-    // auto Knobs = std::make_unique<IntKnobsTy>(10);
-    // Knobs->push_back(static_cast<tuner::Knob<int>*>(Inliner));
-    // C.initializeTuner(std::move(Knobs)); // TODO
-
     llvm::PassManagerBuilder Builder_;
     Builder_.OptLevel = OptLevel;
     Builder_.SizeLevel = OptSize;
@@ -104,7 +99,7 @@ namespace tuner {
     // create feedback
 
     // TODO: pick a better one.
-    FB_ = std::make_shared<DebuggingFB>();
+    FB_ = std::make_shared<ExecutionTime>();
 
     /////////
     // create tuner
