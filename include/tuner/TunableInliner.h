@@ -42,6 +42,10 @@ namespace tuner {
       return 1000;
     }
 
+    std::string getName() const override {
+      return "inlining threshold";
+    }
+
     /////////
     // the below need to be reimplemented because SimpleInliner
     // is not accessable for us to inherit.

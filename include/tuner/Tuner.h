@@ -5,6 +5,8 @@
 #include <tuner/KnobConfig.h>
 #include <tuner/KnobSet.h>
 
+#include <iostream>
+
 namespace tuner {
 
   class Tuner {
@@ -34,7 +36,45 @@ namespace tuner {
         auto Knob = KS_.IntKnobs[ID];
         Knob->setVal(Val);
       }
+    }
 
+    /////////
+    // utilites
+
+    void dumpConfig (KnobConfig const &Config) const {
+      std::cout << "{\n";
+      for (auto Entry : Config.IntConfig) {
+        auto ID = Entry.first;
+        auto Val = Entry.second;
+
+        auto search = KS_.IntKnobs.find(ID);
+        if (search == KS_.IntKnobs.end()) {
+          std::cout << "dumpConfig ERROR: a knob in the given Config "
+                    << "is not in Tuner's KnobSet!\n";
+
+          throw std::runtime_error("unknown knob ID");
+        }
+
+        auto Knob = search->second;
+        std::cout << Knob->getName() << " := " << Val << "\n";
+      }
+      std::cout << "}\n";
+    }
+
+    void dumpConfigInstance (GenResult const &Entry) const {
+      auto Conf = Entry.first;
+      auto FB = Entry.second;
+      FB->dump();
+      dumpConfig(*Conf);
+      std::cout << "\n";
+    }
+
+    void dump() const {
+      std::cout << "-----------\n";
+      for (auto Entry : Configs_) {
+        dumpConfigInstance(Entry);
+      }
+      std::cout << "-----------\n";
     }
 
   }; // end class Tuner

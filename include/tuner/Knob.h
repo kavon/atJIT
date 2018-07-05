@@ -3,6 +3,7 @@
 
 #include <cinttypes>
 #include <climits>
+#include <string>
 
 namespace tuner {
 
@@ -33,6 +34,10 @@ namespace {
 
     // a unique ID relative to all knobs in the program.
     KnobID getID() const { return id; }
+
+    virtual std::string getName() const {
+       return "knob id " + std::to_string(getID());
+    }
 
   }; // end class Knob
 

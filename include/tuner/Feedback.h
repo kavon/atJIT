@@ -20,6 +20,8 @@ public:
   virtual ~Feedback() = default;
   virtual Token startMeasurement() = 0;
   virtual void endMeasurement(Token) = 0;
+
+  virtual void dump() const = 0;
 };
 
 
@@ -30,6 +32,10 @@ class NoOpFeedback : public Feedback {
 public:
   Token startMeasurement() override { return 0; }
   void endMeasurement(Token t) override { }
+
+  virtual void dump() const override {
+    std::cout << "NoOpFeedback did not measure anything.\n";
+  }
 }; // end class
 
 
@@ -50,6 +56,11 @@ class DebuggingFB : public Feedback {
     std::chrono::duration<int64_t, std::nano> elapsed = (End - Start_);
     std::cout << "== elapsed time: " << elapsed.count() << " ns ==\n";
   }
+
+  void dump() const override {
+    std::cout << "DebuggingFB does not save measurements\n";
+  }
+
 }; // end class
 
 
@@ -84,7 +95,20 @@ class ExecutionTime : public Feedback {
       movingAvg = elapsedTime;
     }
 
-    std::cout << "## avg = " << movingAvg.value() << " ns ##\n";
+  }
+
+  void dump () const override {
+
+    std::cout << "avg time: ";
+    if (movingAvg)
+      std::cout << movingAvg.value() << " ns";
+    else
+      std::cout << "< none >";
+
+    std::cout << ", ";
+
+
+    std::cout << "from " << dataPoints << " measurements\n";
   }
 }; // end class
 
