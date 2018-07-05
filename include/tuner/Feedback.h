@@ -3,7 +3,7 @@
 
 #include <cinttypes>
 #include <chrono>
-#include <optional>
+#include <cmath>
 #include <cassert>
 #include <iostream>
 
@@ -71,8 +71,16 @@ class ExecutionTime : public Feedback {
   using Token = uint64_t;
 
   std::chrono::time_point<std::chrono::system_clock> Start_;
-  std::optional<int64_t> movingAvg{}; // cumulative
+
+
+  double average = 0; // cumulative
+  double sampleVariance = 0; // unbiased sample variance
+  double stdDev = 0; // unbiased sample standard deviation
+  double stdError = 0;
+  double stdErrorPct = 0;
+  double sumSqDiff = 0;
   uint64_t dataPoints = 0;
+
 
   Token startMeasurement() override {
     Start_ = std::chrono::system_clock::now();
@@ -87,26 +95,76 @@ class ExecutionTime : public Feedback {
     std::chrono::duration<int64_t, std::nano> elapsedDur = (End - Start_);
     int64_t elapsedTime = elapsedDur.count();
 
-    if (movingAvg) {
-      // https://en.wikipedia.org/wiki/Moving_average#Cumulative_moving_average
-      movingAvg = (elapsedTime + ((dataPoints-1) * movingAvg.value())) / dataPoints;
-    } else {
-      // first measurement
-      movingAvg = elapsedTime;
+    if (dataPoints == 1) {
+      average = elapsedTime;
+      return;
     }
+
+    /////////////
+    // sources for these forumlas:
+    //
+    // https://en.wikipedia.org/wiki/Moving_average#Cumulative_moving_average
+    // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm
+    // https://en.wikipedia.org/wiki/Standard_deviation#Unbiased_sample_standard_deviation
+    // https://en.wikipedia.org/wiki/Standard_error#Estimate
+
+    const double N = dataPoints;
+
+    const double newAvg = (elapsedTime + ((N-1) * average)) / N;
+
+    sumSqDiff += (elapsedTime - average) * (elapsedTime - newAvg);
+    sampleVariance = sumSqDiff / (N-1);
+
+    // we use the approximation of the correction for a normal distribution.
+    stdDev = std::sqrt(sumSqDiff / (N - 1.5));
+
+    stdError = stdDev / std::sqrt(N);
+
+    stdErrorPct = (stdError / newAvg) * 100.0;
+
+    average = newAvg;
 
   }
 
   void dump () const override {
 
     std::cout << "avg time: ";
-    if (movingAvg)
-      std::cout << movingAvg.value() << " ns";
+    if (dataPoints)
+      std::cout << average << " ns";
     else
       std::cout << "< none >";
-
     std::cout << ", ";
 
+    std::cout << "error: ";
+    if (dataPoints)
+      std::cout << stdErrorPct << "%";
+    else
+      std::cout << "< none >";
+    std::cout << ", ";
+
+
+    // Other less interesting stats in a compressed output
+    std::cout << "(s^2: ";
+    if (dataPoints)
+      std::cout << sampleVariance;
+    else
+      std::cout << "X";
+    std::cout << ", ";
+
+    std::cout << "s: ";
+    if (dataPoints)
+      std::cout << stdDev;
+    else
+      std::cout << "X";
+    std::cout << ", ";
+
+    std::cout << "SEM: ";
+    if (dataPoints)
+      std::cout << stdError;
+    else
+      std::cout << "X";
+
+    std::cout << ") ";
 
     std::cout << "from " << dataPoints << " measurements\n";
   }
