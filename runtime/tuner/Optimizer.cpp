@@ -66,7 +66,7 @@ namespace tuner {
                        std::shared_ptr<easy::Context> Cxt,
                        bool LazyInit)
                        : Cxt_(Cxt), Addr_(Addr), InitializedSelf_(false),
-                         Tuner_(nullptr), FB_(nullptr) {
+                         Tuner_(nullptr) {
         if (!LazyInit)
           initialize();
       }
@@ -82,8 +82,7 @@ namespace tuner {
 
       // steps:
       // 1. collect all knobs
-      // 2. create feedback object
-      // 3. initialize the desired tuner with those knobs.
+      // 2. initialize the desired tuner with those knobs.
 
     std::cout << "initializing optimizer\n";
 
@@ -93,13 +92,7 @@ namespace tuner {
     KnobSet KS;
 
     auto K = setupPassManager();
-    KS.IntKnobs.push_back(K);
-
-    /////////
-    // create feedback
-
-    // TODO: pick a better one.
-    FB_ = std::make_shared<ExecutionTime>();
+    KS.IntKnobs[K->getID()] = K;
 
     /////////
     // create tuner
@@ -112,7 +105,7 @@ namespace tuner {
 
       case easy::AT_None:
       default:
-        Tuner_ = new NoOpTuner();
+        Tuner_ = new NoOpTuner(std::move(KS));
     }
 
     InitializedSelf_ = true;
@@ -132,16 +125,15 @@ namespace tuner {
 
     std::cout << "... optimizing\n";
 
-    Tuner_->applyConfiguration(FB_);
+    auto Gen = Tuner_->getNextConfig();
+    auto TunerConf = Gen.first;
+    auto FB = Gen.second;
+
+    Tuner_->applyConfig(*TunerConf);
 
     MPM_->run(M);
 
-    // TODO(kavon) perform some sort of "new config mode" operation
-    // so that the subsequent measurements are not mixed with the prior config's?
-    // maybe we need to keep a list/stack of Feedback objects and allocate
-    // a new one here?
-
-    return FB_;
+    return FB;
   }
 
 } // namespace tuner

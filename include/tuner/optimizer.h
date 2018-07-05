@@ -32,7 +32,6 @@ private:
 
   // members related to automatic tuning
   Tuner *Tuner_;
-  std::shared_ptr<Feedback> FB_;
 
 public:
   Optimizer(void* Addr, std::shared_ptr<easy::Context> Cxt, bool LazyInit = false);

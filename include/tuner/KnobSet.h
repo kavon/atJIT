@@ -10,9 +10,12 @@ namespace tuner {
   // looks like a royal pain-in-the-butt:
   // https://en.cppreference.com/w/cpp/utility/variant/visit
 
+
+  // NOTE: don't forget to update Tuner::applyConfig if
+  // any new knob kinds are added here!
   class KnobSet {
   public:
-    std::vector<knob_type::Int*> IntKnobs;
+    std::unordered_map<tuner::KnobID, knob_type::Int*> IntKnobs;
 
   };
 

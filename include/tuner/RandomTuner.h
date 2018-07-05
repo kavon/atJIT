@@ -12,11 +12,11 @@ namespace tuner {
 
   // a tuner that randomly perturbs its knobs
   class RandomTuner : public Tuner {
-    KnobSet KS_;
     std::mt19937 Gen_; // // 32-bit mersenne twister random number generator
 
+
   public:
-    RandomTuner(KnobSet KS) : KS_(KS) {
+    RandomTuner(KnobSet KS) : Tuner(KS) {
         unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
         Gen_ = std::mt19937(seed);
       }
@@ -25,11 +25,19 @@ namespace tuner {
     // should end up freeing them.
     ~RandomTuner() {}
 
-    void applyConfiguration(std::shared_ptr<Feedback> IGNORED) override {
-      for (auto Knob : KS_.IntKnobs) {
+    GenResult& getNextConfig() override {
+      auto Conf = std::make_shared<KnobConfig>();
+      auto FB = std::make_shared<ExecutionTime>();
+
+      for (auto Entry : KS_.IntKnobs) {
+        auto Knob = Entry.second;
         std::uniform_int_distribution<> dist(Knob->min(), Knob->max());
-        Knob->setVal(dist(Gen_));
+        Conf->IntConfig.push_back({Knob->getID(), dist(Gen_)});
       }
+
+      // keep track of this config.
+      Configs_.push_back({Conf, FB});
+      return Configs_.back();
     }
 
   }; // end class RandomTuner
