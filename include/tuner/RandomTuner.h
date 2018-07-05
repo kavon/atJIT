@@ -1,8 +1,7 @@
 #ifndef TUNER_RANDOM_TUNER
 #define TUNER_RANDOM_TUNER
 
-#include <tuner/Tuner.h>
-#include <tuner/KnobSet.h>
+#include <tuner/AnalyzingTuner.h>
 
 #include <iostream>
 #include <random>
@@ -11,12 +10,12 @@
 namespace tuner {
 
   // a tuner that randomly perturbs its knobs
-  class RandomTuner : public Tuner {
+  class RandomTuner : public AnalyzingTuner {
     std::mt19937 Gen_; // // 32-bit mersenne twister random number generator
 
 
   public:
-    RandomTuner(KnobSet KS) : Tuner(KS) {
+    RandomTuner(KnobSet KS) : AnalyzingTuner(KS) {
         unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
         Gen_ = std::mt19937(seed);
       }

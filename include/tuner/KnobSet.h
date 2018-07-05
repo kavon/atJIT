@@ -3,6 +3,8 @@
 
 #include <tuner/Knob.h>
 
+#include <unordered_map>
+
 namespace tuner {
 
   // using std::variant & std::visit to try and combine the

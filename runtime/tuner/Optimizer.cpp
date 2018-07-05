@@ -24,7 +24,7 @@ namespace {
 
 namespace tuner {
 
-  knob_type::Int* Optimizer::setupPassManager() {
+  void Optimizer::setupPassManager(KnobSet &KS) {
     auto &BT = easy::BitcodeTracker::GetTracker();
     const char* Name = BT.getName(Addr_);
 
@@ -34,8 +34,8 @@ namespace tuner {
 
     llvm::Triple Triple{llvm::sys::getProcessTriple()};
 
-    // get all knobs
     auto Inliner = tuner::createTunableInlinerPass(OptLevel, OptSize);
+    KS.IntKnobs[Inliner->getID()] = Inliner;
 
     llvm::PassManagerBuilder Builder_;
     Builder_.OptLevel = OptLevel;
@@ -55,7 +55,6 @@ namespace tuner {
     MPM_->add(easy::createDevirtualizeConstantPass(Name));
     Builder_.populateModulePassManager(*MPM_);
 
-    return Inliner;
   }
 
   // currently, this constructor is called every time we query the ATDriver's
@@ -91,8 +90,8 @@ namespace tuner {
 
     KnobSet KS;
 
-    auto K = setupPassManager();
-    KS.IntKnobs[K->getID()] = K;
+    setupPassManager(KS);
+
 
     /////////
     // create tuner
@@ -124,6 +123,8 @@ namespace tuner {
     // the module changed. Perhaps its useful to store that in the Feedback?
 
     std::cout << "... optimizing\n";
+
+    Tuner_->analyze(M);
 
     auto Gen = Tuner_->getNextConfig();
     auto TunerConf = Gen.first;

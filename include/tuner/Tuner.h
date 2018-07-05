@@ -5,6 +5,8 @@
 #include <tuner/KnobConfig.h>
 #include <tuner/KnobSet.h>
 
+#include <llvm/IR/Module.h>
+
 #include <iostream>
 
 namespace tuner {
@@ -26,6 +28,8 @@ namespace tuner {
     // NOTE: this method should not mutate the value of any Knobs,
     // it _may_ mutate the state of the Tuner.
     virtual GenResult& getNextConfig () = 0;
+
+    virtual void analyze(llvm::Module &M) = 0;
 
     // applies a configuration to the knobs managed by this tuner.
     void applyConfig (KnobConfig const &Config) {
@@ -89,9 +93,11 @@ namespace tuner {
                       std::make_shared<NoOpFeedback>() };
     }
 
-    virtual GenResult& getNextConfig () override {
+    GenResult& getNextConfig () override {
       return NoOpConfig_;
     }
+
+    void analyze(llvm::Module &M) override { }
   };
 
 } // namespace tuner

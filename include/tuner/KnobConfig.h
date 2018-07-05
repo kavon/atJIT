@@ -3,6 +3,9 @@
 
 #include <tuner/Knob.h>
 
+#include <vector>
+#include <utility>
+
 namespace tuner {
 
   // a data type that is suitable for use by mathematical models.

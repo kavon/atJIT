@@ -8,6 +8,7 @@
 
 #include <tuner/Tuner.h>
 #include <tuner/Knob.h>
+#include <tuner/KnobSet.h>
 #include <tuner/Feedback.h>
 
 namespace tuner {
@@ -28,7 +29,7 @@ private:
   std::unique_ptr<llvm::TargetMachine> TM_;
   bool InitializedSelf_;
 
-  ScalarKnob<int>* setupPassManager();
+  void setupPassManager(KnobSet &);
 
   // members related to automatic tuning
   Tuner *Tuner_;
