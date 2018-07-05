@@ -7,4 +7,8 @@ namespace easy {
   llvm::Pass* createRegisterBitcodePass();
 }
 
+namespace tuner {
+  llvm::Pass* createLoopNamerPass();
+}
+
 #endif

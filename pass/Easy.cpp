@@ -1,5 +1,6 @@
 #include <easy/attributes.h>
 #include "MayAliasTracer.h"
+#include "StaticPasses.h"
 
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Constants.h>
@@ -333,12 +334,13 @@ namespace easy {
         Entry.setLinkage(GlobalValue::ExternalLinkage);
       }
 
-      //clean the cloned module
+      // clean & canonicalize the cloned module
       legacy::PassManager Passes;
       Passes.add(createGVExtractionPass(Referenced));
       Passes.add(createGlobalDCEPass());
       Passes.add(createStripDeadDebugInfoPass());
       Passes.add(createStripDeadPrototypesPass());
+      Passes.add(tuner::createLoopNamerPass());
       Passes.run(M);
 
       if(ForFunction) {
