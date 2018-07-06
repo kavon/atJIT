@@ -2,6 +2,7 @@
 #define TUNER_KNOBSET
 
 #include <tuner/Knob.h>
+#include <tuner/LoopKnob.h>
 
 #include <unordered_map>
 
@@ -17,7 +18,8 @@ namespace tuner {
   // any new knob kinds are added here!
   class KnobSet {
   public:
-    std::unordered_map<tuner::KnobID, knob_type::Int*> IntKnobs;
+    std::unordered_map<KnobID, knob_type::Int*> IntKnobs;
+    std::unordered_map<KnobID, knob_type::Loop*> LoopKnobs;
 
   };
 

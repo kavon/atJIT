@@ -11,6 +11,24 @@
 
 namespace tuner {
 
+  namespace {
+    template < typename ValTy, typename KnobTy >
+    void adjustKnobs(std::vector<std::pair<tuner::KnobID, ValTy>> const &Settings,
+                     std::unordered_map<tuner::KnobID, KnobTy*> &Knobs,
+                     llvm::Module &M) {
+
+      for (auto Entry : Settings) {
+        auto ID = Entry.first;
+        auto Val = Entry.second;
+
+        auto Knob = Knobs[ID];
+        Knob->setVal(Val);
+        Knob->apply(M);
+      }
+
+    }
+  } // end anonymous namespace
+
   class Tuner {
   protected:
     using GenResult = std::pair<std::shared_ptr<KnobConfig>, std::shared_ptr<Feedback>>;
@@ -31,15 +49,11 @@ namespace tuner {
 
     virtual void analyze(llvm::Module &M) = 0;
 
-    // applies a configuration to the knobs managed by this tuner.
-    void applyConfig (KnobConfig const &Config) {
-      for (auto Entry : Config.IntConfig) {
-        auto ID = Entry.first;
-        auto Val = Entry.second;
-
-        auto Knob = KS_.IntKnobs[ID];
-        Knob->setVal(Val);
-      }
+    // applies a configuration to the given LLVM module via the
+    // knobs managed by this tuner.
+    void applyConfig (KnobConfig const &Config, llvm::Module &M) {
+      adjustKnobs(Config.IntConfig, KS_.IntKnobs, M);
+      adjustKnobs(Config.LoopConfig, KS_.LoopKnobs, M);
     }
 
     /////////

@@ -46,6 +46,11 @@ namespace tuner {
       return "inlining threshold";
     }
 
+    // the LLVM module already has a reference to this object, and will "apply"
+    // it implicitly when it calls getInlineCost, which accesses the Params
+    // member.
+    void apply(llvm::Module &M) override { }
+
     /////////
     // the below need to be reimplemented because SimpleInliner
     // is not accessable for us to inherit.

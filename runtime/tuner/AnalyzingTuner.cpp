@@ -1,5 +1,6 @@
 
 #include <tuner/AnalyzingTuner.h>
+#include <tuner/LoopKnob.h>
 
 namespace tuner {
 

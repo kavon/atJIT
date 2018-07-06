@@ -130,7 +130,7 @@ namespace tuner {
     auto TunerConf = Gen.first;
     auto FB = Gen.second;
 
-    Tuner_->applyConfig(*TunerConf);
+    Tuner_->applyConfig(*TunerConf, M);
 
     MPM_->run(M);
 

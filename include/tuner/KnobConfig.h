@@ -2,6 +2,7 @@
 #define TUNER_KNOBCONFIG
 
 #include <tuner/Knob.h>
+#include <tuner/LoopKnob.h>
 
 #include <vector>
 #include <utility>
@@ -13,7 +14,8 @@ namespace tuner {
 
   class KnobConfig {
   public:
-    std::vector<std::pair<tuner::KnobID, int>> IntConfig;
+    std::vector<std::pair<KnobID, int>> IntConfig;
+    std::vector<std::pair<KnobID, LoopSetting>> LoopConfig;
 
   };
 

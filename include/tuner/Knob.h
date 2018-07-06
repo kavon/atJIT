@@ -5,6 +5,8 @@
 #include <climits>
 #include <string>
 
+#include <llvm/IR/Module.h>
+
 namespace tuner {
 
   // polymorphism of Knobs is primarily achieved through inheritance.
@@ -31,6 +33,8 @@ namespace {
     // value accessors
     virtual ValTy getVal() const = 0;
     virtual void setVal(ValTy) = 0;
+
+    virtual void apply(llvm::Module &M) = 0;
 
     // a unique ID relative to all knobs in the program.
     KnobID getID() const { return id; }
