@@ -23,16 +23,28 @@ namespace tuner {
   class LoopKnob : public Knob<LoopSetting> {
   private:
     LoopSetting Opt;
+    unsigned LoopID;
+
     // NOTE could probably add some utilities to check the
     // sanity of a loop setting to this class?
 
 
   public:
-    // LoopKnob (LOOP ID?) {}
+    LoopKnob (unsigned name) : LoopID(name) {}
 
     LoopSetting getVal() const override { return Opt; }
-    // void setVal (LoopSetting LS) override { Opt = LS; }
-    // TODO: how do we actually _apply_ it to the module?
+
+    void setVal (LoopSetting LS) override { Opt = LS; }
+
+    unsigned getLoopID() const { return LoopID; }
+
+    void apply (llvm::Module &M) override {
+      // TODO  !! 
+      std::cout << "implement LoopKnob::apply!\n";
+    }
+
+
+
   };
 
 
@@ -41,7 +53,8 @@ namespace knob_type {
   using Loop = LoopKnob;
 }
 
-
 } // namespace tuner
+
+std::ostream& operator<<(std::ostream &o, tuner::LoopSetting &LS);
 
 #endif // TUNER_LOOP_KNOBS

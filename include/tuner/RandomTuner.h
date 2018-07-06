@@ -9,6 +9,18 @@
 
 namespace tuner {
 
+  namespace {
+    template < typename RNE >  // RandomNumberEngine
+    LoopSetting genRandomLoopSetting(RNE &Eng) {
+      LoopSetting LS;
+      // TODO: actually change some of these settings!
+      // This function may belong in a LoopSettings.cpp file to be honest,
+      // there will likely be lots of utilities for dealing with this type,
+      // such as operator<< that is currently sitting in AnalyzingTuner.cpp
+      return LS;
+    }
+  }
+
   // a tuner that randomly perturbs its knobs
   class RandomTuner : public AnalyzingTuner {
     std::mt19937 Gen_; // // 32-bit mersenne twister random number generator
@@ -28,10 +40,18 @@ namespace tuner {
       auto Conf = std::make_shared<KnobConfig>();
       auto FB = std::make_shared<ExecutionTime>();
 
+      // TODO: factor out common structure below with lambdas
+
       for (auto Entry : KS_.IntKnobs) {
         auto Knob = Entry.second;
         std::uniform_int_distribution<> dist(Knob->min(), Knob->max());
         Conf->IntConfig.push_back({Knob->getID(), dist(Gen_)});
+      }
+
+      for (auto Entry : KS_.LoopKnobs) {
+        auto Knob = Entry.second;
+        auto Setting = genRandomLoopSetting(Gen_);
+        Conf->LoopConfig.push_back({Knob->getID(), Setting});
       }
 
       // keep track of this config.

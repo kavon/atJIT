@@ -14,8 +14,13 @@ namespace tuner {
   // https://en.cppreference.com/w/cpp/utility/variant/visit
 
 
-  // NOTE: don't forget to update Tuner::applyConfig if
-  // any new knob kinds are added here!
+  // NOTE: don't forget to update the following things
+  // if any new knob kinds are added:
+  //
+  // 1. class KnobConfig
+  // 2. Tuner::applyConfig
+  // 3. Tuner::dumpConfig
+
   class KnobSet {
   public:
     std::unordered_map<KnobID, knob_type::Int*> IntKnobs;

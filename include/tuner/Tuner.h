@@ -11,6 +11,7 @@
 
 namespace tuner {
 
+  // generic operations over KnobSet/KnobConfig components.
   namespace {
     template < typename ValTy, typename KnobTy >
     void adjustKnobs(std::vector<std::pair<tuner::KnobID, ValTy>> const &Settings,
@@ -25,9 +26,31 @@ namespace tuner {
         Knob->setVal(Val);
         Knob->apply(M);
       }
+    }
 
+    template < typename ValTy, typename KnobTy >
+    void dumpKnobs (std::vector<std::pair<tuner::KnobID, ValTy>> const &Settings,
+                       std::unordered_map<tuner::KnobID, KnobTy*> const &Knobs) {
+
+      for (auto Entry : Settings) {
+        auto ID = Entry.first;
+        auto Val = Entry.second;
+
+        auto search = Knobs.find(ID);
+        if (search == Knobs.end()) {
+          std::cout << "dumpConfig ERROR: a knob in the given Config "
+                    << "is not in Tuner's KnobSet!\n";
+
+          throw std::runtime_error("unknown knob ID");
+        }
+
+        auto Knob = search->second;
+        std::cout << Knob->getName() << " := " << Val << "\n";
+      }
     }
   } // end anonymous namespace
+
+
 
   class Tuner {
   protected:
@@ -61,21 +84,8 @@ namespace tuner {
 
     void dumpConfig (KnobConfig const &Config) const {
       std::cout << "{\n";
-      for (auto Entry : Config.IntConfig) {
-        auto ID = Entry.first;
-        auto Val = Entry.second;
-
-        auto search = KS_.IntKnobs.find(ID);
-        if (search == KS_.IntKnobs.end()) {
-          std::cout << "dumpConfig ERROR: a knob in the given Config "
-                    << "is not in Tuner's KnobSet!\n";
-
-          throw std::runtime_error("unknown knob ID");
-        }
-
-        auto Knob = search->second;
-        std::cout << Knob->getName() << " := " << Val << "\n";
-      }
+      dumpKnobs(Config.IntConfig, KS_.IntKnobs);
+      dumpKnobs(Config.LoopConfig, KS_.LoopKnobs);
       std::cout << "}\n";
     }
 
