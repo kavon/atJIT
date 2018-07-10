@@ -41,18 +41,22 @@ namespace tuner {
       auto Conf = std::make_shared<KnobConfig>();
       auto FB = std::make_shared<ExecutionTime>();
 
-      // TODO: factor out common structure below with lambdas
+      // if this is the first requested config, we do not
+      // add anything to the knob config to test default settings.
+      if (!Configs_.empty()) {
+        // TODO: factor out common structure below with lambdas
 
-      for (auto Entry : KS_.IntKnobs) {
-        auto Knob = Entry.second;
-        std::uniform_int_distribution<> dist(Knob->min(), Knob->max());
-        Conf->IntConfig.push_back({Knob->getID(), dist(Gen_)});
-      }
+        for (auto Entry : KS_.IntKnobs) {
+          auto Knob = Entry.second;
+          std::uniform_int_distribution<> dist(Knob->min(), Knob->max());
+          Conf->IntConfig.push_back({Knob->getID(), dist(Gen_)});
+        }
 
-      for (auto Entry : KS_.LoopKnobs) {
-        auto Knob = Entry.second;
-        auto Setting = genRandomLoopSetting(Gen_);
-        Conf->LoopConfig.push_back({Knob->getID(), Setting});
+        for (auto Entry : KS_.LoopKnobs) {
+          auto Knob = Entry.second;
+          auto Setting = genRandomLoopSetting(Gen_);
+          Conf->LoopConfig.push_back({Knob->getID(), Setting});
+        }
       }
 
       // keep track of this config.
