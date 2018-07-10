@@ -29,7 +29,7 @@ std::string easy::GetEntryFunctionName(Module const &M) {
     return Name->getString();
   }
 
-  llvm_unreachable("No entry function in easy::jit module!");
+  report_fatal_error("No entry function in easy::jit module!");
   return "";
 }
 

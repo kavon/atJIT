@@ -38,10 +38,7 @@ namespace tuner {
 
     unsigned getLoopID() const { return LoopID; }
 
-    void apply (llvm::Module &M) override {
-      // TODO  !! 
-      std::cout << "implement LoopKnob::apply!\n";
-    }
+    void apply (llvm::Module &M) override;
 
 
 

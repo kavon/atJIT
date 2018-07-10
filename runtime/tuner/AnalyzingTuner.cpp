@@ -1,4 +1,5 @@
 
+#include <tuner/MDUtils.h>
 #include <tuner/AnalyzingTuner.h>
 #include <tuner/LoopKnob.h>
 
@@ -25,15 +26,15 @@ namespace {
       : LoopPass(ID), KS(KSet) {};
 
     bool runOnLoop(Loop *Loop, LPPassManager &LPM) override {
-      MDNode *Name = Loop->getLoopID();
+      MDNode *LoopMD = Loop->getLoopID();
 
-      if (Name == nullptr) {
+      if (!LoopMD) {
         // LoopNamer should have been run when embedding the bitcode.
-        llvm_unreachable("encountered an unnamed loop!");
+        report_fatal_error("encountered an improperly named loop!");
         return false;
       }
 
-      LoopKnob *LK = new LoopKnob(Name->getMetadataID());
+      LoopKnob *LK = new LoopKnob(getLoopName(LoopMD));
 
       KS->LoopKnobs[LK->getID()] = LK;
 

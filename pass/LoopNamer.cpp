@@ -1,11 +1,16 @@
 
+#include <tuner/MDUtils.h>
+
 #include <llvm/Analysis/LoopPass.h>
+#include <llvm/IR/Constants.h>
 
 using namespace llvm;
 
 namespace tuner {
 
 class LoopNamer : public LoopPass {
+private:
+  unsigned LoopIDs = 0;
 public:
   static char ID;
 
@@ -13,20 +18,25 @@ public:
     : LoopPass(ID) {};
 
   bool runOnLoop(Loop *Loop, LPPassManager &LPM) override {
-    // skip this loop if it already has an ID
-    if (Loop->getLoopID() != nullptr)
-      return false;
-
+    MDNode *LoopMD = Loop->getLoopID();
     LLVMContext &Context = Loop->getHeader()->getContext();
 
-    // Reserve first location for self reference to the LoopID metadata node.
-    MDNode *Dummy = MDNode::get(Context, {});
-    MDNode *NewLoopID = MDNode::get(Context, {Dummy});
+    if (!LoopMD) {
+      // Setup the first location with a dummy operand for now.
+      MDNode *Dummy = MDNode::get(Context, {});
+      LoopMD = MDNode::get(Context, {Dummy});
+    }
 
-    // Set operand 0 to refer to the loop id itself.
-    NewLoopID->replaceOperandWith(0, NewLoopID);
+    MDNode* KnobTag = createLoopName(Context, LoopIDs);
+    MDNode *Wrapper = MDNode::get(Context, {KnobTag});
 
-    Loop->setLoopID(NewLoopID);
+    // combine the knob tag with the current LoopMD.
+    LoopMD = MDNode::concatenate(LoopMD, Wrapper);
+
+    // reinstate the self-loop in the first position of the MD.
+    LoopMD->replaceOperandWith(0, LoopMD);
+
+    Loop->setLoopID(LoopMD);
 
     return true;
   }
