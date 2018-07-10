@@ -28,7 +28,7 @@ public:
     }
 
     MDNode* KnobTag = createLoopName(Context, LoopIDs);
-    MDNode *Wrapper = MDNode::get(Context, {KnobTag});
+    MDNode* Wrapper = MDNode::get(Context, {KnobTag});
 
     // combine the knob tag with the current LoopMD.
     LoopMD = MDNode::concatenate(LoopMD, Wrapper);

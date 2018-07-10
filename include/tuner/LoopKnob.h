@@ -9,13 +9,21 @@
 namespace tuner {
 
   // https://llvm.org/docs/LangRef.html#llvm-loop
+  //
+  // NOTE if you add a new option here, make sure to update:
+  // 1. LoopKnob.cpp::addToLoopMD
+  // 2. operator<<(stream, LoopSetting)
+  // 3. any tuners operating on a LoopSetting,
+  //    like RandomTuner::genRandomLoopSetting
+  //
   struct LoopSetting {
     // std::option<bool> VectorizeEnable;
     // std::option<uint16_t> VectorizeWidth; // 1 == disable, 0 or omitted == "choose automatically"
 
-    std::optional<bool> UnrollDisable;    // llvm.loop.unroll.disable
-    std::optional<uint16_t> UnrollCount;  // llvm.loop.unroll.count
-    std::optional<bool> UnrollFull;       // llvm.loop.unroll.full
+    std::optional<bool> UnrollDisable{};    // llvm.loop.unroll.disable
+    std::optional<bool> UnrollFull{};       // llvm.loop.unroll.full
+    std::optional<uint16_t> UnrollCount{};  // llvm.loop.unroll.count
+
 
 
   };
@@ -36,11 +44,13 @@ namespace tuner {
 
     void setVal (LoopSetting LS) override { Opt = LS; }
 
-    unsigned getLoopID() const { return LoopID; }
+    unsigned getLoopName() const { return LoopID; }
 
     void apply (llvm::Module &M) override;
 
-
+    virtual std::string getName() const override {
+       return "loop #" + std::to_string(getLoopName());
+    }
 
   };
 

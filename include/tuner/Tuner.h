@@ -7,6 +7,7 @@
 
 #include <llvm/IR/Module.h>
 
+#include <algorithm>
 #include <iostream>
 
 namespace tuner {
@@ -97,7 +98,16 @@ namespace tuner {
       std::cout << "\n";
     }
 
-    void dump() const {
+    void dump() {
+      struct {
+        bool operator()(GenResult const &A, GenResult const &B) const
+        { // smallest time last.
+            return A.second->avgMeasurement() >= B.second->avgMeasurement();
+        }
+      } sortByTime;
+
+      std::sort(Configs_.begin(), Configs_.end(), sortByTime);
+
       std::cout << "-----------\n";
       for (auto Entry : Configs_) {
         dumpConfigInstance(Entry);

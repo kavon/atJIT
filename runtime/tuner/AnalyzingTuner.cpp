@@ -67,9 +67,18 @@ void AnalyzingTuner::analyze(llvm::Module &M) {
 
 } // end namespace
 
+#define PRINT_OPTION(X, Y) \
+  if ((X)) \
+    o << loop_md::Y << ": " << (X).value() << ", ";
 
 // this file seemed fitting to define this function. can't put in header.
 std::ostream& operator<<(std::ostream &o, tuner::LoopSetting &LS) {
-  o << "<Loop Setting Config Here>";
+  o << "<";
+
+  PRINT_OPTION(LS.UnrollDisable, UNROLL_DISABLE)
+  PRINT_OPTION(LS.UnrollFull, UNROLL_FULL)
+  PRINT_OPTION(LS.UnrollCount, UNROLL_COUNT)
+
+  o << ">";
   return o;
 }

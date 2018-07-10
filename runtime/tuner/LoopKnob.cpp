@@ -12,6 +12,32 @@ namespace tuner {
 
     using namespace llvm;
 
+    // {!"option.name"}, aka, no value such as an i1
+    MDNode* setPresenceOption(MDNode *LMD, std::optional<bool> const& Option, StringRef OptName) {
+      if (Option) {
+        if (Option.value()) // add the option
+          return updateLMD(LMD, OptName, nullptr);
+        else // delete any such options, if present
+          return updateLMD(LMD, OptName, nullptr, true);
+      }
+
+      return LMD;
+    }
+
+    MDNode* addToLoopMD(MDNode *LMD, LoopSetting const& LS) {
+      LLVMContext &C = LMD->getContext();
+      IntegerType* i32 = IntegerType::get(C, 32);
+
+      LMD = setPresenceOption(LMD, LS.UnrollDisable, loop_md::UNROLL_DISABLE);
+      LMD = setPresenceOption(LMD, LS.UnrollFull, loop_md::UNROLL_FULL);
+
+      if (LS.UnrollCount)
+        LMD = updateLMD(LMD, loop_md::UNROLL_COUNT,
+                              mkMDInt(i32, LS.UnrollCount.value()));
+
+      return LMD;
+    }
+
     class LoopKnobAdjustor : public LoopPass {
     private:
       knob_type::Loop *LK;
@@ -35,13 +61,17 @@ namespace tuner {
         unsigned LoopName = getLoopName(LoopMD);
 
         // is this the right loop?
-        if (LoopName != LK->getLoopID())
+        if (LoopName != LK->getLoopName())
           return false;
 
-        // TODO: change the metadata.
-        errs() << "adjustor for loop " << LK->getLoopID() << " would have fired\n";
+        MDNode *NewLoopMD = addToLoopMD(LoopMD, LK->getVal());
 
-        return false;
+        if (NewLoopMD == LoopMD) // then nothing changed.
+          return false;
+
+        Loop->setLoopID(NewLoopMD);
+
+        return true;
       }
 
     }; // end class
@@ -55,6 +85,15 @@ namespace tuner {
   } // end anonymous namespace
 
 void LoopKnob::apply (llvm::Module &M) {
+  // NOTE: ideally, we wouldn't run a pass over every loop in
+  // the module for each call to this method.
+  //
+  // It would be better if (maybe)
+  // each LoopKnob held onto the reference to the Loop*
+  // we got from analysis, and simply mutated _that_ during
+  // an invocation of this method. I believe this would work
+  // if the Loop* is stable throughout the tuning process.
+
   legacy::PassManager Passes;
   Passes.add(new LoopKnobAdjustor(this));
   Passes.run(M);

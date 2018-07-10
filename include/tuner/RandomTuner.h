@@ -13,10 +13,11 @@ namespace tuner {
     template < typename RNE >  // RandomNumberEngine
     LoopSetting genRandomLoopSetting(RNE &Eng) {
       LoopSetting LS;
-      // TODO: actually change some of these settings!
-      // This function may belong in a LoopSettings.cpp file to be honest,
-      // there will likely be lots of utilities for dealing with this type,
-      // such as operator<< that is currently sitting in AnalyzingTuner.cpp
+
+      std::uniform_int_distribution<> unrollRange(0, 100);
+
+      LS.UnrollCount = unrollRange(Eng);
+
       return LS;
     }
   }
