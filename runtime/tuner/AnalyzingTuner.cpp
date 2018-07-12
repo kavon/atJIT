@@ -79,6 +79,9 @@ std::ostream& operator<<(std::ostream &o, tuner::LoopSetting &LS) {
   PRINT_OPTION(LS.UnrollFull, UNROLL_FULL)
   PRINT_OPTION(LS.UnrollCount, UNROLL_COUNT)
 
+  PRINT_OPTION(LS.VectorizeEnable, VECTORIZE_ENABLE)
+  PRINT_OPTION(LS.VectorizeWidth, VECTORIZE_WIDTH)
+
   o << ">";
   return o;
 }

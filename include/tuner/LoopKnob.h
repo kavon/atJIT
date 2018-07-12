@@ -12,13 +12,14 @@ namespace tuner {
   //
   // NOTE if you add a new option here, make sure to update:
   // 1. LoopKnob.cpp::addToLoopMD
+  //    1a. You'll want to update MDUtils.h while doing this.
   // 2. operator<<(stream, LoopSetting)
   // 3. any tuners operating on a LoopSetting,
   //    like RandomTuner::genRandomLoopSetting
   //
   struct LoopSetting {
-    // std::option<bool> VectorizeEnable;
-    // std::option<uint16_t> VectorizeWidth; // 1 == disable, 0 or omitted == "choose automatically"
+    std::optional<bool> VectorizeEnable{};
+    std::optional<uint16_t> VectorizeWidth{}; // >= 2, omitted == "choose automatically"
 
     std::optional<bool> UnrollDisable{};    // llvm.loop.unroll.disable
     std::optional<bool> UnrollFull{};       // llvm.loop.unroll.full

@@ -25,6 +25,8 @@ namespace {
      char const* UNROLL_DISABLE = "llvm.loop.unroll.disable";
      char const* UNROLL_COUNT = "llvm.loop.unroll.count";
      char const* UNROLL_FULL = "llvm.loop.unroll.full";
+     char const* VECTORIZE_ENABLE = "llvm.loop.vectorize.enable";
+     char const* VECTORIZE_WIDTH = "llvm.loop.vectorize.width";
   }
 
   Metadata* mkMDInt(IntegerType* Ty, uint64_t Val, bool isSigned = false) {

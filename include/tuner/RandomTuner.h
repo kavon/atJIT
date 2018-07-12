@@ -14,13 +14,51 @@ namespace tuner {
     LoopSetting genRandomLoopSetting(RNE &Eng) {
       LoopSetting LS;
 
-      std::uniform_int_distribution<> unrollRange(0, 100);
+      {
+        /////////////////////////
+        // UNROLLING KNOBS
 
-      LS.UnrollCount = unrollRange(Eng);
+        // roll a 100-sided die, so we can make a weighted choice.
+        std::uniform_int_distribution<unsigned> diceRoll(0, 100);
+        unsigned unrollChoice = diceRoll(Eng);
+        if (unrollChoice <= 10) {
+          LS.UnrollDisable = true;
+        } else if (unrollChoice <= 50) {
+          LS.UnrollFull = true;
+        } else {
+          // pick a power-of-two (>= 2) unrolling factor
+          std::uniform_int_distribution<unsigned> bitNum(1, 12); // 2^12 = 4096
+          LS.UnrollCount = ((uint16_t) 1) << bitNum(Eng);
+        }
+      }
+
+      {
+        /////////////////////////
+        // VECTORIZATION KNOBS
+
+        std::uniform_int_distribution<unsigned> diceRoll1(0, 100);
+        unsigned vecChoice = diceRoll1(Eng);
+
+        if (vecChoice <= 30) {
+          LS.VectorizeEnable = false;
+        } else if (vecChoice <= 75) {
+          LS.VectorizeEnable = true;
+        } // otherwise, we don't specify anything.
+
+        if (LS.VectorizeEnable && LS.VectorizeEnable.value()) {
+          std::uniform_int_distribution<unsigned> diceRoll2(0, 100);
+          // should we specify a width? otherwise, LLVM chooses automatically.
+          if (diceRoll2(Eng) >= 40) {
+            // pick a power-of-two (>= 2) width
+            std::uniform_int_distribution<unsigned> bitNum(1, 5); // 2^5 = 32
+            LS.VectorizeWidth = ((uint16_t) 1) << bitNum(Eng);
+          }
+        }
+      }
 
       return LS;
     }
-  }
+  } // end namespace
 
   // a tuner that randomly perturbs its knobs
   class RandomTuner : public AnalyzingTuner {

@@ -24,6 +24,11 @@ namespace tuner {
       return LMD;
     }
 
+#define SET_I32_OPTION(FieldName, StringName) \
+if (LS.FieldName) \
+  LMD = updateLMD(LMD, loop_md::StringName, \
+                        mkMDInt(i32, LS.FieldName.value()));
+
     MDNode* addToLoopMD(MDNode *LMD, LoopSetting const& LS) {
       LLVMContext &C = LMD->getContext();
       IntegerType* i32 = IntegerType::get(C, 32);
@@ -31,9 +36,10 @@ namespace tuner {
       LMD = setPresenceOption(LMD, LS.UnrollDisable, loop_md::UNROLL_DISABLE);
       LMD = setPresenceOption(LMD, LS.UnrollFull, loop_md::UNROLL_FULL);
 
-      if (LS.UnrollCount)
-        LMD = updateLMD(LMD, loop_md::UNROLL_COUNT,
-                              mkMDInt(i32, LS.UnrollCount.value()));
+      LMD = setPresenceOption(LMD, LS.VectorizeEnable, loop_md::VECTORIZE_ENABLE);
+
+      SET_I32_OPTION(UnrollCount, UNROLL_COUNT)
+      SET_I32_OPTION(VectorizeWidth, VECTORIZE_WIDTH)
 
       return LMD;
     }
