@@ -6,43 +6,51 @@ atJIT: A just-in-time autotuning compiler for C++
 About
 -----
 
-atJIT is an _extremely_ early-phase experiment in just-in-time autotuning that
-is based on the Easy::jit project.
+atJIT is an early-phase experiment in online autotuning.
 
-[Easy::jit](https://github.com/jmmartinez/easy-just-in-time) is a
-_compiler-assisted_ library that enables simple Just-In-Time
-code generation for C++ codes.
+The code was originally based on the [Easy::jit](https://github.com/jmmartinez/easy-just-in-time) project.
 
-Building
+Requirements
 --------
 
-First, install clang and LLVM.
+First, install clang and LLVM. To do this on Ubuntu, you can simply install using the following command.
 
 ```bash
 apt install llvm-6.0-dev llvm-6.0-tools clang-6.0
 ```
 
-Then, configure and compile the project.
+To use a custom-built clang + LLVM that is built from source, you will need to
+configure your build with CMake in a special way, which can be done easily by adding the following `-C` flag to your usual invocation of CMake to load the config:
+
+```bash
+cmake -C <path-to-atJit-root>/cmake/LLVM.cmake  .. other arguments ..
+```
+
+
+
+Building
+--------
+
+Once you have clang and LLVM installed, configure and compile atJIT from the root of the project like so:
 
 ```bash
 mkdir build install
 cd build
-cmake -G Ninja -DCMAKE_INSTALL_PREFIX=../install \
-    -DCMAKE_CXX_COMPILER=clang++-6.0 -DCMAKE_C_COMPILER=clang-6.0 ..
-ninja install
-```
-<!--
-cmake -DLLVM_DIR=/usr/lib/llvm-6.0/cmake <path_to_easy_jit_src>
+cmake -DCMAKE_INSTALL_PREFIX=../install ..
 cmake --build .
--->
+```
+
+Once this completes, see the next section for usage.
+
+##### Build Options
+
+If you are using a custom LLVM that is not installed system-wide, you'll need to add `-DCMAKE_PREFIX_PATH=<path-to-where-LLVM-was-installed>` to the first CMake command above.
 
 To build the examples, install the [opencv](https://opencv.org/) library,
 and add the flags ```-DEASY_JIT_EXAMPLE=1``` to the cmake command.
 
 To enable benchmarking, install the [google benchmark](https://github.com/google/benchmark) framework,
 and add the flags ```-DEASY_JIT_BENCHMARK=1 -DBENCHMARK_DIR=<path_to_google_benchmark_install>``` to the cmake command.
-
-Everything is ready to go!
 
 <!--
 ### Docker
@@ -101,6 +109,10 @@ clang++-6.0 --std=c++17 <my_file.cpp> \
 -->
 
 ### Using atJIT inside my project
+
+*coming soon*
+
+<!--
 
 Consider the code below from a software that applies image filters on a video stream.
 In the following sections we are going to adapt it to use the atJIT library.
@@ -169,15 +181,15 @@ Bellow we show the code from previous section, but adapted to use a code cache.
 </include camfilter.cpp EASY_CACHE/>
 ```
 
+-->
+
 License
 -------
 
 See file `LICENSE` at the top-level directory of this project.
 
-Thanks
+Acknowledgements
 ------
 
-Special thanks to Quarkslab for their support on working in personal projects.
-
-In addition, thanks to Serge Guelton and Juan Manuel Martinez Caamaño for
+Special thanks to Serge Guelton and Juan Manuel Martinez Caamaño for
 originally developing Easy::jit.
