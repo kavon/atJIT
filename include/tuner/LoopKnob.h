@@ -8,6 +8,22 @@
 
 namespace tuner {
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
+
+  namespace loop_md {
+    static char const* TAG = "atJit.loop"; // make sure to keep this in sync with MDUtils.h
+
+    static char const* UNROLL_DISABLE = "llvm.loop.unroll.disable";
+    static char const* UNROLL_COUNT = "llvm.loop.unroll.count";
+    static char const* UNROLL_FULL = "llvm.loop.unroll.full";
+    static char const* VECTORIZE_ENABLE = "llvm.loop.vectorize.enable";
+    static char const* VECTORIZE_WIDTH = "llvm.loop.vectorize.width";
+    static char const* LICM_VER_DISABLE = "llvm.loop.licm_versioning.disable";
+  }
+
+#pragma GCC diagnostic pop
+
   // https://llvm.org/docs/LangRef.html#llvm-loop
   //
   // NOTE if you add a new option here, make sure to update:
@@ -25,7 +41,7 @@ namespace tuner {
     std::optional<bool> UnrollFull{};       // llvm.loop.unroll.full
     std::optional<uint16_t> UnrollCount{};  // llvm.loop.unroll.count
 
-
+    std::optional<bool> LICMVerDisable{}; // llvm.loop.licm_versioning.disable
 
   };
 

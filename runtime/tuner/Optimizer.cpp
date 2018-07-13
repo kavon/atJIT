@@ -122,9 +122,15 @@ namespace tuner {
     // NOTE(kavon): right now we throw away the indicator saying whether
     // the module changed. Perhaps its useful to store that in the Feedback?
 
-    std::cout << "... optimizing\n";
+    std::cout << "\nREOPTIMIZING\n";
+
+    auto Start = std::chrono::system_clock::now();
+
+    std::cout << "analyzing module...\n";
 
     Tuner_->analyze(M);
+
+    std::cout << "generating a config...\n";
 
     auto Gen = Tuner_->getNextConfig();
     auto TunerConf = Gen.first;
@@ -132,9 +138,17 @@ namespace tuner {
 
     Tuner_->applyConfig(*TunerConf, M);
 
+    std::cout << "compiling...\n";
+
     MPM_->run(M);
 
+    auto End = std::chrono::system_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
+
     Tuner_->dump();
+
+    std::cout << "Finished in " << elapsed.count() << "ms\n"
+              << "+++++++\n";
 
     return FB;
   }

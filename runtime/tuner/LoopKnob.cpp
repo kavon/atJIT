@@ -29,6 +29,8 @@ if (LS.FieldName) \
   LMD = updateLMD(LMD, loop_md::StringName, \
                         mkMDInt(i32, LS.FieldName.value()));
 
+
+
     MDNode* addToLoopMD(MDNode *LMD, LoopSetting const& LS) {
       LLVMContext &C = LMD->getContext();
       IntegerType* i32 = IntegerType::get(C, 32);
@@ -37,6 +39,8 @@ if (LS.FieldName) \
       LMD = setPresenceOption(LMD, LS.UnrollFull, loop_md::UNROLL_FULL);
 
       LMD = setPresenceOption(LMD, LS.VectorizeEnable, loop_md::VECTORIZE_ENABLE);
+
+      LMD = setPresenceOption(LMD, LS.LICMVerDisable, loop_md::LICM_VER_DISABLE);
 
       SET_I32_OPTION(UnrollCount, UNROLL_COUNT)
       SET_I32_OPTION(VectorizeWidth, VECTORIZE_WIDTH)
@@ -106,3 +110,25 @@ void LoopKnob::apply (llvm::Module &M) {
 }
 
 } // end namespace tuner
+
+
+#define PRINT_OPTION(X, Y) \
+  if ((X)) \
+    o << tuner::loop_md::Y << ": " << (X).value() << ", ";
+
+// this file seemed fitting to define this function. can't put in header.
+std::ostream& operator<<(std::ostream &o, tuner::LoopSetting &LS) {
+  o << "<";
+
+  PRINT_OPTION(LS.UnrollDisable, UNROLL_DISABLE)
+  PRINT_OPTION(LS.UnrollFull, UNROLL_FULL)
+  PRINT_OPTION(LS.UnrollCount, UNROLL_COUNT)
+
+  PRINT_OPTION(LS.VectorizeEnable, VECTORIZE_ENABLE)
+  PRINT_OPTION(LS.VectorizeWidth, VECTORIZE_WIDTH)
+
+  PRINT_OPTION(LS.LICMVerDisable, LICM_VER_DISABLE)
+
+  o << ">";
+  return o;
+}

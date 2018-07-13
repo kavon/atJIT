@@ -20,14 +20,8 @@ namespace {
 
   using namespace llvm;
 
-  namespace loop_md {
-     char const* TAG = "atJit.loop";
-     char const* UNROLL_DISABLE = "llvm.loop.unroll.disable";
-     char const* UNROLL_COUNT = "llvm.loop.unroll.count";
-     char const* UNROLL_FULL = "llvm.loop.unroll.full";
-     char const* VECTORIZE_ENABLE = "llvm.loop.vectorize.enable";
-     char const* VECTORIZE_WIDTH = "llvm.loop.vectorize.width";
-  }
+  // make sure to keep this in sync with LoopKnob.h
+  char const* TAG = "atJit.loop";
 
   Metadata* mkMDInt(IntegerType* Ty, uint64_t Val, bool isSigned = false) {
     auto ConstInt = ConstantInt::get(Ty, Val, isSigned);
@@ -36,7 +30,7 @@ namespace {
 
   MDNode* createLoopName(LLVMContext& Context, unsigned &LoopIDs) {
     // build a custom knob tag for the loop
-    MDString *Tag = MDString::get(Context, loop_md::TAG);
+    MDString *Tag = MDString::get(Context, TAG);
     auto Val = ConstantInt::get(IntegerType::get(Context, 32),
                                 LoopIDs++, /*Signed=*/false);
 
@@ -58,7 +52,7 @@ namespace {
         continue;
 
       ConstantInt *ValConst = dyn_cast_or_null<ConstantInt>(Val->getValue());
-      if (ValConst && Tag->getString() == loop_md::TAG) {
+      if (ValConst && Tag->getString() == TAG) {
         return ValConst->getZExtValue();
       }
     }

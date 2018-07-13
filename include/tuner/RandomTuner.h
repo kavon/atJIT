@@ -32,6 +32,7 @@ namespace tuner {
         }
       }
 
+
       {
         /////////////////////////
         // VECTORIZATION KNOBS
@@ -53,6 +54,21 @@ namespace tuner {
             std::uniform_int_distribution<unsigned> bitNum(1, 5); // 2^5 = 32
             LS.VectorizeWidth = ((uint16_t) 1) << bitNum(Eng);
           }
+        }
+      }
+
+
+      {
+        /////////////////////////
+        // LICM KNOBS
+
+        std::uniform_int_distribution<unsigned> diceRoll(0, 100);
+        unsigned choice = diceRoll(Eng);
+
+        if (choice < 30) {
+          LS.LICMVerDisable = true;
+        } else if (choice < 80) {
+          LS.LICMVerDisable = false; // will try removing it if it was disabled.
         }
       }
 
