@@ -35,7 +35,7 @@ namespace tuner {
 
       {
         /////////////////////////
-        // VECTORIZATION KNOBS
+        // VECTORIZATION KNOBS (AND RELATED TO VECTORIZATION)
 
         std::uniform_int_distribution<unsigned> diceRoll1(0, 100);
         unsigned vecChoice = diceRoll1(Eng);
@@ -55,6 +55,32 @@ namespace tuner {
             LS.VectorizeWidth = ((uint16_t) 1) << bitNum(Eng);
           }
         }
+
+        std::uniform_int_distribution<unsigned> diceRoll2(0, 100);
+        unsigned interleaveChoice = diceRoll2(Eng);
+
+        if (interleaveChoice < 65) {
+
+          if (interleaveChoice < 10) {
+            LS.InterleaveCount = 0; // disable
+          } else if (interleaveChoice < 35) {
+            LS.InterleaveCount = 1; // automatic
+          } else {
+            // pick a power-of-two (>= 2) count
+            std::uniform_int_distribution<unsigned> bitNum(1, 6); // 2^6 = 64
+            LS.InterleaveCount = ((uint16_t) 1) << bitNum(Eng);
+          }
+
+        }
+
+
+        std::uniform_int_distribution<unsigned> diceRoll3(0, 100);
+        unsigned distributeChoice = diceRoll3(Eng);
+
+        if (distributeChoice <= 50) {
+            LS.Distribute = distributeChoice <= 25;
+        }
+
       }
 
 

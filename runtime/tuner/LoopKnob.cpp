@@ -12,7 +12,7 @@ namespace tuner {
 
     using namespace llvm;
 
-    // {!"option.name"}, aka, no value such as an i1
+    // {!"option.name"}, aka, no value
     MDNode* setPresenceOption(MDNode *LMD, std::optional<bool> const& Option, StringRef OptName) {
       if (Option) {
         if (Option.value()) // add the option
@@ -24,16 +24,17 @@ namespace tuner {
       return LMD;
     }
 
-#define SET_I32_OPTION(FieldName, StringName) \
+#define SET_INT_OPTION(IntKind, FieldName, StringName) \
 if (LS.FieldName) \
   LMD = updateLMD(LMD, loop_md::StringName, \
-                        mkMDInt(i32, LS.FieldName.value()));
+                        mkMDInt(IntKind, LS.FieldName.value()));
 
 
 
     MDNode* addToLoopMD(MDNode *LMD, LoopSetting const& LS) {
       LLVMContext &C = LMD->getContext();
       IntegerType* i32 = IntegerType::get(C, 32);
+      IntegerType* i1 = IntegerType::get(C, 32);
 
       LMD = setPresenceOption(LMD, LS.UnrollDisable, loop_md::UNROLL_DISABLE);
       LMD = setPresenceOption(LMD, LS.UnrollFull, loop_md::UNROLL_FULL);
@@ -42,8 +43,11 @@ if (LS.FieldName) \
 
       LMD = setPresenceOption(LMD, LS.LICMVerDisable, loop_md::LICM_VER_DISABLE);
 
-      SET_I32_OPTION(UnrollCount, UNROLL_COUNT)
-      SET_I32_OPTION(VectorizeWidth, VECTORIZE_WIDTH)
+      SET_INT_OPTION(i32, UnrollCount, UNROLL_COUNT)
+      SET_INT_OPTION(i32, VectorizeWidth, VECTORIZE_WIDTH)
+      SET_INT_OPTION(i32, InterleaveCount, INTERLEAVE_COUNT)
+
+      SET_INT_OPTION(i1, Distribute, DISTRIBUTE)
 
       return LMD;
     }
@@ -128,6 +132,10 @@ std::ostream& operator<<(std::ostream &o, tuner::LoopSetting &LS) {
   PRINT_OPTION(LS.VectorizeWidth, VECTORIZE_WIDTH)
 
   PRINT_OPTION(LS.LICMVerDisable, LICM_VER_DISABLE)
+
+  PRINT_OPTION(LS.InterleaveCount, INTERLEAVE_COUNT)
+
+  PRINT_OPTION(LS.Distribute, DISTRIBUTE)
 
   o << ">";
   return o;

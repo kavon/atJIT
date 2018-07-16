@@ -20,6 +20,8 @@ namespace tuner {
     static char const* VECTORIZE_ENABLE = "llvm.loop.vectorize.enable";
     static char const* VECTORIZE_WIDTH = "llvm.loop.vectorize.width";
     static char const* LICM_VER_DISABLE = "llvm.loop.licm_versioning.disable";
+    static char const* INTERLEAVE_COUNT = "llvm.loop.interleave.count";
+    static char const* DISTRIBUTE = "llvm.loop.distribute.enable";
   }
 
 #pragma GCC diagnostic pop
@@ -28,20 +30,26 @@ namespace tuner {
   //
   // NOTE if you add a new option here, make sure to update:
   // 1. LoopKnob.cpp::addToLoopMD
-  //    1a. You'll want to update MDUtils.h while doing this.
+  //    1a. You might need to update MDUtils.h while doing this.
   // 2. operator<<(stream, LoopSetting)
   // 3. any tuners operating on a LoopSetting,
   //    like RandomTuner::genRandomLoopSetting
   //
   struct LoopSetting {
+    // hints only
     std::optional<bool> VectorizeEnable{};
     std::optional<uint16_t> VectorizeWidth{}; // >= 2, omitted == "choose automatically"
+
+    // hint only
+    std::optional<uint16_t> InterleaveCount{}; // 0 = off, 1 = automatic, >=2 is count.
 
     std::optional<bool> UnrollDisable{};    // llvm.loop.unroll.disable
     std::optional<bool> UnrollFull{};       // llvm.loop.unroll.full
     std::optional<uint16_t> UnrollCount{};  // llvm.loop.unroll.count
 
     std::optional<bool> LICMVerDisable{}; // llvm.loop.licm_versioning.disable
+
+    std::optional<bool> Distribute{};
 
   };
 
