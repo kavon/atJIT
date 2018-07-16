@@ -43,12 +43,17 @@ class ATDriver {
     tuner::Optimizer &OptFromEntry = *(EntryVals.first);
 
     bool WasNotInCache = EmplaceResult.second;
-    if (WasNotInCache)
+
+    // reasons we will JIT, in order:
+    // 1. this is the first encounter of the function + context
+    // 2. the existing optimized function has recieved enough feedback,
+    //    so the optimizer can make a decision on reoptimizing it.
+    if (WasNotInCache || FWB.getFeedback().avgMeasurement()) {
       OptFromEntry.initialize();
+      auto FW = easy::jit_with_optimizer<T, Args...>(OptFromEntry, std::forward<T>(Fun));
+      FWB = std::move(FW);
+    }
 
-    auto FW = easy::jit_with_optimizer<T, Args...>(OptFromEntry, std::forward<T>(Fun));
-
-    FWB = std::move(FW);
     return reinterpret_cast<wrapper_ty&>(FWB);
   }
 

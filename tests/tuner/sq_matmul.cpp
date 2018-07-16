@@ -80,8 +80,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  // very low number for now so the test doesn't take too long.
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 100; i++) {
     auto const &OptimizedFun = AT.reoptimize(MatMul<ElmTy>, DIM, _1, _2,
           easy::options::tuner_kind(easy::AT_Random));
 

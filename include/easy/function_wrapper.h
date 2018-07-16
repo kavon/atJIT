@@ -40,6 +40,10 @@ class FunctionWrapperBase {
     return *Fun_;
   }
 
+  tuner::Feedback const& getFeedback() const {
+    return *FB_;
+  }
+
   void* getRawPointer() const {
     return getFunction().getRawPointer();
   }

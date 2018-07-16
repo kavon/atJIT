@@ -8,6 +8,7 @@
 #include <llvm/IR/Module.h>
 
 #include <algorithm>
+#include <cfloat>
 #include <iostream>
 
 namespace tuner {
@@ -101,8 +102,11 @@ namespace tuner {
     void dump() {
       struct {
         bool operator()(GenResult const &A, GenResult const &B) const
-        { // smallest time last.
-            return A.second->avgMeasurement() >= B.second->avgMeasurement();
+        { // smallest time last. if no time is available, it goes to the front.
+            std::optional<double> timeA = A.second->avgMeasurement();
+            std::optional<double> timeB = B.second->avgMeasurement();
+
+            return timeA.value_or(DBL_MAX) >= timeB.value_or(DBL_MAX);
         }
       } sortByTime;
 
