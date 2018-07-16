@@ -1,37 +1,27 @@
-To Do
+Todos
 =====
 
-Doing
------
+## Autotuning
+
+- more loop metadata knobs
+- integrate with Michael's LLVM branch.
+- do the tunable parameter thing
+- refinement of the search space
+- running-time normalization
+  - first thing to try is put in user-interface to specify indicators of workload for normalization
+  - then try to find that out automatically.
+
+
+## JIT Compilation
+
+### Known Issues
 
 * Inlining of structures.
   - large structure return
 
-Feature
--------
+### Testing
 
-* Combine specialization of functions: see Issues.
-* Serialization/Deserialization of object code.
-* Better error handling : 
-  - if a function is passed as parameter and cannot be extracted, print a warning,
-  - if it is the target function, print an error.
-* Expansion of recursive calls.
-* Hook function to modify the IR at runtime.
-  - e.g ```easy::jit(foo, _2, _1, easy::after_optimization([](BasicBlock* B) { instrument_edges(B); return true; }))```;
-* Drop body of functions that are not used
-
-Documentation
--------------
-
-* API doc
-* Installing doc
-* More complex usage example
-
-Testing
--------
-
-* Small set of benchmarks 
-* Script to randomly transform calls in c++ code to calls to easy::jit for testing on large projects
+* Small set of benchmarks
 * Test with:
   - member functions
   - function objects (jit operator() ?)
