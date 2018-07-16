@@ -10,10 +10,20 @@ atJIT is an early-phase experiment in online autotuning.
 
 The code was originally based on the [Easy::jit](https://github.com/jmmartinez/easy-just-in-time) project.
 
-Requirements
+Prerequisites
 --------
 
-First, install clang and LLVM. To do this on Ubuntu, you can simply install using the following command.
+Before you can build atJIT, ensure that your system has
+
+- a C++ compiler with sufficient [C++17 support](https://en.cppreference.com/w/cpp/compiler_support#C.2B.2B17_features). This likely means GCC >= 7, or Clang >= 4, but slightly older versions may work.
+- cmake >= 3.4.3
+- to run the test suite (the `check` target), python 2.7 + [the lit package](https://pypi.org/project/lit/)
+
+Then, do the following:
+
+#### Step 1
+
+Install clang and LLVM. To do this on Ubuntu, you can simply install using the following command.
 
 ```bash
 apt install llvm-6.0-dev llvm-6.0-tools clang-6.0
@@ -27,11 +37,18 @@ cmake -C <path-to-atJit-root>/cmake/LLVM.cmake  .. other arguments ..
 ```
 
 
+#### Step 2
+
+Obtain and build XGBoost by running the following command:
+
+```
+./xgboost/get.sh
+```
 
 Building
 --------
 
-Once you have clang and LLVM installed, configure and compile atJIT from the root of the project like so:
+Once you have met the prerequisites, configure and compile atJIT from the root of the project like so:
 
 ```bash
 mkdir build install
