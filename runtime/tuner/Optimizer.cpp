@@ -15,9 +15,6 @@
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 #include <llvm/Transforms/IPO.h>
 
-#include <xgboost/learner.h>
-#include <xgboost/data.h>
-
 namespace {
   static std::unique_ptr<llvm::TargetMachine> GetHostTargetMachine() {
     std::unique_ptr<llvm::TargetMachine> TM(llvm::EngineBuilder().selectTarget());

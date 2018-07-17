@@ -5,6 +5,7 @@
 
 #include <optional>
 #include <cinttypes>
+#include <random>
 
 namespace tuner {
 
@@ -77,7 +78,17 @@ namespace tuner {
        return "loop #" + std::to_string(getLoopName());
     }
 
-  };
+  }; // end class
+
+
+// any specializations of genRandomLoopSetting you would like to use
+// should be declared as an extern template here, and then instantiated
+// in LoopSettingGen, since I don't want to include the generic impl here.
+// see: https://stackoverflow.com/questions/10632251/undefined-reference-to-template-function
+template < typename RNE >  // meets the requirements of RandomNumberEngine
+LoopSetting genRandomLoopSetting(RNE &Eng);
+
+extern template LoopSetting genRandomLoopSetting<std::mt19937>(std::mt19937&);
 
 
 // handy type aliases.

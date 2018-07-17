@@ -12,6 +12,8 @@ add_library(EasyJitRuntime SHARED
   tuner/Optimizer.cpp
   tuner/AnalyzingTuner.cpp
   tuner/LoopKnob.cpp
+  tuner/LoopSettingGen.cpp
+  tuner/KnobConfig.cpp
 )
 
 # the installed version of the library needs to

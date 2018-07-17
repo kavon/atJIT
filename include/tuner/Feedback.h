@@ -1,6 +1,7 @@
 #ifndef TUNER_FEEDBACK
 #define TUNER_FEEDBACK
 
+#include <optional>
 #include <cinttypes>
 #include <chrono>
 #include <cmath>

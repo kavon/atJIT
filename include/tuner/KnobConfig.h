@@ -3,6 +3,7 @@
 
 #include <tuner/Knob.h>
 #include <tuner/LoopKnob.h>
+#include <tuner/KnobSet.h>
 
 #include <vector>
 #include <utility>
@@ -18,6 +19,11 @@ namespace tuner {
     std::vector<std::pair<KnobID, LoopSetting>> LoopConfig;
 
   };
+
+  template < typename RNE >  // meets the requirements of RandomNumberEngine
+  KnobConfig genRandomConfig(KnobSet &KS, RNE &Eng);
+
+  extern template KnobConfig genRandomConfig<std::mt19937>(KnobSet&, std::mt19937&);
 
 }
 

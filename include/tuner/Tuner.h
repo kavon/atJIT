@@ -13,6 +13,8 @@
 
 namespace tuner {
 
+  using GenResult = std::pair<std::shared_ptr<KnobConfig>, std::shared_ptr<Feedback>>;
+
   // generic operations over KnobSet/KnobConfig components.
   namespace {
     template < typename ValTy, typename KnobTy >
@@ -56,7 +58,6 @@ namespace tuner {
 
   class Tuner {
   protected:
-    using GenResult = std::pair<std::shared_ptr<KnobConfig>, std::shared_ptr<Feedback>>;
 
     KnobSet KS_;
     std::vector<GenResult> Configs_;
