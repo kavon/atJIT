@@ -5,6 +5,7 @@
 # and outputs the following variables:
 #
 #   XGB_LIB -- an absolute path to the shared library file for xgboost
+#   XGB_LIB_DIR -- the directory to the above lib
 #
 
 function (requireFound SYMB MSG)
@@ -45,5 +46,8 @@ include_directories(${XGB_INCLUDE_DIR}
                     ${RABIT_INCLUDE_DIR}
                     ${DMLC_INCLUDE_DIR}
                   )
+
+get_filename_component(XGB_LIB_DIR ${XGB_LIB} DIRECTORY)
+message(STATUS "Found XGB_LIB_DIR: ${XGB_LIB_DIR}")
 
 ####################
