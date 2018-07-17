@@ -9,40 +9,16 @@ message(STATUS "LLVM Include dirs: ${LLVM_INCLUDE_DIRS}")
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 include(AddLLVM)
 include(Python)
+include(XGBoost)
 
 option(LLVM_ENABLE_PLUGINS "Generate build targets for LLVM plugins." ON)
 option (FORCE_COLORED_OUTPUT "Always produce ANSI-colored output (GNU/Clang only)." TRUE)
 
 
-
-#################
-# find xgboost installation
-
-find_library(XGB_LIB
-  NAMES xgboost
-  HINTS "${PROJECT_SOURCE_DIR}/xgboost/root/lib"
-)
-
-find_path(XGB_INCLUDE_DIR
-  NAMES xgboost/base.h
-  HINTS "${PROJECT_SOURCE_DIR}/xgboost/root/include"
-)
-
-if(NOT XGB_LIB)
-  message(FATAL_ERROR "XGBoost shared library (libxgboost) not found")
-endif()
-message(STATUS "xgboost lib: ${XGB_LIB}")
-
-if(NOT XGB_INCLUDE_DIR)
-  message(FATAL_ERROR "XGBoost include header files not found")
-endif()
-message(STATUS "xgboost include dir: ${XGB_INCLUDE_DIR}")
-
-####################
-
-
-
-include_directories(SYSTEM ${LLVM_INCLUDE_DIRS} include ${XGB_INCLUDE_DIR})
+include_directories(SYSTEM
+                    ${LLVM_INCLUDE_DIRS}
+                    include
+                   )
 
 link_directories(${LLVM_LIBRARY_DIRS})
 add_definitions(${LLVM_DEFINITIONS})

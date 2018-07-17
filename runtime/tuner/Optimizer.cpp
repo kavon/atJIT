@@ -15,6 +15,9 @@
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 #include <llvm/Transforms/IPO.h>
 
+#include <xgboost/learner.h>
+#include <xgboost/data.h>
+
 namespace {
   static std::unique_ptr<llvm::TargetMachine> GetHostTargetMachine() {
     std::unique_ptr<llvm::TargetMachine> TM(llvm::EngineBuilder().selectTarget());
@@ -121,6 +124,10 @@ namespace tuner {
   std::shared_ptr<Feedback> Optimizer::optimize(llvm::Module &M) {
     // NOTE(kavon): right now we throw away the indicator saying whether
     // the module changed. Perhaps its useful to store that in the Feedback?
+
+    // load in data.
+    // std::shared_ptr<xgboost::DMatrix> dtrain(
+    //       xgboost::DMatrix::Load("~/hello.txt", false, true));
 
     std::cout << "\nREOPTIMIZING\n";
 
