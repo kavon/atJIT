@@ -4,7 +4,7 @@ set(ALL_TESTS tests/)
 
 add_custom_target(check
                   COMMAND ${PYTHON_EXEC} -m lit.main ${ALL_TESTS} -v --time-tests -j 4 --shuffle
-                  DEPENDS EasyJitPass EasyJitRuntime)
+                  DEPENDS install)
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tests/lit.cfg.in" "${CMAKE_CURRENT_BINARY_DIR}/tests/lit.cfg")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tests/doc/lit.cfg.in" "${CMAKE_CURRENT_BINARY_DIR}/tests/doc/lit.cfg")
