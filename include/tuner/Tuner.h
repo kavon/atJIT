@@ -17,41 +17,59 @@ namespace tuner {
 
   // generic operations over KnobSet/KnobConfig components.
   namespace {
-    template < typename ValTy, typename KnobTy >
-    void adjustKnobs(std::vector<std::pair<tuner::KnobID, ValTy>> const &Settings,
-                     std::unordered_map<tuner::KnobID, KnobTy*> &Knobs,
-                     llvm::Module &M) {
+    class KnobAdjustor : public KnobConfigAppFn {
+      KnobSet &KS;
+      llvm::Module &M;
 
-      for (auto Entry : Settings) {
-        auto ID = Entry.first;
-        auto Val = Entry.second;
+    public:
+      KnobAdjustor(KnobSet &KSet, llvm::Module &Mod) : KS(KSet), M(Mod) {}
 
-        auto Knob = Knobs[ID];
-        Knob->setVal(Val);
-        Knob->apply(M);
-      }
-    }
-
-    template < typename ValTy, typename KnobTy >
-    void dumpKnobs (std::vector<std::pair<tuner::KnobID, ValTy>> const &Settings,
-                       std::unordered_map<tuner::KnobID, KnobTy*> const &Knobs) {
-
-      for (auto Entry : Settings) {
-        auto ID = Entry.first;
-        auto Val = Entry.second;
-
-        auto search = Knobs.find(ID);
-        if (search == Knobs.end()) {
-          std::cout << "dumpConfig ERROR: a knob in the given Config "
-                    << "is not in Tuner's KnobSet!\n";
-
-          throw std::runtime_error("unknown knob ID");
+      #define HANDLE_CASE(ValTy, KnobMap)                                      \
+        void operator()(std::pair<KnobID, ValTy> Entry) override {             \
+          auto ID = Entry.first;                                               \
+          auto NewVal = Entry.second;                                          \
+          auto Knobs = KS.KnobMap;                                             \
+          auto TheKnob = Knobs[ID];                                            \
+          TheKnob->setVal(NewVal);                                             \
+          TheKnob->apply(M);                                                   \
         }
 
-        auto Knob = search->second;
-        std::cout << Knob->getName() << " := " << Val << "\n";
+      HANDLE_CASE(int, IntKnobs)
+      HANDLE_CASE(LoopSetting, LoopKnobs)
+
+      #undef HANDLE_CASE
+
+    }; // end class
+
+    class ConfigDumper : public KnobConfigAppFn {
+      KnobSet const &KS;
+    public:
+      ConfigDumper(KnobSet const &KSet) : KS(KSet) {}
+
+      #define HANDLE_CASE(ValTy, KnobMap)                                      \
+      void operator()(std::pair<KnobID, ValTy> Entry) override {               \
+        auto ID = Entry.first;                                                 \
+        auto Val = Entry.second;                                               \
+                                                                               \
+        auto search = KS.KnobMap.find(ID);                                     \
+        if (search == KS.KnobMap.end()) {                                      \
+          std::cout << "dumpConfig ERROR: a knob in the given Config "         \
+                    << "is not in Tuner's KnobSet!\n";                         \
+                                                                               \
+          throw std::runtime_error("unknown knob ID");                         \
+        }                                                                      \
+                                                                               \
+        auto Knob = search->second;                                            \
+        std::cout << Knob->getName() << " := " << Val << "\n";                 \
       }
-    }
+
+      HANDLE_CASE(int, IntKnobs)
+      HANDLE_CASE(LoopSetting, LoopKnobs)
+
+      #undef HANDLE_CASE
+
+    }; // end class
+
   } // end anonymous namespace
 
 
@@ -78,8 +96,8 @@ namespace tuner {
     // applies a configuration to the given LLVM module via the
     // knobs managed by this tuner.
     void applyConfig (KnobConfig const &Config, llvm::Module &M) {
-      adjustKnobs(Config.IntConfig, KS_.IntKnobs, M);
-      adjustKnobs(Config.LoopConfig, KS_.LoopKnobs, M);
+      KnobAdjustor F(KS_, M);
+      applyToConfig(F, Config);
     }
 
     /////////
@@ -87,8 +105,8 @@ namespace tuner {
 
     void dumpConfig (KnobConfig const &Config) const {
       std::cout << "{\n";
-      dumpKnobs(Config.IntConfig, KS_.IntKnobs);
-      dumpKnobs(Config.LoopConfig, KS_.LoopKnobs);
+      ConfigDumper F(KS_);
+      applyToConfig(F, Config);
       std::cout << "}\n";
     }
 
