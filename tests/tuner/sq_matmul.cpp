@@ -59,8 +59,7 @@ T** MatMul(const int DIM, T** aMatrix, T** bMatrix) {
 
 using ElmTy = int16_t;
 
-int main(int argc, char** argv) {
-
+void testWith(easy::AutoTuner TunerKind, const int ITERS) {
   tuner::ATDriver AT;
 
   int DIM = 100;
@@ -80,15 +79,15 @@ int main(int argc, char** argv) {
     }
   }
 
-  for (int i = 0; i < 100; i++) {
+  for (int i = 0; i < ITERS; i++) {
     auto const &OptimizedFun = AT.reoptimize(MatMul<ElmTy>, DIM, _1, _2,
-          easy::options::tuner_kind(easy::AT_Random));
+          easy::options::tuner_kind(TunerKind));
 
     ElmTy** ans = OptimizedFun(aMatrix, bMatrix);
 
     if (!equal_mat<ElmTy>(DIM, ans, bMatrix)) {
       printf("ERROR!! unexpected matrix multiply result.\n");
-      return 1;
+      std::exit(1);
     }
 
     free(ans);
@@ -97,8 +96,24 @@ int main(int argc, char** argv) {
   free(aMatrix);
   free(bMatrix);
 
-  // CHECK: sq_matmul regression test success!
-  printf("sq_matmul regression test success!\n");
+}
+
+int main(int argc, char** argv) {
+
+  // CHECK: [sq_matmul] start!
+  printf("[sq_matmul] start!\n");
+
+  testWith(easy::AT_None, 5);
+  // CHECK: [sq_matmul] noop tuner works
+  printf("[sq_matmul] noop tuner works\n");
+
+  testWith(easy::AT_Random, 100);
+  // CHECK: [sq_matmul] random tuner works
+  printf("[sq_matmul] random tuner works\n");
+
+  testWith(easy::AT_Bayes, 100);
+  // CHECK: [sq_matmul] bayes tuner works
+  printf("[sq_matmul] bayes tuner works\n");
 
   return 0;
 }

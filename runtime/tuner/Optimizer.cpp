@@ -9,6 +9,7 @@
 
 #include <tuner/TunableInliner.h>
 #include <tuner/RandomTuner.h>
+#include <tuner/BayesianTuner.h>
 
 #include <llvm/IR/Module.h>
 #include <llvm/IR/LegacyPassManager.h>
@@ -97,6 +98,10 @@ namespace tuner {
     // create tuner
 
     switch (Cxt_->getTunerKind()) {
+
+      case easy::AT_Bayes:
+        Tuner_ = new BayesianTuner(std::move(KS));
+        break;
 
       case easy::AT_Random:
         Tuner_ = new RandomTuner(std::move(KS));

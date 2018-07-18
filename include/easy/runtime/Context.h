@@ -12,7 +12,8 @@ namespace easy {
 
   enum AutoTuner {
     AT_None,
-    AT_Random
+    AT_Random,
+    AT_Bayes
   };
 
 struct ArgumentBase {
