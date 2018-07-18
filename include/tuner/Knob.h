@@ -31,6 +31,7 @@ namespace {
       id = KnobTicker++;
     }
     // value accessors
+    virtual ValTy getDefault() const = 0;
     virtual ValTy getVal() const = 0;
     virtual void setVal(ValTy) = 0;
 

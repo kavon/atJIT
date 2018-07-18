@@ -14,6 +14,7 @@ namespace tuner {
   // a vector that represents all of the InlineParams fields.
   class TunableInliner : public ScalarKnob<int>, public llvm::LegacyInlinerBase {
     llvm::InlineParams Params;
+    llvm::InlineParams DefaultParams;
 
     llvm::TargetTransformInfoWrapperPass *TTIWP;
 
@@ -24,7 +25,8 @@ namespace tuner {
 
     TunableInliner(unsigned OptLevel, unsigned SizeOptLevel)
       : llvm::LegacyInlinerBase(ID),
-        Params(llvm::getInlineParams(OptLevel, SizeOptLevel)) {}
+        Params(llvm::getInlineParams(OptLevel, SizeOptLevel)),
+        DefaultParams(Params) {}
 
     void setVal(int Threshold) override {
       Params.DefaultThreshold = Threshold;
@@ -32,6 +34,10 @@ namespace tuner {
 
     int getVal() const override {
       return Params.DefaultThreshold;
+    }
+
+    int getDefault() const override {
+      return DefaultParams.DefaultThreshold;
     }
 
     int min() const override {

@@ -66,6 +66,11 @@ namespace tuner {
   public:
     LoopKnob (unsigned name) : LoopID(name) {}
 
+    LoopSetting getDefault() const override {
+      LoopSetting Empty;
+      return Empty;
+    }
+
     LoopSetting getVal() const override { return Opt; }
 
     void setVal (LoopSetting LS) override { Opt = LS; }

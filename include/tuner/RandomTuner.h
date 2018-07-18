@@ -27,9 +27,10 @@ namespace tuner {
     GenResult& getNextConfig() override {
       KnobConfig KC;
 
-      // if this is the first requested config, we do not
-      // add anything to the knob config to test default settings.
-      if (!Configs_.empty())
+      // if this is the first requested config, we generate the default config.
+      if (Configs_.empty())
+        KC = genDefaultConfig(KS_);
+      else
         KC = genRandomConfig(KS_, Gen_);
 
       auto Conf = std::make_shared<KnobConfig>(KC);
