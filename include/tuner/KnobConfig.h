@@ -19,6 +19,10 @@ namespace tuner {
   // 1. KnobConfigAppFn and related abstract visitors.
   // 2. applyToConfig and related generic operations.
 
+  // TODO this should be just be a single vector<pair<KnobID, float>>,
+  // since we need to be able to import & export configurations from
+  // the model, which only deals with float. When applying a Config to
+  // a KnobSet, the floats can be interpreted for what they mean.
   class KnobConfig {
   public:
     std::vector<std::pair<KnobID, int>> IntConfig;
@@ -33,6 +37,10 @@ namespace tuner {
 
   KnobConfig genDefaultConfig(KnobSet const&);
 
+  void exportConfig(KnobConfig const& KC,
+                    float* mat, uint64_t row, uint64_t ncol,
+                    uint64_t* colToKnob, const float MISSING);
+
   class KnobConfigAppFn {
   public:
       virtual void operator()(std::pair<KnobID, int>) = 0;
@@ -40,6 +48,7 @@ namespace tuner {
   };
 
   void applyToConfig(KnobConfigAppFn &F, KnobConfig const &Settings);
+  void applyToConfig(KnobIDAppFn &F, KnobConfig const &Settings);
 
 }
 

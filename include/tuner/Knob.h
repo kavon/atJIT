@@ -37,7 +37,10 @@ namespace {
 
     virtual void apply(llvm::Module &M) = 0;
 
-    // a unique ID relative to all knobs in the program.
+    // a unique ID relative to all knobs in the process.
+    // since multiple instances of autotuners can be created
+    // per process, this only guarentees uniqueness of each
+    // instance, it is otherwise unstable.
     KnobID getID() const { return id; }
 
     virtual std::string getName() const {

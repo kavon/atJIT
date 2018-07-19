@@ -29,16 +29,30 @@ namespace tuner {
     std::unordered_map<KnobID, knob_type::Int*> IntKnobs;
     std::unordered_map<KnobID, knob_type::Loop*> LoopKnobs;
 
+    size_t size() const {
+      return (
+        IntKnobs.size()
+        + LoopKnobs.size()
+      );
+    }
+
   };
 
-  // applies some arbitrary operation to a knob
+  // applies some arbitrary operation to a KnobSet
   class KnobSetAppFn {
   public:
       virtual void operator()(std::pair<KnobID, knob_type::Int*>) = 0;
       virtual void operator()(std::pair<KnobID, knob_type::Loop*>) = 0;
   };
 
+  // apply an operation over the IDs of a collection of knobs
+  class KnobIDAppFn {
+  public:
+      virtual void operator()(KnobID) = 0;
+  };
+
  void applyToKnobs(KnobSetAppFn &F, KnobSet const &KS);
+ void applyToKnobs(KnobIDAppFn &F, KnobSet const &KS);
 
 
 }

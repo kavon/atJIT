@@ -40,7 +40,21 @@ public:
   HANDLE_CASE(knob_type::Loop*, LoopConfig)
 
   #undef HANDLE_CASE
-}; // end case
+}; // end class
+
+
+void exportConfig(KnobConfig const& KC,
+                  float* mat, uint64_t row, uint64_t ncol,
+                  uint64_t* colToKnob, const float MISSING) {
+  // NOTE: we cannot properly implement this yet, because of a mistake
+  // in how we generate knobs: right now we only have one
+  // knob _per_ loop, and that knob consists of a large number of settings.
+  // we need to flatten that out to one knob per setting, per loop.
+
+  // throw std::runtime_error("implement me!");
+  for (uint64_t i = 0; i < ncol; ++i)
+    mat[(row * ncol) + i] = 3.0;
+}
 
 KnobConfig genDefaultConfig(KnobSet const& KS) {
   GenDefaultConfig F;
@@ -65,5 +79,10 @@ void applyToConfig(KnobConfigAppFn &F, KnobConfig const &Settings) {
   for (auto V : Settings.IntConfig) F(V);
   for (auto V : Settings.LoopConfig) F(V);
 }
+
+ void applyToConfig(KnobIDAppFn &F, KnobConfig const &Settings) {
+   for (auto V : Settings.IntConfig) F(V.first);
+   for (auto V : Settings.LoopConfig) F(V.first);
+ }
 
 } // end namespace
