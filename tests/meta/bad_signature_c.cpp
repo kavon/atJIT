@@ -1,4 +1,4 @@
-// RUN: %not %easycc  -O2  %s -o %t 2> %t.log
+// RUN: %not %atjitc  -O2  %s -o %t 2> %t.log
 // RUN: %FileCheck %s < %t.log
 
 #include <easy/jit.h>

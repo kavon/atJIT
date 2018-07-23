@@ -57,6 +57,6 @@ add_subdirectory(benchmark)
 
 include(CMakeTests.txt)
 
-configure_file("${EASY_JIT_ROOT}/misc/easycc.in" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/easycc")
-install(FILES ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/easycc DESTINATION bin
+configure_file("${EASY_JIT_ROOT}/misc/atjitc.in" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/atjitc")
+install(FILES ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/atjitc DESTINATION bin
 PERMISSIONS OWNER_EXECUTE OWNER_READ )

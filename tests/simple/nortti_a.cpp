@@ -1,4 +1,4 @@
-// RUN: %easycc   %s -o %t -fno-rtti
+// RUN: %atjitc   %s -o %t -fno-rtti
 // RUN: %t > %t.out
 // RUN: %FileCheck %s < %t.out
 

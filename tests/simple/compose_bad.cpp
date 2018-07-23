@@ -1,4 +1,4 @@
-// RUN: %not %easycc   %s -o %t
+// RUN: %not %atjitc   %s -o %t
 
 #include <easy/jit.h>
 

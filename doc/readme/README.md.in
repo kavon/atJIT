@@ -16,21 +16,30 @@ Prerequisites
 Before you can build atJIT, ensure that your system has
 
 - a C++ compiler with sufficient [C++17 support](https://en.cppreference.com/w/cpp/compiler_support#C.2B.2B17_features). This likely means GCC >= 7, or Clang >= 4, but slightly older versions may work.
-- cmake >= 3.4.3
+- cmake >= 3.5
 - to run the test suite (the `check` target), python 2.7 + [the lit package](https://pypi.org/project/lit/)
 
 Then, do the following:
 
 #### Step 1
 
-Install clang and LLVM. To do this on Ubuntu, you can simply install using the following command.
+Install a compatible version of clang and LLVM version 6.
+To do this on Ubuntu 18.04, you can simply install using the following command.
 
 ```bash
-apt install llvm-6.0-dev llvm-6.0-tools clang-6.0
+sudo apt update
+sudo apt install llvm-6.0-dev llvm-6.0-tools clang-6.0
 ```
 
-To use a custom-built clang + LLVM that is built from source, you will need to
-configure your build with CMake in a special way, which can be done easily by adding the following `-C` flag to your usual invocation of CMake to load the config:
+For versions of Debian or Ubuntu that do not have version 6 available in the
+default APT repositories, you can first add the appropriate APT repository
+[from this list](http://apt.llvm.org/).
+
+In order to use a clang + LLVM that was built from source, you will need to
+configure the build of LLVM with special CMake options (e.g., we require RTTI).
+We have collected these options in the `./cmake/LLVM.cmake` file, which can
+be added to your usual
+invocation of CMake when building LLVM with the `-C` flag like so:
 
 ```bash
 cmake -C <path-to-atJit-root>/cmake/LLVM.cmake  .. other arguments ..
@@ -45,23 +54,26 @@ Obtain and build XGBoost by running the following command:
 ./xgboost/get.sh
 ```
 
-Building
+Building atJIT
 --------
 
-Once you have met the prerequisites, configure and compile atJIT from the root of the project like so:
+Once you have met the prerequisites,
+the basic configuration and compile steps for atJIT, starting from the root of the project,
+are:
 
 ```bash
 mkdir build install
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=../install ..
-cmake --build .
+cmake --build . --target install
 ```
 
-Once this completes, see the next section for usage.
+Once this completes, you can jump to the usage section. For special builds of
+atJIT, see below.
 
 ##### Build Options
 
-If you are using a custom LLVM that is not installed system-wide, you'll need to add `-DCMAKE_PREFIX_PATH=<path-to-where-LLVM-was-installed>` to the first CMake command above.
+If you are using a custom LLVM that is not installed system-wide, you'll need to add `-DCMAKE_PREFIX_PATH=<path-to-where-LLVM-was-installed>` to the first CMake command above. For example, `-DCMAKE_PREFIX_PATH=~/bin/llvm6/install`.
 
 To build the examples, install the [opencv](https://opencv.org/) library,
 and add the flags ```-DEASY_JIT_EXAMPLE=1``` to the cmake command.
@@ -88,14 +100,14 @@ Basic usage
 
 ### Compiling my project with atJIT
 
-Look in your install directory for the `bin/easycc` executable, which is a
+Look in your install directory for the `bin/atjitc` executable, which is a
 thin wrapper around `clang++` with the correct arguments to run the
 clang plugin and dynamically link in the runtime system.
-You can use `easycc` as if it were `clang++`.
+You can use `atjitc` as if it were `clang++`.
 Here's an example:
 
 ```bash
-➤ install/bin/easycc -O2 tests/simple/int_a.cpp -o int_a
+➤ install/bin/atjitc -O2 tests/simple/int_a.cpp -o int_a
 ➤ ./int_a
 inc(4) is 5
 inc(5) is 6
