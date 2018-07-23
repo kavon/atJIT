@@ -59,7 +59,7 @@ T** MatMul(const int DIM, T** aMatrix, T** bMatrix) {
 
 using ElmTy = int16_t;
 
-void testWith(easy::AutoTuner TunerKind, const int ITERS) {
+void testWith(tuner::AutoTuner TunerKind, const int ITERS) {
   tuner::ATDriver AT;
 
   int DIM = 100;
@@ -103,15 +103,15 @@ int main(int argc, char** argv) {
   // CHECK: [sq_matmul] start!
   printf("[sq_matmul] start!\n");
 
-  testWith(easy::AT_None, 5);
+  testWith(tuner::AT_None, 5);
   // CHECK: [sq_matmul] noop tuner works
   printf("[sq_matmul] noop tuner works\n");
 
-  testWith(easy::AT_Random, 100);
+  testWith(tuner::AT_Random, 100);
   // CHECK: [sq_matmul] random tuner works
   printf("[sq_matmul] random tuner works\n");
 
-  testWith(easy::AT_Bayes, 100);
+  testWith(tuner::AT_Bayes, 100);
   // CHECK: [sq_matmul] bayes tuner works
   printf("[sq_matmul] bayes tuner works\n");
 

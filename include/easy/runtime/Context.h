@@ -8,13 +8,15 @@
 
 #include <easy/runtime/Function.h>
 
-namespace easy {
-
+namespace tuner {
   enum AutoTuner {
     AT_None,
     AT_Random,
     AT_Bayes
   };
+}
+
+namespace easy {
 
 struct ArgumentBase {
 
@@ -114,7 +116,7 @@ class Context {
   std::string DebugFile_;
   std::string DebugBeforeFile_;
 
-  AutoTuner TunerKind_ = AT_None;
+  tuner::AutoTuner TunerKind_ = tuner::AT_None;
 
   template<class ArgTy, class ... Args>
   inline Context& setArg(Args && ... args) {
@@ -146,12 +148,12 @@ class Context {
     return setParameterStruct(reinterpret_cast<char const*>(ptr), sizeof(T));
   }
 
-  Context& setTunerKind(AutoTuner AT) {
+  Context& setTunerKind(tuner::AutoTuner AT) {
     TunerKind_ = AT;
     return *this;
   }
 
-  AutoTuner getTunerKind() const {
+  tuner::AutoTuner getTunerKind() const {
     return TunerKind_;
   }
 

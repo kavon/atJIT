@@ -35,7 +35,7 @@ namespace options{
   // tuner kind option & correspondence.
   EASY_NEW_OPTION_STRUCT(tuner_kind) {
 
-    tuner_kind(AutoTuner kind)
+    tuner_kind(tuner::AutoTuner kind)
                : kind_(kind) {}
 
     EASY_HANDLE_OPTION_STRUCT(IGNORED, C) {
@@ -43,7 +43,7 @@ namespace options{
     }
 
     private:
-      AutoTuner kind_;
+      tuner::AutoTuner kind_;
   };
 
   // option used for writing the ir to a file, useful for debugging

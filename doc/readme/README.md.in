@@ -57,9 +57,8 @@ Obtain and build XGBoost by running the following command:
 Building atJIT
 --------
 
-Once you have met the prerequisites,
-the basic configuration and compile steps for atJIT, starting from the root of the project,
-are:
+Once you have met the prerequisites, we can build atJIT.
+Starting from the root of the project, the general build steps are:
 
 ```bash
 mkdir build install
@@ -98,12 +97,10 @@ docker run -ti easy/test /bin/bash
 Basic usage
 -----------
 
-### Compiling my project with atJIT
-
 Look in your install directory for the `bin/atjitc` executable, which is a
 thin wrapper around `clang++` with the correct arguments to run the
-clang plugin and dynamically link in the runtime system.
-You can use `atjitc` as if it were `clang++`.
+clang plugin and dynamically link in the atJIT runtime system.
+You can use `atjitc` as if it were `clang++`, as it forwards its arguments to `clang++`.
 Here's an example:
 
 ```bash
@@ -115,31 +112,56 @@ inc(6) is 7
 inc(7) is 8
 ```
 
-<!--
-Since the Easy::Jit library relies on assistance from the compiler, its
-mandatory to load a compiler plugin in order to use it.
-The flag ```-Xclang -load -Xclang <path_to_easy_jit_build>/bin/EasyJitPass.so```
-loads the plugin.
-
-The included headers require C++17 support, and remember to add the include directories!
-Use ```--std=c++17 -I<path_to_easy_jit_src>/cpplib/include```.
-
-Finaly, the binary must be linked against the Easy::Jit runtime library, using
-```-L<path_to_easy_jit_build>/bin -lEasyJitRuntime```.
-
-Putting all together we get the command bellow.
-
-```bash
-clang++-6.0 --std=c++17 <my_file.cpp> \
-  -Xclang -load -Xclang /path/to/easy/jit/build/bin/bin/EasyJitPass.so \
-  -I<path_to_easy_jit_src>/cpplib/include \
-  -L<path_to_easy_jit_build>/bin -lEasyJitRuntime
-```
--->
-
 ### Using atJIT inside my project
 
-*coming soon*
+The C++ library to use atJIT is quite simple.
+To get started, construct the driver for the autotuner:
+
+```c++
+#include <tuner/driver.h>
+
+... {
+  tuner::ATDriver AT;
+  // ...
+}
+```
+
+A single driver can handle the tuning of multiple functions.
+The driver only exposes one, do-it-all, variadic method `reoptimize`.
+To actually "drive" the autotuning process, you should ideally call
+`reoptimize` before every function call.
+Sometimes the tuner will JIT compile a new version, or it will return
+an already-compiled version that needs further runtime measurements.
+
+Given a tuner `AT`, `reoptimize` has the following generic usage:
+
+```c++
+  /* (1) return type */ F = AT.reoptimize(
+                           /* (2) function to reoptimize */
+                           /* (3) arguments to the function */
+                           /* (4) options for the tuner */
+                          );   
+```
+
+1. The return type of the function is some variant of `easy::FunctionWrapper<> const&`, which is a C++ function object that can be called like an ordinary function. The type depends on (2) and (3), and you can typically just write `auto const&` in its place.
+
+2. The function to be optimized, which can be a template function if the type is specified.
+
+3. The list of arguments must match the arity of the original function, though not all arguments need to have a real value.
+Providing a runtime value will allow the JIT compiler to specialize based on the value, and [std::placeholders](https://en.cppreference.com/w/cpp/utility/functional/placeholders) (e.g., `std::placeholders::_1`) leave parameters as-is. For example:
+
+```c++
+</include simple_at.cpp USAGE/>
+```
+
+4. The main option for the tuner is what algorithm to use during the search. If no option is specified, the tuner currently will not perform any search.
+To use the random search, we would specify `tuner::AT_Random` like so:
+
+```c++
+</include simple_at.cpp TUNING/>
+```
+
+See `doc/readme/simple_at.cpp` for the complete example we have walked through in this section.
 
 <!--
 
