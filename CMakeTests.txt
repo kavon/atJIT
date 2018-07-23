@@ -2,9 +2,13 @@ find_python_module(lit REQUIRED)
 
 set(ALL_TESTS tests/)
 
+# it is not possible to use add_dependencies on the install target, since it's
+# not a "real" target: https://cmake.org/cmake/help/v3.5/command/add_dependencies.html
 add_custom_target(check
                   COMMAND ${PYTHON_EXEC} -m lit.main ${ALL_TESTS} -v --time-tests -j 4 --shuffle
-                  DEPENDS install)
+                  COMMENT "running regression test suite..."
+                  USES_TERMINAL
+                  )
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tests/lit.cfg.in" "${CMAKE_CURRENT_BINARY_DIR}/tests/lit.cfg")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tests/doc/lit.cfg.in" "${CMAKE_CURRENT_BINARY_DIR}/tests/doc/lit.cfg")
