@@ -8,7 +8,7 @@ About
 
 atJIT is an early-phase experiment in online autotuning.
 
-The code was originally based on the [Easy::jit](https://github.com/jmmartinez/easy-just-in-time) project.
+The code was originally based on the Easy::jit project.
 
 Prerequisites
 --------
@@ -23,8 +23,8 @@ Then, do the following:
 
 #### Step 1
 
-Install a compatible version of clang and LLVM version 6.
-To do this on Ubuntu 18.04, you can simply install using the following command.
+Install a compatible version of [clang](http://clang.llvm.org/) and [LLVM](http://llvm.org/) version 6.
+To do this on Ubuntu 18.04, you can simply install using the following command:
 
 ```bash
 sudo apt update
@@ -80,6 +80,17 @@ and add the flags ```-DEASY_JIT_EXAMPLE=1``` to the cmake command.
 To enable benchmarking, install the [google benchmark](https://github.com/google/benchmark) framework,
 and add the flags ```-DEASY_JIT_BENCHMARK=1 -DBENCHMARK_DIR=<path_to_google_benchmark_install>``` to the cmake command.
 
+##### Regression Testing
+
+The test suite (`check` target) can be run after the `install` target has been built:
+
+```bash
+cmake --build . --target install
+cmake --build . --target check
+```
+
+None of the tests should have an unexpected failure/success.
+
 <!--
 ### Docker
 
@@ -104,7 +115,7 @@ You can use `atjitc` as if it were `clang++`, as it forwards its arguments to `c
 Here's an example:
 
 ```bash
-➤ install/bin/atjitc -O2 tests/simple/int_a.cpp -o int_a
+➤ install/bin/atjitc -Wall -O2 tests/simple/int_a.cpp -o int_a
 ➤ ./int_a
 inc(4) is 5
 inc(5) is 6
@@ -112,9 +123,9 @@ inc(6) is 7
 inc(7) is 8
 ```
 
-### Using atJIT inside my project
+### Using atJIT in my project
 
-The C++ library to use atJIT is quite simple.
+The C++ library interface to atJIT is quite minimal.
 To get started, construct the driver for the autotuner:
 
 ```c++
@@ -126,13 +137,8 @@ To get started, construct the driver for the autotuner:
 }
 ```
 
-A single driver can handle the tuning of multiple functions.
+A single driver can handle the tuning of multiple functions, each with their own unique partial argument applications.
 The driver only exposes one, do-it-all, variadic method `reoptimize`.
-To actually "drive" the autotuning process, you should ideally call
-`reoptimize` before every function call.
-Sometimes the tuner will JIT compile a new version, or it will return
-an already-compiled version that needs further runtime measurements.
-
 Given a tuner `AT`, `reoptimize` has the following generic usage:
 
 ```c++
@@ -151,31 +157,56 @@ Given a tuner `AT`, `reoptimize` has the following generic usage:
 Providing a runtime value will allow the JIT compiler to specialize based on the value, and [std::placeholders](https://en.cppreference.com/w/cpp/utility/functional/placeholders) (e.g., `std::placeholders::_1`) leave parameters as-is. For example:
 
 ```c++
-// returns a function computing fsub(a, 1.0)
+using namespace std::placeholders;
+
+float fsub(float a, float b) { return a-b; }
+
+int main () {
+  tuner::ATDriver AT;
+
+  // returns a function computing fsub(a, 1.0)
   easy::FunctionWrapper<float(float)> const& decrement =
-    AT.reoptimize(fsub, _1, 1.0);
+      AT.reoptimize(fsub, _1, 1.0);
 
   // returns a function computing fsub(0.0, b)
   auto const& negate = AT.reoptimize(fsub, 0.0, _1);
 
   printf("dec(5) == %f\n", decrement(5));
   printf("neg(3) == %f\n", negate(3));
+  // ...
 ```
 
 4. The main option for the tuner is what algorithm to use during the search. If no option is specified, the tuner currently will not perform any search.
 To use the random search, we would specify `tuner::AT_Random` like so:
 
 ```c++
+using namespace easy::options;
+
+// returns a function equivalent to fsub(a, b)
+auto const& fsubJIT = AT.reoptimize(fsub, _1, _2,
+                           tuner_kind(tuner::AT_Random));
+
+printf("fsubJIT(3, 2) == %f\n", fsubJIT(3.0, 2.0));
+```
+
+#### Autotuning a Function
+
+To actually *drive* the online autotuning process for some function F, you must repeatedly `reoptimize` F and call the newly returned version F' at least once. Ideally, you would ask the tuner for a reoptimized version of F before every call. For example:
+
+```c++
 for (int i = 0; i < 100; ++i) {
     auto const& tunedSub7 =
-        AT.reoptimize(fsub, _1, 7.0,
-            easy::options::tuner_kind(tuner::AT_Random));
+        AT.reoptimize(fsub, _1, 7.0, tuner_kind(tuner::AT_Random));
 
     printf("8 - 7 == %f\n", tunedSub7(8));
   }
 ```
 
+Don't worry about calling `reoptimize` too often. Sometimes the tuner will JIT compile a new version, but often it will return
+a ready-to-go version that needs more runtime measurements to determine its quality.
+
 See `doc/readme/simple_at.cpp` for the complete example we have walked through in this section.
+
 
 <!--
 
@@ -291,5 +322,8 @@ See file `LICENSE` at the top-level directory of this project.
 Acknowledgements
 ------
 
-Special thanks to Serge Guelton and Juan Manuel Martinez Caamaño for
-originally developing Easy::jit.
+Special thanks to:
+
+* Hal Finkel & Michael Kruse (Argonne National Laboratory)
+* John Reppy (University of Chicago)
+* Serge Guelton & Juan Manuel Martinez Caamaño (originally developed [Easy::jit](https://github.com/jmmartinez/easy-just-in-time))

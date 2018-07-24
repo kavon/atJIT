@@ -9,7 +9,7 @@ Todos
   - create a range/set type usable by both tuner and user.
 - smarter navigation of the search space
   - ~~JIT only when we have feedback from last version~~
-  - integrate XGBoost
+  - ~~integrate XGBoost~~
   - create a SURF tuner
 - running-time normalization
   - first thing to try is put in user-interface to specify indicators of workload for normalization
