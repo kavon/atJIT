@@ -31,11 +31,11 @@ namespace tuner {
   class Knob {
 
   private:
-    KnobID id;
+    KnobID id__;
 
   public:
     Knob() {
-      id = KnobTicker++;
+      id__ = KnobTicker++;
     }
     // value accessors
     virtual ValTy getDefault() const = 0;
@@ -48,7 +48,7 @@ namespace tuner {
     // since multiple instances of autotuners can be created
     // per process, this only guarentees uniqueness of each
     // instance, it is otherwise unstable.
-    KnobID getID() const { return id; }
+    KnobID getID() const { return id__; }
 
     virtual std::string getName() const {
        return "knob id " + std::to_string(getID());

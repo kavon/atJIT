@@ -107,11 +107,11 @@ int main(int argc, char** argv) {
   // CHECK: [sq_matmul] noop tuner works
   printf("[sq_matmul] noop tuner works\n");
 
-  testWith(tuner::AT_Random, 100);
+  testWith(tuner::AT_Random, 150);
   // CHECK: [sq_matmul] random tuner works
   printf("[sq_matmul] random tuner works\n");
 
-  testWith(tuner::AT_Bayes, 100);
+  testWith(tuner::AT_Bayes, 150);
   // CHECK: [sq_matmul] bayes tuner works
   printf("[sq_matmul] bayes tuner works\n");
 

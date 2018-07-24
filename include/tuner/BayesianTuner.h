@@ -6,6 +6,7 @@
 
 #include <cstdlib>
 #include <cassert>
+#include <set>
 
 #include <xgboost/c_api.h>
 
@@ -39,7 +40,8 @@ namespace tuner {
   private:
     // the number of configs we have evaluated since we last trained a model
     uint32_t SinceLastTraining_ = 0;
-    uint32_t BatchSz_ = 2;
+    uint32_t BatchSz_ = 5;
+    uint32_t ExploreSz_ = 100;
 
     std::list<KnobConfig> Predictions_; // current top predictions
 
@@ -107,7 +109,7 @@ namespace tuner {
       // First, we need to retrain a new model.
       ///////
 
-      printf("MAKING BAYESIAN INFERENCE\n");
+      printf("STARTING TO SURF\n");
 
       updateDataset();
 
@@ -128,14 +130,14 @@ namespace tuner {
       XGBoosterSetParam(booster, "booster", "gbtree");
       XGBoosterSetParam(booster, "objective", "reg:linear");
       XGBoosterSetParam(booster, "max_depth", "5");
-      XGBoosterSetParam(booster, "eta", "0.1");
+      XGBoosterSetParam(booster, "eta", "0.3");
       XGBoosterSetParam(booster, "min_child_weight", "1");
       XGBoosterSetParam(booster, "subsample", "0.5");
       XGBoosterSetParam(booster, "colsample_bytree", "1");
-      XGBoosterSetParam(booster, "num_parallel_tree", "1");
+      XGBoosterSetParam(booster, "num_parallel_tree", "4");
 
       // learn
-      for (int i = 0; i < 200; i++) {
+      for (int i = 0; i < 250; i++) {
         XGBoosterUpdateOneIter(booster, i, dmat[0]);
       }
 
@@ -144,15 +146,69 @@ namespace tuner {
       // in the pool.
       ///////
 
-      // TODO generate configurations, turn them into a DMatrix,
-      // and ask the model to predict the times.
+      // build test cases
+      std::vector<KnobConfig> Test;
+      float* testMat = (float*) malloc(ExploreSz_ * ncol * sizeof(float));
+      for (uint32_t i = 0; i < ExploreSz_; ++i) {
+        KnobConfig KC = genRandomConfig(KS_, RNE_);
+        exportConfig(KC, testMat, i, ncol, colToKnob);
+        Test.push_back(KC);
+      }
 
-      // TODO pick the top BatchSz performers from the prediction,
-      // and push them onto the Predictions queue.
 
-      // TODO free memory related to the XGB objects.
+      // get predictions
+      DMatrixHandle h_test;
+      XGDMatrixCreateFromMat((float *) testMat, ExploreSz_, ncol, MISSING, &h_test);
+      bst_ulong out_len;
+      const float *out;
+      XGBoosterPredict(booster, h_test, 0, 0, &out_len, &out);
 
-      return false;
+
+      // pick best configs based on predictions ones
+      using SetKey = std::pair<uint32_t, float>;
+
+      struct lessThan {
+        constexpr bool operator()(const SetKey &lhs, const SetKey &rhs) const
+        {
+            return lhs.second < rhs.second;
+        }
+      };
+
+      std::multiset<SetKey, lessThan> Best;
+      for (uint32_t i = 0; i < out_len; i++) {
+        // DEBUG
+        std::cout << "prediction[" << i << "]=" << out[i] << std::endl;
+        auto Cur = std::make_pair(i, out[i]);
+
+        if (Best.size() < BatchSz_) {
+          Best.insert(Cur);
+          continue;
+        }
+
+        auto UB = Best.upper_bound(Cur);
+        if (UB != Best.end()) {
+          // then UB is greater than Cur
+          Best.erase(UB);
+          Best.insert(Cur);
+        }
+      }
+
+      for (auto Entry : Best) {
+        auto Chosen = Entry.first;
+        std::cout << "chose config " << Chosen
+                  << " with estimated time " << Entry.second << std::endl;
+        Predictions_.push_back(Test[Chosen]);
+      }
+
+      // DONE
+
+      // free memory related to the XGB objects.
+      XGDMatrixFree(dmat[0]);
+      XGBoosterFree(booster);
+      XGDMatrixFree(h_test);
+      free(testMat);
+
+      return (Predictions_.size() > 0);
     }
 
 
