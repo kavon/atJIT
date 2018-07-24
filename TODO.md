@@ -5,15 +5,19 @@ Todos
 
 - ~~more loop metadata knobs~~
 - integrate with Michael's LLVM branch
+  - generate polly knobs
 - allow users to specify a tunable function parameter
-  - create a range/set type usable by both tuner and user.
+  - create a range/set type usable by both tuner and user
 - smarter navigation of the search space
   - ~~JIT only when we have feedback from last version~~
   - ~~integrate XGBoost~~
   - create a SURF tuner
+  - create a simulated annealing tuner
 - running-time normalization
   - first thing to try is put in user-interface to specify indicators of workload for normalization
   - then try to find that out automatically.
+  - alternative: include the context in the model,
+    and generate a decision tree in the code based on what the model learned dispatch to differently optimized functions based on inputs.
 
 
 ## JIT Compilation
