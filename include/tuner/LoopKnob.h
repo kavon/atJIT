@@ -2,6 +2,7 @@
 #define TUNER_LOOP_KNOBS
 
 #include <tuner/Knob.h>
+#include <tuner/Util.h>
 
 #include <optional>
 #include <cinttypes>
@@ -52,6 +53,47 @@ namespace tuner {
 
     std::optional<bool> Distribute{};
 
+    size_t size() const {
+      return 8;
+    }
+
+    static void flatten(float* slice, LoopSetting LS) {
+      size_t i = 0;
+
+      LoopSetting::flatten(slice + i++, LS.VectorizeEnable);
+      LoopSetting::flatten(slice + i++, LS.VectorizeWidth);
+
+      LoopSetting::flatten(slice + i++, LS.InterleaveCount);
+
+      LoopSetting::flatten(slice + i++, LS.UnrollDisable);
+      LoopSetting::flatten(slice + i++, LS.UnrollFull);
+      LoopSetting::flatten(slice + i++, LS.UnrollCount);
+
+      LoopSetting::flatten(slice + i++, LS.LICMVerDisable);
+
+      LoopSetting::flatten(slice + i++, LS.Distribute);
+
+
+      if (i != LS.size())
+        throw std::logic_error("size does not match expectations");
+    }
+
+    // TODO: is the use of MISSING here correct?
+
+    static void flatten(float* slice, std::optional<bool> opt) {
+      if (opt)
+        *slice = opt.value() ? 1.0 : 0.0;
+      else
+        *slice = MISSING;
+    }
+
+    static void flatten(float* slice, std::optional<uint16_t> opt) {
+      if (opt)
+        *slice = (float) opt.value();
+      else
+        *slice = MISSING;
+    }
+
   };
 
   class LoopKnob : public Knob<LoopSetting> {
@@ -81,6 +123,10 @@ namespace tuner {
 
     virtual std::string getName() const override {
        return "loop #" + std::to_string(getLoopName());
+    }
+
+    virtual size_t size() const override {
+      return Opt.size();
     }
 
   }; // end class

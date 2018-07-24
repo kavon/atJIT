@@ -30,10 +30,15 @@ namespace tuner {
     std::unordered_map<KnobID, knob_type::Loop*> LoopKnobs;
 
     size_t size() const {
-      return (
-        IntKnobs.size()
-        + LoopKnobs.size()
-      );
+      size_t numVals = 0;
+
+      for (auto const& Entry : IntKnobs)
+        numVals += Entry.second->size();
+
+      for (auto const& Entry : LoopKnobs)
+        numVals += Entry.second->size();
+
+      return numVals;
     }
 
   };
@@ -53,7 +58,6 @@ namespace tuner {
 
  void applyToKnobs(KnobSetAppFn &F, KnobSet const &KS);
  void applyToKnobs(KnobIDAppFn &F, KnobSet const &KS);
-
 
 }
 

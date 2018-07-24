@@ -25,8 +25,8 @@ namespace tuner {
   // a KnobSet, the floats can be interpreted for what they mean.
   class KnobConfig {
   public:
-    std::vector<std::pair<KnobID, int>> IntConfig;
-    std::vector<std::pair<KnobID, LoopSetting>> LoopConfig;
+    std::unordered_map<KnobID, int> IntConfig;
+    std::unordered_map<KnobID, LoopSetting> LoopConfig;
 
   };
 
@@ -38,8 +38,8 @@ namespace tuner {
   KnobConfig genDefaultConfig(KnobSet const&);
 
   void exportConfig(KnobConfig const& KC,
-                    float* mat, uint64_t row, uint64_t ncol,
-                    uint64_t* colToKnob, const float MISSING);
+                    float* mat, const uint64_t row, const uint64_t ncol,
+                    uint64_t const* colToKnob);
 
   class KnobConfigAppFn {
   public:
@@ -47,8 +47,21 @@ namespace tuner {
       virtual void operator()(std::pair<KnobID, LoopSetting>) = 0;
   };
 
+  // a version of the AppFn that only applies to the given knob ID.
+  // uses lookups to find the Knob in the config. Is reusable.
+  class KnobConfigSelFun : public KnobConfigAppFn {
+    KnobID id_;
+  public:
+    KnobConfigSelFun(KnobID id) : id_(id) {}
+    KnobID getID() const { return id_; }
+    void setID(KnobID newID) { id_ = newID; }
+
+    virtual void notFound() = 0;
+  };
+
   void applyToConfig(KnobConfigAppFn &F, KnobConfig const &Settings);
   void applyToConfig(KnobIDAppFn &F, KnobConfig const &Settings);
+  void applyToConfig(KnobConfigSelFun &F, KnobConfig const &Settings);
 
 }
 

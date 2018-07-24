@@ -5,18 +5,25 @@
 #include <climits>
 #include <string>
 
+#include <tuner/Util.h>
+
 #include <llvm/IR/Module.h>
 
 namespace tuner {
 
   // polymorphism of Knobs is primarily achieved through inheritance.
 
+  // I really wish c++ supported template methods that are virtual!
+  // We implement the template portion manually with macros.
+  // If you see things like "HANDLE_CASE" that take a type as a parameter,
+  // that's what we mean. This is still robust, since a new virtual method will
+  // cause the compiler to point out places where you haven't updated your code
+
   using KnobID = uint64_t;
 
-namespace {
   // used to ensure knob IDs are unique.
-  static KnobID KnobTicker = 1;
-}
+  // we rely on the fact that 0 is an invalid knob ID
+  extern KnobID KnobTicker;
 
   // Base class for tunable compiler "knobs", which
   // are simply tunable components.
@@ -46,6 +53,10 @@ namespace {
     virtual std::string getName() const {
        return "knob id " + std::to_string(getID());
     }
+
+    // members related to exporting to a flat array
+
+    virtual size_t size() const { return 1; } // num values to be flattened
 
   }; // end class Knob
 

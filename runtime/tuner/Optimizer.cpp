@@ -154,7 +154,7 @@ namespace tuner {
     auto End = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
 
-    Tuner_->dump();
+    // Tuner_->dump();
 
     std::cout << "Finished in " << elapsed.count() << "ms\n"
               << "+++++++\n";

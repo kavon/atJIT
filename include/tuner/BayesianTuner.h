@@ -2,6 +2,7 @@
 #define TUNER_BAYES_TUNER
 
 #include <tuner/AnalyzingTuner.h>
+#include <tuner/Util.h>
 
 #include <cstdlib>
 #include <cassert>
@@ -11,14 +12,24 @@
 namespace tuner {
 
   namespace {
-    class AssignToCols : public KnobIDAppFn {
+    class AssignToCols : public KnobSetAppFn {
       uint64_t i = 0;
       uint64_t* colToKnob;
     public:
       AssignToCols(uint64_t* fv1) : colToKnob(fv1) {}
-      void operator()(KnobID id) {
-        colToKnob[i++] = id;
+
+      #define HANDLE_CASE(KnobKind)                                            \
+      void operator()(std::pair<KnobID, KnobKind> I) override {                \
+        auto Knob = I.second;                                                  \
+        auto ID = I.first;                                                     \
+        for (size_t k = 0; k < Knob->size(); ++k)                              \
+          colToKnob[i++] = ID;                                                 \
       }
+
+      HANDLE_CASE(knob_type::Int*)
+      HANDLE_CASE(knob_type::Loop*)
+
+      #undef HANDLE_CASE
     }; // end class
   } // end namespace
 
@@ -28,7 +39,7 @@ namespace tuner {
   private:
     // the number of configs we have evaluated since we last trained a model
     uint32_t SinceLastTraining_ = 0;
-    uint32_t BatchSz_ = 32;
+    uint32_t BatchSz_ = 2;
 
     std::list<KnobConfig> Predictions_; // current top predictions
 
@@ -42,9 +53,10 @@ namespace tuner {
     // result -- an array of length nrow containing training labels.
     //           result[i] is the observed output of configuration cfg[i].
     //
-    // colToKnob -- a map from KnobIDs -> column numbers, implemented as an array.
+    // colToKnob -- a map from column numbers -> KnobIDs.
+    //              a knob can span 1 or more contiguous columns, so col[i]
+    //              may be the same as col[i+1];
     //
-    static constexpr float MISSING = std::numeric_limits<float>::quiet_NaN();
     uint64_t ncol = 0;
     uint64_t nrow = 0;
     float *result = NULL;
@@ -78,7 +90,7 @@ namespace tuner {
         auto KC = Entry.first;
         auto FB = Entry.second;
 
-        exportConfig(*KC, cfg, i, ncol, colToKnob, MISSING);
+        exportConfig(*KC, cfg, i, ncol, colToKnob);
 
         auto measure = FB->avgMeasurement();
         // NOTE: i'm not sure if we're allowed to use MISSING here.
@@ -95,9 +107,11 @@ namespace tuner {
       // First, we need to retrain a new model.
       ///////
 
+      printf("MAKING BAYESIAN INFERENCE\n");
+
       updateDataset();
 
-      // must be a array. not sure why.
+      // must be an array. not sure why.
       DMatrixHandle dmat[1];
 
       // add config data
