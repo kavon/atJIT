@@ -12,7 +12,7 @@ namespace tuner {
 
   // TODO: a better version of this knob would expose
   // a vector that represents all of the InlineParams fields.
-  class TunableInliner : public ScalarKnob<int>, public llvm::LegacyInlinerBase {
+  class TunableInliner : public ScalarRange<int>, public llvm::LegacyInlinerBase {
     llvm::InlineParams Params;
     llvm::InlineParams DefaultParams;
 

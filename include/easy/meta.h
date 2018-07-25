@@ -31,7 +31,7 @@ struct type_list {
   static constexpr bool empty = true;
 };
 
-template<class Head, class ... Tail> 
+template<class Head, class ... Tail>
 struct type_list<Head, Tail ...> {
   using head = Head;
   using tail = struct type_list<Tail...>;
@@ -133,6 +133,7 @@ struct map_placeholder_to_type {
 
   template<class _, class __, class Result, class Seen, size_t N, bool Done>
   struct helper {
+    static_assert(Done, "we should be done here!");
     static_assert(Seen::size == N, "Seen::size != N");
     static_assert(Result::size == N, "Result::size != N");
     static_assert(!Result::template has<void>, "Void cannot appear in the resulting type");
@@ -145,7 +146,7 @@ struct map_placeholder_to_type {
     using al_tail = typename AL::tail;
 
     static bool constexpr parse_placeholder = is_ph<al_head>::value && !Seen::template has<al_head>;
-    static size_t constexpr result_idx = parse_placeholder?is_ph<al_head>::value-1:0;
+    static size_t constexpr result_idx = parse_placeholder ? is_ph<al_head>::value-1 : 0;
     static size_t constexpr arg_idx = PL::size - AL::size;
     using pl_at_idx = typename PL::template at<arg_idx>;
 

@@ -6,6 +6,8 @@
 #include <easy/options.h>
 #include <easy/meta.h>
 
+#include <tuner/param.h>
+
 namespace easy {
 
 namespace  {
@@ -45,6 +47,11 @@ struct set_parameter_helper {
                   "easy::jit composition is not possible. Incompatible types.");
     C.setParameterModule(arg.getFunction());
   }
+
+  // TODO: add an instance of set_param for tuner::Param
+  // and create infrastructure in the Context for such params.
+  // also: perform a type-checking operation here to ensure that
+  // unwrapped<Param> == Arg
 };
 
 template<>
@@ -89,7 +96,8 @@ struct set_parameter {
 
   static constexpr bool is_ph = std::is_placeholder<std::decay_t<Arg>>::value;
   static constexpr bool is_fw = easy::is_function_wrapper<Arg>::value;
-  static constexpr bool is_special = is_ph || is_fw;
+  static constexpr bool is_knb = tuner::is_knob<std::decay_t<Arg>>::value;
+  static constexpr bool is_special = is_ph || is_fw || is_knb;
 
   using help = set_parameter_helper<is_special>;
 };

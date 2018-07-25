@@ -4,6 +4,7 @@
 #include <cinttypes>
 #include <climits>
 #include <string>
+#include <cassert>
 
 #include <tuner/Util.h>
 
@@ -61,20 +62,38 @@ namespace tuner {
   }; // end class Knob
 
 
+  // represents a knob that can take on values in the range
+  // [a, b], where a, b are scalar values.
   template < typename ValTy >
-  class ScalarKnob : public Knob<ValTy> {
-
+  class ScalarRange : public Knob<ValTy> {
   public:
+
     // inclusive ranges
     virtual ValTy min() const = 0;
     virtual ValTy max() const = 0;
-  }; // end class ScalarKnob
+
+  }; // end class ScalarRange
 
 
-// handy type aliases.
+////////////////////////
+// handy type aliases and type utilities
+
 namespace knob_type {
-  using Int = tuner::ScalarKnob<int>;
+  using IntRange = tuner::ScalarRange<int>;
 }
+
+// this needs to appear first, before specializations.
+template< typename Any >
+struct is_knob {
+  static constexpr bool value = false;
+  using rawTy = void;
+};
+
+template< >
+struct is_knob< knob_type::IntRange >  {
+  static constexpr bool value = true;
+  using rawTy = int;
+};
 
 
 } // namespace tuner
