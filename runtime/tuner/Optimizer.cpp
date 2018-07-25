@@ -127,10 +127,6 @@ namespace tuner {
     // NOTE(kavon): right now we throw away the indicator saying whether
     // the module changed. Perhaps its useful to store that in the Feedback?
 
-    // load in data.
-    // std::shared_ptr<xgboost::DMatrix> dtrain(
-    //       xgboost::DMatrix::Load("~/hello.txt", false, true));
-
     std::cout << "\nREOPTIMIZING\n";
 
     auto Start = std::chrono::system_clock::now();
