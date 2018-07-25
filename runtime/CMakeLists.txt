@@ -16,6 +16,7 @@ add_library(EasyJitRuntime SHARED
   tuner/KnobConfig.cpp
   tuner/KnobSet.cpp
   tuner/Statics.cpp
+  tuner/Knob.cpp
 )
 
 # the installed version of the library needs to

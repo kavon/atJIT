@@ -2,7 +2,9 @@
 #define TUNER_PARAM
 
 #include <tuner/Knob.h>
+
 #include <cassert>
+#include <cinttypes>
 
 namespace tuned_param {
 
@@ -31,11 +33,25 @@ public:
     assert(lo_ <= dflt && dflt <= hi_ && "default doesn't make sense");
     setVal(dflt);
   }
+
+  size_t hash() const {
+    return max() ^ min() ^ getDefault();
+  }
+
+  bool operator==(IntRange const&);
 };
 
+} // end namespace tuned_param
 
-
-
-}
+namespace std {
+  template<> struct hash<tuned_param::IntRange>
+  {
+    typedef tuned_param::IntRange argument_type;
+    typedef std::size_t result_type;
+    result_type operator()(argument_type const& s) const noexcept {
+      return s.hash();
+    }
+  };
+} // end namespace std
 
 #endif // TUNER_PARAM

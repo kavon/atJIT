@@ -72,6 +72,9 @@ namespace tuner {
     virtual ValTy min() const = 0;
     virtual ValTy max() const = 0;
 
+    template <typename S>
+    friend bool operator== (ScalarRange<S> const&, ScalarRange<S> const&);
+
   }; // end class ScalarRange
 
 
