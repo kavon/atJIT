@@ -36,6 +36,8 @@ namespace tuner {
 
   public:
     Knob() {
+      if (KnobTicker == 0)
+        throw std::runtime_error("exhausted the KnobTicker!");
       id__ = KnobTicker++;
     }
     // value accessors
