@@ -30,6 +30,7 @@ private:
   bool InitializedSelf_;
 
   void setupPassManager(KnobSet &);
+  void findContextKnobs(KnobSet &);
 
   // members related to automatic tuning
   Tuner *Tuner_;

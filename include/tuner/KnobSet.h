@@ -26,7 +26,7 @@ namespace tuner {
 
   class KnobSet {
   public:
-    std::unordered_map<KnobID, knob_type::IntRange*> IntKnobs;
+    std::unordered_map<KnobID, knob_type::ScalarInt*> IntKnobs;
     std::unordered_map<KnobID, knob_type::Loop*> LoopKnobs;
 
     size_t size() const {
@@ -46,7 +46,7 @@ namespace tuner {
   // applies some arbitrary operation to a KnobSet
   class KnobSetAppFn {
   public:
-      virtual void operator()(std::pair<KnobID, knob_type::IntRange*>) = 0;
+      virtual void operator()(std::pair<KnobID, knob_type::ScalarInt*>) = 0;
       virtual void operator()(std::pair<KnobID, knob_type::Loop*>) = 0;
   };
 

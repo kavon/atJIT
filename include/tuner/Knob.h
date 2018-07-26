@@ -82,7 +82,7 @@ namespace tuner {
 // handy type aliases and type utilities
 
 namespace knob_type {
-  using IntRange = tuner::ScalarRange<int>;
+  using ScalarInt = tuner::ScalarRange<int>;
 }
 
 // this needs to appear first, before specializations.

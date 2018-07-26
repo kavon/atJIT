@@ -76,8 +76,8 @@ void GetInlineArgs(easy::Context const &C, FunctionType& OldTy, Function &Wrappe
 
       case easy::ArgumentBase::AK_IntRange: {
         auto const *IntArg = Arg.as<easy::IntRangeArgument>();
-        auto &IntRange = IntArg->get();
-        Args.push_back(ConstantInt::get(ParamTy, IntRange.getCurrent(), true));
+        auto *IntRange = IntArg->get();
+        Args.push_back(ConstantInt::get(ParamTy, IntRange->getVal(), true));
       } break;
 
       case easy::ArgumentBase::AK_Ptr: {

@@ -11,7 +11,7 @@ public:
   GenSimpleRandConfig (RNE &Engine) : Eng(Engine) {}
   KnobConfig get() { return Conf; }
 
-  void operator()(std::pair<KnobID, knob_type::IntRange*> I) override {
+  void operator()(std::pair<KnobID, knob_type::ScalarInt*> I) override {
     auto Knob = I.second;
     std::uniform_int_distribution<> dist(Knob->min(), Knob->max());
     Conf.IntConfig[Knob->getID()] = dist(Eng);
@@ -36,7 +36,7 @@ public:
     Conf.Member[Knob->getID()] = Knob->getDefault();                           \
   }
 
-  HANDLE_CASE(knob_type::IntRange*, IntConfig)
+  HANDLE_CASE(knob_type::ScalarInt*, IntConfig)
   HANDLE_CASE(knob_type::Loop*, LoopConfig)
 
   #undef HANDLE_CASE

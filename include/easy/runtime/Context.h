@@ -83,7 +83,32 @@ DeclareArgument(Int, int64_t);
 DeclareArgument(Float, double);
 DeclareArgument(Ptr, void const*);
 DeclareArgument(Module, easy::Function const&);
-DeclareArgument(IntRange, tuned_param::IntRange&);
+
+// NOTE: when more tunable params are added, we probably
+// want to make this a macro. The main difference
+// between this and DeclareArgument is that we dereference
+// the Data_ when doing comparisons.
+class IntRangeArgument
+    : public ArgumentBase {
+  tuned_param::IntRange* Data_;
+  public:
+  IntRangeArgument(tuned_param::IntRange* D)
+    : ArgumentBase(), Data_(D) {};
+  virtual ~IntRangeArgument() { delete Data_; }
+  tuned_param::IntRange* get() const { return Data_; }
+  static constexpr ArgumentKind Kind = AK_IntRange;
+  ArgumentKind kind() const noexcept override  { return Kind; }
+
+  protected:
+  bool compareWithSameType(ArgumentBase const& Other) const override {
+    auto const &OtherCast = static_cast<IntRangeArgument const&>(Other);
+    return *Data_ == *OtherCast.Data_;
+  }
+
+  size_t hash() const noexcept override {
+    return Data_->hash();
+  }
+};
 
 class StructArgument
     : public ArgumentBase {
@@ -140,7 +165,7 @@ class Context {
   Context& setParameterPointer(void const*);
   Context& setParameterStruct(char const*, size_t);
   Context& setParameterModule(easy::Function const&);
-  Context& setTunableParam(tuned_param::IntRange &);
+  Context& setTunableParam(tuned_param::IntRange);
 
   template<class T>
   Context& setParameterTypedPointer(T* ptr) {

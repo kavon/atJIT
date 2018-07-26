@@ -26,8 +26,8 @@ Context& Context::setParameterModule(easy::Function const &F) {
   return setArg<ModuleArgument>(F);
 }
 
-Context& Context::setTunableParam(tuned_param::IntRange &K) {
-  return setArg<IntRangeArgument>(K);
+Context& Context::setTunableParam(tuned_param::IntRange K) {
+  return setArg<IntRangeArgument>(new tuned_param::IntRange(K));
 }
 
 bool Context::operator==(const Context& Other) const {

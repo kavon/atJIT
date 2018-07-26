@@ -133,7 +133,7 @@ class ExecutionTime : public Feedback {
   }
 
   std::optional<double> avgMeasurement() const override {
-    if (dataPoints > 1 && stdErrorPct <= 1.0)
+    if (dataPoints > 1 && stdErrorPct <= 10.0)
       return average;
 
     return std::nullopt;

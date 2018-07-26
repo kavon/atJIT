@@ -58,6 +58,29 @@ namespace tuner {
 
   }
 
+  void Optimizer::findContextKnobs(KnobSet &KS) {
+    for (std::shared_ptr<easy::ArgumentBase> AB : *Cxt_) {
+      switch(AB->kind()) {
+
+        case easy::ArgumentBase::AK_IntRange: {
+          auto const* IntArg = AB->as<easy::IntRangeArgument>();
+          auto *ScalarKnob = static_cast<knob_type::ScalarInt*>(IntArg->get());
+          KS.IntKnobs[ScalarKnob->getID()] = ScalarKnob;
+        } break;
+
+        case easy::ArgumentBase::AK_Forward:
+        case easy::ArgumentBase::AK_Int:
+        case easy::ArgumentBase::AK_Float:
+        case easy::ArgumentBase::AK_Ptr:
+        case easy::ArgumentBase::AK_Struct:
+        case easy::ArgumentBase::AK_Module: {
+          continue;
+        } break;
+      };
+
+    }
+  }
+
   // currently, this constructor is called every time we query the ATDriver's
   // state map, because of how unordered_map is setup. Thus, you'll want to
   // call "initialize" once the object is known to be needed to actually
@@ -92,6 +115,8 @@ namespace tuner {
     KnobSet KS;
 
     setupPassManager(KS);
+
+    findContextKnobs(KS);
 
 
     /////////

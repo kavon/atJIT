@@ -27,7 +27,7 @@ namespace tuner {
           colToKnob[i++] = ID;                                                 \
       }
 
-      HANDLE_CASE(knob_type::IntRange*)
+      HANDLE_CASE(knob_type::ScalarInt*)
       HANDLE_CASE(knob_type::Loop*)
 
       #undef HANDLE_CASE

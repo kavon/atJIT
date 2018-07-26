@@ -8,10 +8,12 @@
 
 namespace tuned_param {
 
-class IntRange : private tuner::ScalarRange<int> {
+class IntRange : public tuner::ScalarRange<int> {
 private:
   int lo_, hi_;
   int cur, dflt_;
+
+public:
 
   int min() const override { return lo_; }
   int max() const override { return hi_; }
@@ -23,7 +25,9 @@ private:
     cur = val;
   }
 
-public:
+  std::string getName() const override {
+     return "tunable param id " + std::to_string(getID());
+  }
 
   IntRange(int lo, int hi) : IntRange(lo, hi, lo) {}
 
@@ -36,14 +40,6 @@ public:
 
   size_t hash() const {
     return max() ^ min() ^ getDefault();
-  }
-
-  // NOTE you may think of just implementing `operator int`
-  // instead, but I advise agianst it to maintain the ability of
-  // of the type-level machinery in easy/param.h to catch an issue
-  // with is_knob not triggering correctly, etc.
-  int getCurrent() const {
-    return cur;
   }
 
   bool operator==(IntRange const&);
