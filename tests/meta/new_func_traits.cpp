@@ -1,4 +1,4 @@
-// RUN: %clangxx %cxxflags %include_flags %s -o /dev/null
+// RUN: %clangxx %cxxflags %include_flags -c %s -o /dev/null
 
 #include <easy/meta.h>
 #include <type_traits>
