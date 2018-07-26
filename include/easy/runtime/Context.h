@@ -140,7 +140,7 @@ class Context {
   Context& setParameterPointer(void const*);
   Context& setParameterStruct(char const*, size_t);
   Context& setParameterModule(easy::Function const&);
-  Context& setParameterIntRange(tuned_param::IntRange &);
+  Context& setTunableParam(tuned_param::IntRange &);
 
   template<class T>
   Context& setParameterTypedPointer(T* ptr) {

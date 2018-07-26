@@ -26,7 +26,7 @@ Context& Context::setParameterModule(easy::Function const &F) {
   return setArg<ModuleArgument>(F);
 }
 
-Context& Context::setParameterIntRange(tuned_param::IntRange &K) {
+Context& Context::setTunableParam(tuned_param::IntRange &K) {
   return setArg<IntRangeArgument>(K);
 }
 

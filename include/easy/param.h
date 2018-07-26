@@ -40,7 +40,7 @@ struct set_parameter_helper {
     C.setParameterIndex(std::is_placeholder<typename std::decay<Arg>::type>::value-1);
   }
 
-  template<class Param, class Arg> // TODO use param to perform type checking!
+  template<class Param, class Arg>
   static void set_param(Context &C,
                         _if<easy::is_function_wrapper<Arg>::value, Arg> &&arg) {
     static_assert(function_wrapper_specialization_is_possible<Param, Arg>::value,
@@ -48,10 +48,14 @@ struct set_parameter_helper {
     C.setParameterModule(arg.getFunction());
   }
 
-  // TODO: add an instance of set_param for tuner::Param
-  // and create infrastructure in the Context for such params.
-  // also: perform a type-checking operation here to ensure that
-  // unwrapped<Param> == Arg
+  template<class Param, class Arg>
+  static void set_param(Context &C,
+                        _if<tuner::is_knob<std::decay_t<Arg>>::value, Arg> &&arg) {
+    static_assert(std::is_same<typename tuner::is_knob<std::decay_t<Arg>>::rawTy, Param>::value,
+    "atJIT tunable parameter's underlying type is mismatched");
+    C.setTunableParam(arg);
+  }
+
 };
 
 template<>

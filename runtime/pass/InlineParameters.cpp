@@ -74,6 +74,10 @@ void GetInlineArgs(easy::Context const &C, FunctionType& OldTy, Function &Wrappe
         Args.push_back(ConstantFP::get(ParamTy, Float->get()));
       } break;
 
+      case easy::ArgumentBase::AK_IntRange: {
+        throw std::runtime_error("inlineParam -- implement handling for int range");
+      } break;
+
       case easy::ArgumentBase::AK_Ptr: {
         auto const *Ptr = Arg.as<easy::PtrArgument>();
         Constant* Repl = nullptr;

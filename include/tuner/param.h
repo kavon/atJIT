@@ -43,6 +43,14 @@ public:
 
 } // end namespace tuned_param
 
+namespace tuner {
+  template< >
+  struct is_knob< tuned_param::IntRange > {
+    static constexpr bool value = true;
+    using rawTy = int;
+  };
+}
+
 namespace std {
   template<> struct hash<tuned_param::IntRange>
   {

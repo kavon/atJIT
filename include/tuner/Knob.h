@@ -92,12 +92,6 @@ struct is_knob {
   using rawTy = void;
 };
 
-template< >
-struct is_knob< knob_type::IntRange >  {
-  static constexpr bool value = true;
-  using rawTy = int;
-};
-
 
 } // namespace tuner
 
