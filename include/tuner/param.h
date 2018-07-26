@@ -38,6 +38,14 @@ public:
     return max() ^ min() ^ getDefault();
   }
 
+  // NOTE you may think of just implementing `operator int`
+  // instead, but I advise agianst it to maintain the ability of
+  // of the type-level machinery in easy/param.h to catch an issue
+  // with is_knob not triggering correctly, etc.
+  int getCurrent() const {
+    return cur;
+  }
+
   bool operator==(IntRange const&);
 };
 

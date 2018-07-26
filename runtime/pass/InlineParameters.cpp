@@ -75,7 +75,9 @@ void GetInlineArgs(easy::Context const &C, FunctionType& OldTy, Function &Wrappe
       } break;
 
       case easy::ArgumentBase::AK_IntRange: {
-        throw std::runtime_error("inlineParam -- implement handling for int range");
+        auto const *IntArg = Arg.as<easy::IntRangeArgument>();
+        auto &IntRange = IntArg->get();
+        Args.push_back(ConstantInt::get(ParamTy, IntRange.getCurrent(), true));
       } break;
 
       case easy::ArgumentBase::AK_Ptr: {
