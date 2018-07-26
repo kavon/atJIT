@@ -8,6 +8,7 @@ Todos
   - generate polly knobs
 - allow users to specify a tunable function parameter
   - create a range/set type usable by both tuner and user
+- make the Feedback stderr cutoff before reoptimizing configurable.
 - smarter navigation of the search space
   - ~~JIT only when we have feedback from last version~~
   - ~~integrate XGBoost~~
