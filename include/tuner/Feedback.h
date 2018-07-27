@@ -8,6 +8,8 @@
 #include <cassert>
 #include <iostream>
 
+#include <tuner/Util.h>
+
 /////
 // collects data and other information about the quality of configurations.
 // for subsequent feedback-directed reoptimization.
@@ -85,8 +87,19 @@ class ExecutionTime : public Feedback {
   double stdError = 0;
   double stdErrorPct = 0;
   double sumSqDiff = 0;
+  double errBound = 0; // a precentage
   uint64_t dataPoints = 0;
 
+public:
+
+  ExecutionTime() : ExecutionTime(DEFAULT_STD_ERR_PCT) {}
+
+  //////////////////////////
+  // a value < 0 says:   ignore the stdErr and always return the average, if
+  //                     it exists
+  // a value >= 0 says:  return if you have at least 2 observations, where
+  //                     the precent std err of the mean is <= the value.
+  ExecutionTime(double errPctBound) : errBound(errPctBound) {}
 
   Token startMeasurement() override {
     Start_ = std::chrono::system_clock::now();
@@ -133,7 +146,8 @@ class ExecutionTime : public Feedback {
   }
 
   std::optional<double> avgMeasurement() const override {
-    if (dataPoints > 1 && stdErrorPct <= 1.0)
+    if (   (dataPoints > 1 && stdErrorPct <= errBound)
+        || ((dataPoints >= 1) && errBound < 0) )
       return average;
 
     return std::nullopt;

@@ -8,6 +8,7 @@
 
 #include <easy/runtime/Function.h>
 #include <tuner/param.h>
+#include <tuner/Feedback.h>
 
 namespace tuner {
   enum AutoTuner {
@@ -146,6 +147,10 @@ class Context {
 
   tuner::AutoTuner TunerKind_ = tuner::AT_None;
 
+  // NOTE: this value does not factor into the equality of two contexts:
+  // they are blind to this option.
+  double FeedbackStdErr_ = DEFAULT_STD_ERR_PCT;
+
   template<class ArgTy, class ... Args>
   inline Context& setArg(Args && ... args) {
     ArgumentMapping_.emplace_back(new ArgTy(std::forward<Args>(args)...));
@@ -180,6 +185,15 @@ class Context {
   Context& setTunerKind(tuner::AutoTuner AT) {
     TunerKind_ = AT;
     return *this;
+  }
+
+  Context& setFeedbackStdErr(double val) {
+    FeedbackStdErr_ = val;
+    return *this;
+  }
+
+  double getFeedbackStdErr() const {
+    return FeedbackStdErr_;
   }
 
   tuner::AutoTuner getTunerKind() const {

@@ -15,7 +15,7 @@ namespace tuner {
     std::mt19937 Gen_; // // 32-bit mersenne twister random number generator
 
   public:
-    RandomTuner(KnobSet KS) : AnalyzingTuner(KS) {
+    RandomTuner(KnobSet KS, std::shared_ptr<easy::Context> Cxt) : AnalyzingTuner(KS, std::move(Cxt)) {
         unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
         Gen_ = std::mt19937(seed);
       }
@@ -34,7 +34,7 @@ namespace tuner {
         KC = genRandomConfig(KS_, Gen_);
 
       auto Conf = std::make_shared<KnobConfig>(KC);
-      auto FB = std::make_shared<ExecutionTime>();
+      auto FB = std::make_shared<ExecutionTime>(Cxt_->getFeedbackStdErr());
 
       // keep track of this config.
       Configs_.push_back({Conf, FB});

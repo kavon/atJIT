@@ -125,11 +125,11 @@ namespace tuner {
     switch (Cxt_->getTunerKind()) {
 
       case tuner::AT_Bayes:
-        Tuner_ = new BayesianTuner(std::move(KS));
+        Tuner_ = new BayesianTuner(std::move(KS), Cxt_);
         break;
 
       case tuner::AT_Random:
-        Tuner_ = new RandomTuner(std::move(KS));
+        Tuner_ = new RandomTuner(std::move(KS), Cxt_);
         break;
 
       case tuner::AT_None:
