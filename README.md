@@ -189,6 +189,11 @@ auto const& fsubJIT = AT.reoptimize(fsub, _1, _2,
 printf("fsubJIT(3, 2) == %f\n", fsubJIT(3.0, 2.0));
 ```
 
+The current list of tuning options (namespaces omitted) are:
+
+- `tuner_kind(x)` — where `x` is one of `AT_None`, `AT_Random`, `AT_Bayes`.
+- `pct_err(x)` — where `x` is a double representing the precentage of tolerated time-measurement error during tuning. If `x < 0` then the first measurement is always accepted. The default is currently `1.0`.
+
 #### Autotuning a Function
 
 To actually *drive* the online autotuning process for some function F, you must repeatedly `reoptimize` F and call the newly returned version F' at least once. Ideally, you would ask the tuner for a reoptimized version of F before every call. For example:
