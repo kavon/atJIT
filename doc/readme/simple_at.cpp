@@ -11,24 +11,29 @@
 // INLINE FROM HERE #ALL#
 #include <tuner/driver.h>
 #include <cstdio>
+#include <chrono>
+#include <thread>
 
 // INLINE FROM HERE #USAGE#
 using namespace std::placeholders;
+using namespace tuned_param;
 
 float fsub(float a, float b) { return a-b; }
-
+void wait(int ms) { std::this_thread::sleep_for(std::chrono::milliseconds(ms)); }
 int main () {
   tuner::ATDriver AT;
-
   // returns a function computing fsub(a, 1.0)
-  easy::FunctionWrapper<float(float)> const& decrement =
-      AT.reoptimize(fsub, _1, 1.0);
+  easy::FunctionWrapper<float(float)> const& decrement = AT.reoptimize(fsub, _1, 1.0);
 
   // returns a function computing fsub(0.0, b)
   auto const& negate = AT.reoptimize(fsub, 0.0, _1);
 
+  // returns a function with a fixed `wait` period in the range [1, 500]
+  auto const& pause = AT.reoptimize(wait, IntRange(1, 500));
+
   printf("dec(5) == %f\n", decrement(5));
   printf("neg(3) == %f\n", negate(3));
+  pause();
   // ...
 // TO HERE #USAGE#
 

@@ -153,26 +153,34 @@ Given a tuner `AT`, `reoptimize` has the following generic usage:
 
 2. The function to be optimized, which can be a template function if the type is specified.
 
-3. The list of arguments must match the arity of the original function, though not all arguments need to have a real value.
-Providing a runtime value will allow the JIT compiler to specialize based on the value, and [std::placeholders](https://en.cppreference.com/w/cpp/utility/functional/placeholders) (e.g., `std::placeholders::_1`) leave parameters as-is. For example:
+3. A list of arguments that must match the arity of the original function. The following types of values are interpreted as arguments:
+
+  - **A placeholder** (i.e., from `std::placeholders`) representing a standard, unfilled function parameter.
+  - **A runtime value**. Providing a runtime value will allow the JIT compiler to specialize based on the actual, possibly dynamic, runtime value given to `reoptimize`.
+  - **A tuned parameter**. This is a special value that represents constraints on the allowed arguments to the function, and leaves it up to the tuner to fill in an "optimal" value as a constant before JIT compilation. This can be used for algorithmic selection, among other things.
+
+Here's an example:
 
 ```c++
 using namespace std::placeholders;
+using namespace tuned_param;
 
 float fsub(float a, float b) { return a-b; }
-
+void wait(int ms) { std::this_thread::sleep_for(std::chrono::milliseconds(ms)); }
 int main () {
   tuner::ATDriver AT;
-
   // returns a function computing fsub(a, 1.0)
-  easy::FunctionWrapper<float(float)> const& decrement =
-      AT.reoptimize(fsub, _1, 1.0);
+  easy::FunctionWrapper<float(float)> const& decrement = AT.reoptimize(fsub, _1, 1.0);
 
   // returns a function computing fsub(0.0, b)
   auto const& negate = AT.reoptimize(fsub, 0.0, _1);
 
+  // returns a function with a fixed `wait` period in the range [1, 500]
+  auto const& pause = AT.reoptimize(wait, IntRange(1, 500));
+
   printf("dec(5) == %f\n", decrement(5));
   printf("neg(3) == %f\n", negate(3));
+  pause();
   // ...
 ```
 
