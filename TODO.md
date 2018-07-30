@@ -6,9 +6,10 @@ Todos
 - ~~more loop metadata knobs~~
 - integrate with Michael's LLVM branch
   - generate polly knobs
-- allow users to specify a tunable function parameter
-  - create a range/set type usable by both tuner and user
-- make the Feedback stderr cutoff before reoptimizing configurable.
+- ~~allow users to specify a tunable function parameter~~
+  - ~~create a range type for ints~~
+  - create a set type
+- ~~make the Feedback stderr cutoff before reoptimizing configurable.~~
 - smarter navigation of the search space
   - ~~JIT only when we have feedback from last version~~
   - ~~integrate XGBoost~~
@@ -22,6 +23,7 @@ Todos
 - Improve Bayesian/SuRF tuner
   - add in exploitation (aka, nearby mutations) of the best configs
     so that we're not only doing random exploration.
+- Parallelize the JIT compilation.
 
 ## JIT Compilation
 
