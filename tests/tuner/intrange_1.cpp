@@ -25,25 +25,29 @@ void show(int i, int k) {
 
 // (1) make sure the dynamic arg is still making it through
 
-// CHECK: intrange test recieved ({{[34]}}, 1)
-// CHECK: intrange test recieved ({{[34]}}, 7)
+// CHECK: intrange test recieved ({{-?[0-9]}}, 1)
+// CHECK: intrange test recieved ({{-?[0-9]}}, 3)
 
-// (2) make sure the range is inclusive
+// (2) make sure the value changes within the range
 
-// RUN: grep "intrange test recieved (3" < %t.out
-// RUN: grep "intrange test recieved (4" < %t.out
+// RUN: grep "intrange test recieved (9" < %t.out
+// RUN: grep -E "intrange test recieved \(-?[0-8]" < %t.out
+
+// (3) TODO: some sort of test that ensures the range is
+// inclusive. Random tuning of even a [1,2] range is not stable
+// enough for CI.
 
 int main(int argc, char** argv) {
 
   tuner::AutoTuner TunerKind = tuner::AT_Random;
-  const int ITERS = 20; // 1/(2^9) chance this is not high enough to see both
+  const int ITERS = 5;
 
   tuner::ATDriver AT;
 
   for (int i = 0; i < ITERS; i++) {
     auto const &OptimizedFun = AT.reoptimize(show,
-          IntRange(3, 4), _1,
-          tuner_kind(TunerKind), pct_err(50.0));
+          IntRange(-8, 9, 9), _1,
+          tuner_kind(TunerKind), pct_err(-1));
 
     OptimizedFun(i);
   }
