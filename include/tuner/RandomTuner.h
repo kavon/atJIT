@@ -10,8 +10,9 @@
 
 namespace tuner {
 
-  // a tuner that randomly perturbs its knobs
+  // a tuner that always outputs a completely random configuration
   class RandomTuner : public AnalyzingTuner {
+  protected:
     std::mt19937 Gen_; // // 32-bit mersenne twister random number generator
 
   public:

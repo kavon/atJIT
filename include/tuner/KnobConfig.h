@@ -35,6 +35,14 @@ namespace tuner {
 
   extern template KnobConfig genRandomConfig<std::mt19937>(KnobSet const&, std::mt19937&);
 
+
+  // energy = [0, 100], one can think of it as a "percentage of change".
+  template < typename RNE >  // meets the requirements of RandomNumberEngine
+  KnobConfig perturbConfig(KnobConfig KC, KnobSet const &KS, RNE &Eng, float energy);
+
+  extern template KnobConfig perturbConfig<std::mt19937>(KnobConfig, KnobSet const &, std::mt19937 &, float);
+
+
   KnobConfig genDefaultConfig(KnobSet const&);
 
   void exportConfig(KnobConfig const& KC,

@@ -1,6 +1,11 @@
 
 #include <tuner/KnobConfig.h>
 
+#include <random>
+#include <algorithm>
+#include <cmath>
+#include <unordered_set>
+
 namespace tuner {
 
 template < typename RNE >
@@ -9,6 +14,7 @@ class GenSimpleRandConfig : public KnobSetAppFn {
   KnobConfig Conf;
 public:
   GenSimpleRandConfig (RNE &Engine) : Eng(Engine) {}
+  GenSimpleRandConfig (RNE &Engine, KnobConfig Prev) : Eng(Engine), Conf(Prev) {}
   KnobConfig get() { return Conf; }
 
   void operator()(std::pair<KnobID, knob_type::ScalarInt*> I) override {
@@ -22,6 +28,64 @@ public:
     auto Setting = genRandomLoopSetting<RNE>(Eng);
     Conf.LoopConfig[Knob->getID()] = Setting;
   }
+}; // end class
+
+class CollectIDs : public KnobIDAppFn {
+  float pct;
+  std::unordered_set<KnobID> filtered;
+  std::vector<KnobID> allIDs;
+  bool dropped = false;
+public:
+  CollectIDs(float fv1) : pct(fv1) {
+    assert (pct >= 0.0 && pct <= 100.0);
+  }
+  void operator()(KnobID id) override { allIDs.push_back(id); }
+
+  std::unordered_set<KnobID> get() {
+    if (dropped)
+      return filtered;
+
+    // shuffle
+    std::random_device rd;
+    std::mt19937 g(rd());
+
+    std::shuffle(allIDs.begin(), allIDs.end(), g);
+
+    // drop a percentage of the collected IDs, while ensuring the set
+    // maintains at least one element if pct is non-zero.
+    size_t sz = allIDs.size();
+    size_t elmsKept = ceil(pct * sz);
+
+    for (size_t i = 0; i < elmsKept; i++)
+      filtered.insert(allIDs[i]);
+
+    dropped = true;
+    return filtered;
+  }
+}; // end class
+
+template < typename RNE >
+class GenPartialRandConfig : public GenSimpleRandConfig<RNE> {
+  std::unordered_set<KnobID> chosen;
+public:
+  GenPartialRandConfig(std::unordered_set<KnobID> fv1,
+                       RNE &Eng,
+                       KnobConfig KC)
+                      : GenSimpleRandConfig<RNE>(Eng, KC), chosen(fv1) {}
+
+  #define HANDLE_CASE(KnobKind)                                                \
+  void operator()(std::pair<KnobID, KnobKind> I) override {                    \
+    auto ID = I.first;                                                         \
+    if (chosen.find(ID) == chosen.end())                                       \
+      return; /* not chosen */                                                 \
+                                                                               \
+    GenSimpleRandConfig<RNE>::operator()(I);                                   \
+  }
+
+  HANDLE_CASE(knob_type::ScalarInt*)
+  HANDLE_CASE(knob_type::Loop*)
+
+  #undef HANDLE_CASE
 }; // end class
 
 
@@ -118,6 +182,26 @@ KnobConfig genRandomConfig(KnobSet const &KS, RNE &Eng) {
 template KnobConfig genRandomConfig<std::mt19937>(KnobSet const&, std::mt19937&);
 
 ////////////////////////////
+
+
+////////////////////////////
+
+template < typename RNE >  // meets the requirements of RandomNumberEngine
+KnobConfig perturbConfig(KnobConfig KC, KnobSet const &KS, RNE &Eng, float energy) {
+  CollectIDs PickFrom(energy);
+  applyToKnobs(PickFrom, KS);
+  auto selection = PickFrom.get();
+
+  GenPartialRandConfig Gen(selection, Eng, KC);
+  applyToKnobs(Gen, KS);
+
+  return Gen.get();
+}
+
+// specializations
+template KnobConfig perturbConfig<std::mt19937>(KnobConfig, KnobSet const &, std::mt19937 &, float);
+
+///////////////////////////
 
 void applyToConfig(KnobConfigAppFn &F, KnobConfig const &Settings) {
   for (auto V : Settings.IntConfig) F(V);
