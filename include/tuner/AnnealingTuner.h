@@ -16,8 +16,8 @@ namespace tuner {
   //
   class AnnealingTuner : public RandomTuner {
     uint64_t timeStep;
-    const double EscapeDifficulty = 25000;  // corresponds to d*
-    const double MaxEnergy = 100.0;
+    const double EscapeDifficulty = 50000;  // corresponds to d*
+    const double MaxEnergy = 30.0;
     double MaxTemp; // determined by cooling schedule
 
     bool initalizedFirstState = false;
