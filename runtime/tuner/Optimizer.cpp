@@ -10,6 +10,7 @@
 #include <tuner/TunableInliner.h>
 #include <tuner/RandomTuner.h>
 #include <tuner/BayesianTuner.h>
+#include <tuner/AnnealingTuner.h>
 
 #include <llvm/IR/Module.h>
 #include <llvm/IR/LegacyPassManager.h>
@@ -132,6 +133,10 @@ namespace tuner {
         Tuner_ = new RandomTuner(std::move(KS), Cxt_);
         break;
 
+      case tuner::AT_Anneal:
+        Tuner_ = new AnnealingTuner(std::move(KS), Cxt_);
+        break;
+        
       case tuner::AT_None:
       default:
         Tuner_ = new NoOpTuner(std::move(KS));

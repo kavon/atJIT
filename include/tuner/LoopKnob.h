@@ -139,7 +139,7 @@ namespace tuner {
 template < typename RNE >  // meets the requirements of RandomNumberEngine
 LoopSetting genRandomLoopSetting(RNE &Eng);
 
-extern template LoopSetting genRandomLoopSetting<std::mt19937>(std::mt19937&);
+extern template LoopSetting genRandomLoopSetting<std::mt19937_64>(std::mt19937_64&);
 
 
 // handy type aliases.

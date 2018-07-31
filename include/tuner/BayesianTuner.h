@@ -36,7 +36,7 @@ namespace tuner {
 
   // a tuner that uses techniques based on Bayesian Optimization
   // to find good configurations.
-  class BayesianTuner : public AnalyzingTuner {
+  class BayesianTuner : public RandomTuner {
   private:
     // the number of configs we have evaluated since we last trained a model
     uint32_t SinceLastTraining_ = 0;
@@ -67,9 +67,6 @@ namespace tuner {
     // 'cfg' is actually a _dense_ 2D array of configuration data, i.e.,
     //       cfg[rowNum][i]  must be written as  cfg[(rowNum * ncol) + i]
     float *cfg = NULL;
-
-    std::mt19937 RNE_; // // 32-bit mersenne twister random number generator
-
 
     // updates the cfg and result matrices with new observations
     void updateDataset() {
@@ -150,7 +147,7 @@ namespace tuner {
       std::vector<KnobConfig> Test;
       float* testMat = (float*) malloc(ExploreSz_ * ncol * sizeof(float));
       for (uint32_t i = 0; i < ExploreSz_; ++i) {
-        KnobConfig KC = genRandomConfig(KS_, RNE_);
+        KnobConfig KC = genRandomConfig(KS_, Gen_);
         exportConfig(KC, testMat, i, ncol, colToKnob);
         Test.push_back(KC);
       }
@@ -225,9 +222,7 @@ namespace tuner {
 
   ///////////////// PUBLIC //////////////////
   public:
-    BayesianTuner(KnobSet KS, std::shared_ptr<easy::Context> Cxt) : AnalyzingTuner(KS, std::move(Cxt)) {
-      unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-      RNE_ = std::mt19937(seed);
+    BayesianTuner(KnobSet KS, std::shared_ptr<easy::Context> Cxt) : RandomTuner(KS, std::move(Cxt)) {
     }
 
     // we do not free any knobs, since MPM or other objects
@@ -258,7 +253,7 @@ namespace tuner {
       if (Configs_.size() < BatchSz_) {
         // we're still at Step 2, trying to establish a prior
         // so we sample randomly
-        return saveConfig(genRandomConfig(KS_, RNE_));
+        return saveConfig(genRandomConfig(KS_, Gen_));
       }
 
       // if we're out of predictions, retrain and produce new best-configs.

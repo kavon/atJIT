@@ -14,7 +14,8 @@ namespace tuner {
   enum AutoTuner {
     AT_None,
     AT_Random,
-    AT_Bayes
+    AT_Bayes,
+    AT_Anneal
   };
 }
 

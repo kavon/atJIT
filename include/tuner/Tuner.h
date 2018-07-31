@@ -72,7 +72,15 @@ namespace tuner {
 
   } // end anonymous namespace
 
+  struct {
+    bool operator()(GenResult const &A, GenResult const &B) const
+    { // smallest time last. if no time is available, it goes to the front.
+        std::optional<double> timeA = A.second->avgMeasurement();
+        std::optional<double> timeB = B.second->avgMeasurement();
 
+        return timeA.value_or(DBL_MAX) >= timeB.value_or(DBL_MAX);
+    }
+  } resultGEQ;
 
   class Tuner {
   protected:
@@ -118,24 +126,27 @@ namespace tuner {
       std::cout << "\n";
     }
 
-    void dump() {
-      struct {
-        bool operator()(GenResult const &A, GenResult const &B) const
-        { // smallest time last. if no time is available, it goes to the front.
-            std::optional<double> timeA = A.second->avgMeasurement();
-            std::optional<double> timeB = B.second->avgMeasurement();
+    virtual void dump() {
 
-            return timeA.value_or(DBL_MAX) >= timeB.value_or(DBL_MAX);
-        }
-      } sortByTime;
 
-      std::sort(Configs_.begin(), Configs_.end(), sortByTime);
+      std::sort(Configs_.begin(), Configs_.end(), resultGEQ);
 
       std::cout << "-----------\n";
       for (auto Entry : Configs_) {
         dumpConfigInstance(Entry);
       }
       std::cout << "-----------\n";
+    }
+
+    std::optional<GenResult> bestSeen() {
+      std::optional<GenResult> best = std::nullopt;
+
+      for (auto Entry : Configs_) {
+        if (best.has_value() == false || resultGEQ(best.value(), Entry))
+          best = Entry;
+      }
+
+      return best;
     }
 
   }; // end class Tuner

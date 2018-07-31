@@ -47,7 +47,7 @@ public:
 
     // shuffle
     std::random_device rd;
-    std::mt19937 g(rd());
+    std::mt19937_64 g(rd());
 
     std::shuffle(allIDs.begin(), allIDs.end(), g);
 
@@ -64,6 +64,11 @@ public:
   }
 }; // end class
 
+// FIXME: I'm not particularly happy with this low-effort implementation.
+// I don't think we should delegate to GenSimpleRandConfig... instead,
+// we should delegate to a config mutator that takes the energy into account.
+// For example, a "large" move is moving between unrolling <-> full unrolling,
+// whereas a small move would be just bumping to a knob a little bit!
 template < typename RNE >
 class GenPartialRandConfig : public GenSimpleRandConfig<RNE> {
   std::unordered_set<KnobID> chosen;
@@ -179,7 +184,7 @@ KnobConfig genRandomConfig(KnobSet const &KS, RNE &Eng) {
 }
 
 // specializations
-template KnobConfig genRandomConfig<std::mt19937>(KnobSet const&, std::mt19937&);
+template KnobConfig genRandomConfig<std::mt19937_64>(KnobSet const&, std::mt19937_64&);
 
 ////////////////////////////
 
@@ -199,7 +204,7 @@ KnobConfig perturbConfig(KnobConfig KC, KnobSet const &KS, RNE &Eng, float energ
 }
 
 // specializations
-template KnobConfig perturbConfig<std::mt19937>(KnobConfig, KnobSet const &, std::mt19937 &, float);
+template KnobConfig perturbConfig<std::mt19937_64>(KnobConfig, KnobSet const &, std::mt19937_64 &, float);
 
 ///////////////////////////
 

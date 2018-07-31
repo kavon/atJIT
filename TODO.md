@@ -14,7 +14,7 @@ Todos
   - ~~JIT only when we have feedback from last version~~
   - ~~integrate XGBoost~~
   - ~~create a basic SURF-like tuner~~
-  - create a simulated annealing tuner
+  - ~~create a simulated annealing tuner~~
 - running-time normalization
   - first thing to try is put in user-interface to specify indicators of workload for normalization
   - then try to find that out automatically.
@@ -23,6 +23,8 @@ Todos
 - Improve Bayesian/SuRF tuner
   - add in exploitation (aka, nearby mutations) of the best configs
     so that we're not only doing random exploration.
+- Improve Simulated Annealing tuner
+  - see the GenPartialRandConfig FIXME
 - Parallelize the JIT compilation.
 
 ## JIT Compilation

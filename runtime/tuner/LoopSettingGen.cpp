@@ -96,6 +96,6 @@ LoopSetting genRandomLoopSetting(RNE &Eng) {
 
 // specializations go here.
 
-template LoopSetting genRandomLoopSetting<std::mt19937>(std::mt19937&);
+template LoopSetting genRandomLoopSetting<std::mt19937_64>(std::mt19937_64&);
 
 } // end namespace

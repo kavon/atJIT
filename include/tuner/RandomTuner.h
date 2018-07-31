@@ -13,12 +13,12 @@ namespace tuner {
   // a tuner that always outputs a completely random configuration
   class RandomTuner : public AnalyzingTuner {
   protected:
-    std::mt19937 Gen_; // // 32-bit mersenne twister random number generator
+    std::mt19937_64 Gen_; // 64-bit mersenne twister random number generator
 
   public:
     RandomTuner(KnobSet KS, std::shared_ptr<easy::Context> Cxt) : AnalyzingTuner(KS, std::move(Cxt)) {
         unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-        Gen_ = std::mt19937(seed);
+        Gen_ = std::mt19937_64(seed);
       }
 
     // we do not free any knobs, since MPM or other objects

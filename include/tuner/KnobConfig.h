@@ -19,10 +19,6 @@ namespace tuner {
   // 1. KnobConfigAppFn and related abstract visitors.
   // 2. applyToConfig and related generic operations.
 
-  // TODO this should be just be a single vector<pair<KnobID, float>>,
-  // since we need to be able to import & export configurations from
-  // the model, which only deals with float. When applying a Config to
-  // a KnobSet, the floats can be interpreted for what they mean.
   class KnobConfig {
   public:
     std::unordered_map<KnobID, int> IntConfig;
@@ -33,14 +29,14 @@ namespace tuner {
   template < typename RNE >  // meets the requirements of RandomNumberEngine
   KnobConfig genRandomConfig(KnobSet const &KS, RNE &Eng);
 
-  extern template KnobConfig genRandomConfig<std::mt19937>(KnobSet const&, std::mt19937&);
+  extern template KnobConfig genRandomConfig<std::mt19937_64>(KnobSet const&, std::mt19937_64&);
 
 
   // energy = [0, 100], one can think of it as a "percentage of change".
   template < typename RNE >  // meets the requirements of RandomNumberEngine
   KnobConfig perturbConfig(KnobConfig KC, KnobSet const &KS, RNE &Eng, float energy);
 
-  extern template KnobConfig perturbConfig<std::mt19937>(KnobConfig, KnobSet const &, std::mt19937 &, float);
+  extern template KnobConfig perturbConfig<std::mt19937_64>(KnobConfig, KnobSet const &, std::mt19937_64 &, float);
 
 
   KnobConfig genDefaultConfig(KnobSet const&);
