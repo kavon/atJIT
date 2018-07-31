@@ -20,6 +20,8 @@ namespace tuner {
     const double MaxEnergy = 100.0;
     double MaxTemp; // determined by cooling schedule
 
+    bool initalizedFirstState = false;
+
     GenResult currentState;
     GenResult trialState;
   private:
@@ -98,14 +100,24 @@ namespace tuner {
     AnnealingTuner(KnobSet KS, std::shared_ptr<easy::Context> Cxt)
       : RandomTuner(KS, std::move(Cxt)) {
         timeStep = 0;
-        currentState = saveConfig(genDefaultConfig(KS_));
-        trialState = saveConfig(genRandomConfig(KS_, Gen_));
         MaxTemp = coolingSchedule(2); // largest value the schedule takes on.
       }
 
     // we do not free any knobs, since MPM or other objects
     // should end up freeing them.
     ~AnnealingTuner() {}
+
+    void analyze(llvm::Module &M) override {
+      RandomTuner::analyze(M);
+
+      // we do this here instead of in the constructor because we
+      // want the first start to be aware of _all_ knobs.
+      if (!initalizedFirstState) {
+        currentState = saveConfig(genDefaultConfig(KS_));
+        trialState = saveConfig(genRandomConfig(KS_, Gen_));
+        initalizedFirstState = true;
+      }
+    }
 
     GenResult& getNextConfig() override {
       // ensure we have a cost for the currentState

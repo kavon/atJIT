@@ -234,17 +234,19 @@ namespace tuner {
     }
 
     void analyze(llvm::Module &M) override {
-      AnalyzingTuner::analyze(M);
+      RandomTuner::analyze(M);
 
       // now that the number of knobs will no longer change,
       // we can setup part of the dataset
 
-      ncol = KS_.size();
-      colToKnob = (uint64_t*) std::malloc(ncol * sizeof(uint64_t));
-      assert(colToKnob && "bad alloc!");
+      if (colToKnob == NULL) {
+        ncol = KS_.size();
+        colToKnob = (uint64_t*) std::malloc(ncol * sizeof(uint64_t));
+        assert(colToKnob && "bad alloc!");
 
-      AssignToCols F(colToKnob);
-      applyToKnobs(F, KS_);
+        AssignToCols F(colToKnob);
+        applyToKnobs(F, KS_);
+      }
     }
 
     GenResult& getNextConfig() override {
