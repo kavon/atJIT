@@ -41,7 +41,9 @@ namespace tuner {
     // the number of configs we have evaluated since we last trained a model
     uint32_t SinceLastTraining_ = 0;
     uint32_t BatchSz_ = 5;
-    uint32_t ExploreSz_ = 100;
+    uint32_t SurrogateTestSz_ = 200;
+    double Tradeoff_ = 0.5; // [0,1] indicates how much to "explore", with
+                            // the remaining percent used to "exploit".
 
     std::list<KnobConfig> Predictions_; // current top predictions
 
@@ -145,17 +147,40 @@ namespace tuner {
 
       // build test cases
       std::vector<KnobConfig> Test;
-      float* testMat = (float*) malloc(ExploreSz_ * ncol * sizeof(float));
-      for (uint32_t i = 0; i < ExploreSz_; ++i) {
-        KnobConfig KC = genRandomConfig(KS_, Gen_);
-        exportConfig(KC, testMat, i, ncol, colToKnob);
-        Test.push_back(KC);
+      float* testMat = (float*) malloc(SurrogateTestSz_ * ncol * sizeof(float));
+      uint32_t ExploreSz = std::round(SurrogateTestSz_ * Tradeoff_);
+      uint32_t XPloitSz = SurrogateTestSz_ - ExploreSz;
+
+      {
+        // cases that are used for exploration
+        for (uint32_t i = 0; i < ExploreSz; ++i) {
+          KnobConfig KC = genRandomConfig(KS_, Gen_);
+          exportConfig(KC, testMat, i, ncol, colToKnob);
+          Test.push_back(KC);
+        }
+      }
+
+      {
+        // cases that exploit the best case we've seen so far.
+        auto Best = bestSeen();
+        KnobConfig BestKC;
+        if (Best.has_value())
+          BestKC = *Best.value().first;
+        else
+          BestKC = genDefaultConfig(KS_);
+
+        for (uint32_t i = 0; i < XPloitSz; ++i) {
+          // FIXME: right now I just picked an arbitrary energy level.
+          KnobConfig KC = perturbConfig(BestKC, KS_, Gen_, 30.0);
+          exportConfig(KC, testMat, i, ncol, colToKnob);
+          Test.push_back(KC);
+        }
       }
 
 
       // get predictions
       DMatrixHandle h_test;
-      XGDMatrixCreateFromMat((float *) testMat, ExploreSz_, ncol, MISSING, &h_test);
+      XGDMatrixCreateFromMat((float *) testMat, SurrogateTestSz_, ncol, MISSING, &h_test);
       bst_ulong out_len;
       const float *out;
       XGBoosterPredict(booster, h_test, 0, 0, &out_len, &out);
