@@ -39,8 +39,7 @@ namespace tuner {
   //
   struct LoopSetting {
     // hints only
-    std::optional<bool> VectorizeEnable{};
-    std::optional<uint16_t> VectorizeWidth{}; // >= 2, omitted == "choose automatically"
+    std::optional<uint16_t> VectorizeWidth{}; // 1 = disable entirely, >= 2 suggests width
 
     // hint only
     std::optional<uint16_t> InterleaveCount{}; // 0 = off, 1 = automatic, >=2 is count.
@@ -54,13 +53,12 @@ namespace tuner {
     std::optional<bool> Distribute{};
 
     size_t size() const {
-      return 8;
+      return 7;
     }
 
     static void flatten(float* slice, LoopSetting LS) {
       size_t i = 0;
 
-      LoopSetting::flatten(slice + i++, LS.VectorizeEnable);
       LoopSetting::flatten(slice + i++, LS.VectorizeWidth);
 
       LoopSetting::flatten(slice + i++, LS.InterleaveCount);
@@ -139,7 +137,15 @@ namespace tuner {
 template < typename RNE >  // meets the requirements of RandomNumberEngine
 LoopSetting genRandomLoopSetting(RNE &Eng);
 
-extern template LoopSetting genRandomLoopSetting<std::mt19937_64>(std::mt19937_64&);
+extern template
+LoopSetting genRandomLoopSetting<std::mt19937_64>(std::mt19937_64&);
+
+
+template < typename RNE >
+LoopSetting genNearbyLoopSetting(RNE &Eng, LoopSetting LS, double energy);
+
+extern template
+LoopSetting genNearbyLoopSetting<std::mt19937_64>(std::mt19937_64&, LoopSetting, double);
 
 
 // handy type aliases.

@@ -1,5 +1,6 @@
 
 #include <tuner/KnobConfig.h>
+#include <tuner/Util.h>
 
 #include <random>
 #include <algorithm>
@@ -54,29 +55,25 @@ public:
     const int min = Knob->min();
     const int max = Knob->max();
 
-    // 68% of values drawn will be within this distance from the old value.
-    int scaledRange = (max - min) * (energy / 100.0);
-    int stdDev = scaledRange / 2.0;
+    int val = nearbyInt(this->Eng, oldVal, min, max, energy);
 
-    // sample from a normal distribution, where the mean is
-    // the old value, and the std deviation is influenced by the energy.
-    std::normal_distribution<> dist(oldVal, stdDev);
-
-    // ensure the value is in the right range.
-    int val = dist(this->Eng);
-    val = std::max(val, min);
-    val = std::min(val, max);
-
-    // std::cout << "\n\n+++++++++++++ "
-    //           << oldVal << " --> " << val
-    //           << " +++++++++++++\n\n";
-
-    this->Conf.IntConfig[Knob->getID()] = val;
+    this->Conf.IntConfig[ID] = val;
   }
 
   void operator()(std::pair<KnobID, knob_type::Loop*> I) override {
-    // TODO implement something better
-    GenSimpleRandConfig<RNE>::operator()(I);
+    auto ID = I.first;
+
+    // if we have nothing to work with, pick randomly.
+    if (this->Conf.LoopConfig.find(ID) == this->Conf.LoopConfig.end()) {
+      GenSimpleRandConfig<RNE>::operator()(I);
+      return;
+    }
+
+    auto OldSetting = this->Conf.LoopConfig[ID];
+
+    auto NewSetting = genNearbyLoopSetting<RNE>(this->Eng, OldSetting, energy);
+
+    this->Conf.LoopConfig[ID] = NewSetting;
   }
 }; // end class
 

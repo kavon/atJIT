@@ -39,8 +39,6 @@ if (LS.FieldName) \
       LMD = setPresenceOption(LMD, LS.UnrollDisable, loop_md::UNROLL_DISABLE);
       LMD = setPresenceOption(LMD, LS.UnrollFull, loop_md::UNROLL_FULL);
 
-      LMD = setPresenceOption(LMD, LS.VectorizeEnable, loop_md::VECTORIZE_ENABLE);
-
       LMD = setPresenceOption(LMD, LS.LICMVerDisable, loop_md::LICM_VER_DISABLE);
 
       SET_INT_OPTION(i32, UnrollCount, UNROLL_COUNT)
@@ -128,7 +126,6 @@ std::ostream& operator<<(std::ostream &o, tuner::LoopSetting &LS) {
   PRINT_OPTION(LS.UnrollFull, UNROLL_FULL)
   PRINT_OPTION(LS.UnrollCount, UNROLL_COUNT)
 
-  PRINT_OPTION(LS.VectorizeEnable, VECTORIZE_ENABLE)
   PRINT_OPTION(LS.VectorizeWidth, VECTORIZE_WIDTH)
 
   PRINT_OPTION(LS.LICMVerDisable, LICM_VER_DISABLE)
