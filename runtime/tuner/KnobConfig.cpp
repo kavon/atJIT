@@ -5,11 +5,13 @@
 #include <algorithm>
 #include <cmath>
 #include <unordered_set>
+#include <iostream>
 
 namespace tuner {
 
 template < typename RNE >
 class GenSimpleRandConfig : public KnobSetAppFn {
+protected:
   RNE &Eng;
   KnobConfig Conf;
 public:
@@ -29,6 +31,55 @@ public:
     Conf.LoopConfig[Knob->getID()] = Setting;
   }
 }; // end class
+
+
+template < typename RNE >
+class GenNearbyConfig : public GenSimpleRandConfig<RNE> {
+  double energy;
+public:
+  GenNearbyConfig (double curEnergy, RNE &Engine, KnobConfig Prev)
+      : GenSimpleRandConfig<RNE>(Engine, Prev), energy(curEnergy) {}
+
+  void operator()(std::pair<KnobID, knob_type::ScalarInt*> I) override {
+    auto ID = I.first;
+    auto Knob = I.second;
+
+    // if we have nothing to work with, pick randomly.
+    if (this->Conf.IntConfig.find(ID) == this->Conf.IntConfig.end()) {
+      GenSimpleRandConfig<RNE>::operator()(I);
+      return;
+    }
+
+    int oldVal = this->Conf.IntConfig[ID];
+    const int min = Knob->min();
+    const int max = Knob->max();
+
+    // 68% of values drawn will be within this distance from the old value.
+    int scaledRange = (max - min) * (energy / 100.0);
+    int stdDev = scaledRange / 2.0;
+
+    // sample from a normal distribution, where the mean is
+    // the old value, and the std deviation is influenced by the energy.
+    std::normal_distribution<> dist(oldVal, stdDev);
+
+    // ensure the value is in the right range.
+    int val = dist(this->Eng);
+    val = std::max(val, min);
+    val = std::min(val, max);
+
+    // std::cout << "\n\n+++++++++++++ "
+    //           << oldVal << " --> " << val
+    //           << " +++++++++++++\n\n";
+
+    this->Conf.IntConfig[Knob->getID()] = val;
+  }
+
+  void operator()(std::pair<KnobID, knob_type::Loop*> I) override {
+    // TODO implement something better
+    GenSimpleRandConfig<RNE>::operator()(I);
+  }
+}; // end class
+
 
 class CollectIDs : public KnobIDAppFn {
   float pct;
@@ -64,19 +115,21 @@ public:
   }
 }; // end class
 
+
+
 // FIXME: I'm not particularly happy with this low-effort implementation.
 // I don't think we should delegate to GenSimpleRandConfig... instead,
 // we should delegate to a config mutator that takes the energy into account.
 // For example, a "large" move is moving between unrolling <-> full unrolling,
 // whereas a small move would be just bumping to a knob a little bit!
 template < typename RNE >
-class GenPartialRandConfig : public GenSimpleRandConfig<RNE> {
+class GenPartialNearbyConfig : public GenNearbyConfig<RNE> {
   std::unordered_set<KnobID> chosen;
 public:
-  GenPartialRandConfig(std::unordered_set<KnobID> fv1,
+  GenPartialNearbyConfig(double energy, std::unordered_set<KnobID> fv1,
                        RNE &Eng,
                        KnobConfig KC)
-                      : GenSimpleRandConfig<RNE>(Eng, KC), chosen(fv1) {}
+                      : GenNearbyConfig<RNE>(energy, Eng, KC), chosen(fv1) {}
 
   #define HANDLE_CASE(KnobKind)                                                \
   void operator()(std::pair<KnobID, KnobKind> I) override {                    \
@@ -84,7 +137,7 @@ public:
     if (chosen.find(ID) == chosen.end())                                       \
       return; /* not chosen */                                                 \
                                                                                \
-    GenSimpleRandConfig<RNE>::operator()(I);                                   \
+    GenNearbyConfig<RNE>::operator()(I);                                       \
   }
 
   HANDLE_CASE(knob_type::ScalarInt*)
@@ -197,7 +250,7 @@ KnobConfig perturbConfig(KnobConfig KC, KnobSet const &KS, RNE &Eng, float energ
   applyToKnobs(PickFrom, KS);
   auto selection = PickFrom.get();
 
-  GenPartialRandConfig Gen(selection, Eng, KC);
+  GenPartialNearbyConfig Gen(energy, selection, Eng, KC);
   applyToKnobs(Gen, KS);
 
   return Gen.get();
