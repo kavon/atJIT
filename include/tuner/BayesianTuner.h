@@ -126,6 +126,7 @@ namespace tuner {
       // make a booster
       BoosterHandle booster;
       XGBoosterCreate(dmat, 1, &booster);
+      // FIXME: all of these settings were picked arbitrarily
       XGBoosterSetParam(booster, "booster", "gbtree");
       XGBoosterSetParam(booster, "objective", "reg:linear");
       XGBoosterSetParam(booster, "max_depth", "5");
@@ -136,7 +137,10 @@ namespace tuner {
       XGBoosterSetParam(booster, "num_parallel_tree", "4");
 
       // learn
-      for (int i = 0; i < 250; i++) {
+      for (int i = 0; i < 500; i++) {
+        // FIXME: I just picked an arbitrary # of iters.
+        // Using cross-validation to train up to some accuracy level
+        // would be smarter.
         XGBoosterUpdateOneIter(booster, i, dmat[0]);
       }
 
@@ -150,12 +154,13 @@ namespace tuner {
       float* testMat = (float*) malloc(SurrogateTestSz_ * ncol * sizeof(float));
       uint32_t ExploreSz = std::round(SurrogateTestSz_ * Tradeoff_);
       uint32_t XPloitSz = SurrogateTestSz_ - ExploreSz;
+      uint32_t rowNum = 0;
 
       {
         // cases that are used for exploration
-        for (uint32_t i = 0; i < ExploreSz; ++i) {
+        for (uint32_t i = 0; i < ExploreSz; ++i, ++rowNum) {
           KnobConfig KC = genRandomConfig(KS_, Gen_);
-          exportConfig(KC, testMat, i, ncol, colToKnob);
+          exportConfig(KC, testMat, rowNum, ncol, colToKnob);
           Test.push_back(KC);
         }
       }
@@ -169,10 +174,10 @@ namespace tuner {
         else
           BestKC = genDefaultConfig(KS_);
 
-        for (uint32_t i = 0; i < XPloitSz; ++i) {
+        for (uint32_t i = 0; i < XPloitSz; ++i, ++rowNum) {
           // FIXME: right now I just picked an arbitrary energy level.
           KnobConfig KC = perturbConfig(BestKC, KS_, Gen_, 30.0);
-          exportConfig(KC, testMat, i, ncol, colToKnob);
+          exportConfig(KC, testMat, rowNum, ncol, colToKnob);
           Test.push_back(KC);
         }
       }
@@ -276,10 +281,17 @@ namespace tuner {
 
     GenResult& getNextConfig() override {
       // SURF
+      size_t numConfg = Configs_.size();
 
-      if (Configs_.size() < BatchSz_) {
+      if (numConfg < BatchSz_) {
         // we're still at Step 2, trying to establish a prior
-        // so we sample randomly
+        // so we sample completely randomly
+
+        // NOTE: I think it's useful to always include the default config
+        // in the first batch.
+        if (numConfg == 0)
+          return saveConfig(genDefaultConfig(KS_));
+
         return saveConfig(genRandomConfig(KS_, Gen_));
       }
 

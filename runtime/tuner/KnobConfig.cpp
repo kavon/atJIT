@@ -207,15 +207,15 @@ void exportConfig(KnobConfig const& KC,
     Exporter.reset(cur, slice);
     applyToConfig(Exporter, KC);
 
-    printf("exported knob %lu\n", cur);
+    // printf("exported knob %lu\n", cur);
   }
 
   // DEBUGGING
-  printf("---\nrow %lu:\n", row);
-  for (uint64_t i = 0; i < ncol; ++i) {
-    printf("%f\n", mat[row * ncol + i]);
-  }
-  printf("---\n\n");
+  // printf("---\nrow %lu:\n", row);
+  // for (uint64_t i = 0; i < ncol; ++i) {
+  //   printf("%f\n", mat[row * ncol + i]);
+  // }
+  // printf("---\n\n");
 
 }
 
