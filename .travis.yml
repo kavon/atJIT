@@ -15,7 +15,7 @@ addons:
 
         packages:
             - ninja-build
-            # - g++-8
+            - g++-8
             - llvm-6.0-dev
             - llvm-6.0-tools
             - clang-6.0
