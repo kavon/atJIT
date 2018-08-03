@@ -62,7 +62,11 @@ static void WriteOptimizedToFile(llvm::Module const &M, std::string const& File)
   if(Error)
     throw CouldNotOpenFile(Error.message());
 
+  std::cout << "dumping to file...\n";
+
   Out << M;
+
+  std::cout << "done\n";
 }
 
 std::unique_ptr<Function>
@@ -108,8 +112,17 @@ std::pair<std::unique_ptr<Function>, std::shared_ptr<tuner::Feedback>> Function:
 
   WriteOptimizedToFile(*M, Cxt->getDebugFile());
 
+  std::cout << "generating asm code...\n";
+  auto Start = std::chrono::system_clock::now();
+
   std::unique_ptr<Function> Fun = CompileAndWrap(Name, Globals, std::move(LLVMCxt), std::move(M));
+
+  auto End = std::chrono::system_clock::now();
+  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
+  std::cout << "done in " << elapsed.count() << "ms\n";
+
   return {std::move(Fun), std::move(FB)};
+
 }
 
 void easy::Function::serialize(std::ostream& os) const {

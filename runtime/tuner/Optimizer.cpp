@@ -54,8 +54,9 @@ namespace tuner {
     MPM_->add(easy::createContextAnalysisPass(Cxt_));
     MPM_->add(easy::createInlineParametersPass(Name));
     Builder_.populateModulePassManager(*MPM_);
-    MPM_->add(easy::createDevirtualizeConstantPass(Name));
-    Builder_.populateModulePassManager(*MPM_);
+    // FIXME: rather not run the pass sequence twice!
+    // MPM_->add(easy::createDevirtualizeConstantPass(Name));
+    // Builder_.populateModulePassManager(*MPM_);
 
   }
 
@@ -136,7 +137,7 @@ namespace tuner {
       case tuner::AT_Anneal:
         Tuner_ = new AnnealingTuner(std::move(KS), Cxt_);
         break;
-        
+
       case tuner::AT_None:
       default:
         Tuner_ = new NoOpTuner(std::move(KS));
@@ -173,7 +174,7 @@ namespace tuner {
 
     Tuner_->applyConfig(*TunerConf, M);
 
-    std::cout << "compiling...\n";
+    std::cout << "optimizing...\n";
 
     MPM_->run(M);
 
@@ -182,7 +183,7 @@ namespace tuner {
 
     Tuner_->dump();
 
-    std::cout << "Finished in " << elapsed.count() << "ms\n"
+    std::cout << "Optimize finished in " << elapsed.count() << "ms\n"
               << "+++++++\n";
 
     return FB;
