@@ -54,9 +54,10 @@ namespace tuner {
     MPM_->add(easy::createContextAnalysisPass(Cxt_));
     MPM_->add(easy::createInlineParametersPass(Name));
     Builder_.populateModulePassManager(*MPM_);
-    // FIXME: rather not run the pass sequence twice!
-    // MPM_->add(easy::createDevirtualizeConstantPass(Name));
-    // Builder_.populateModulePassManager(*MPM_);
+
+    // FIXME: would rather not run the whole pass sequence twice!
+    MPM_->add(easy::createDevirtualizeConstantPass(Name));
+    Builder_.populateModulePassManager(*MPM_);
 
   }
 
