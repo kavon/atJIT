@@ -1,8 +1,6 @@
 #include <tuple>
 #include <iostream>
 
-#include <dispatch/dispatch.h>
-
 #include <tuner/optimizer.h>
 
 #include <easy/runtime/Context.h>
@@ -111,6 +109,10 @@ namespace tuner {
     std::cout << "initializing optimizer\n";
 
     /////////
+    // initialize concurrency stuff
+    recompileQ_ = dispatch_queue_create("atJIT.recompileQueue", NULL);
+
+    /////////
     // initialize the metadata needed for JIT compilation
     auto &BT = easy::BitcodeTracker::GetTracker();
     GMap_ = BT.getNameAndGlobalMapping(Addr_);
@@ -158,45 +160,62 @@ namespace tuner {
     return Addr_;
   }
 
-  std::shared_ptr<Feedback> Optimizer::optimize(llvm::Module &M) {
-    // NOTE(kavon): right now we throw away the indicator saying whether
-    // the module changed. Perhaps its useful to store that in the Feedback?
 
-    std::cout << "\nREOPTIMIZING\n";
+//////////////////////////////////
 
-    auto Start = std::chrono::system_clock::now();
+  // for proper standards compliance, we need to mark our
+  // GCD call-back functions with C linkage.
+  extern "C" {
+    // NOTE: this task is only safe in a serial job queue.
+    void recompileTask(void* P) {
+      Optimizer* Opt = static_cast<Optimizer*>(P);
+      Opt->recompile_callback(true);
+    }
 
-    std::cout << "analyzing module...\n";
+    void obtainResultTask(void* P) {
+      Optimizer* Opt = static_cast<Optimizer*>(P);
+      Opt->obtain_callback();
+    }
 
-    Tuner_->analyze(M);
+  } // end extern C
 
-    std::cout << "generating a config...\n";
+/////////////////////////////////
 
-    auto Gen = Tuner_->getNextConfig();
-    auto TunerConf = Gen.first;
-    auto FB = Gen.second;
+  void Optimizer::obtain_callback() {
+    assert(!obtainResult_.has_value() && "should be None");
 
-    Tuner_->applyConfig(*TunerConf, M);
+    if (recompileReady_.empty()) {
+      // we need the result asap, so we do it here
+      // since we're holding the semaphore for the recompile
+      // callback.
+      recompile_callback(false);
+    }
 
-    std::cout << "optimizing...\n";
+    assert(recompileReady_.size() > 0);
 
-    MPM_->run(M);
+    obtainResult_ = std::move(recompileReady_.front());
+    recompileReady_.pop_front();
 
-    auto End = std::chrono::system_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
+    // FIXME launch a chained recompile job!
+  }
 
-    Tuner_->dump();
+  CompileResult Optimizer::recompile() {
 
-    std::cout << "Optimize finished in " << elapsed.count() << "ms\n"
-              << "+++++++\n";
+    // the user program needs a new version right now.
+    dispatch_sync_f(recompileQ_, this, obtainResultTask);
 
-    return FB;
+    assert(obtainResult_.has_value() && "that's wrong");
+
+    auto R = std::move(obtainResult_.value());
+    obtainResult_ = std::nullopt;
+
+    return R;
   }
 
 
-  ////////////////
-
-  std::pair<std::unique_ptr<easy::Function>, std::shared_ptr<tuner::Feedback>> Optimizer::recompile() {
+  void Optimizer::recompile_callback(bool canChain) {
+    std::cout << "recompiling...\n";
+    auto Start = std::chrono::system_clock::now();
 
     auto &BT = easy::BitcodeTracker::GetTracker();
 
@@ -210,20 +229,34 @@ namespace tuner {
 
     easy::Function::WriteOptimizedToFile(*M, Cxt_->getDebugBeforeFile());
 
-    auto FB = optimize(*M);
+    /////////////////////
+    // allow the tuner to analyze & modify the IR.
+    Tuner_->analyze(*M);
+    auto Gen = Tuner_->getNextConfig();
+    auto TunerConf = Gen.first;
+    auto FB = Gen.second;
+
+    Tuner_->applyConfig(*TunerConf, *M);
+
+    Tuner_->dump();
+    //////////////////////
+
+    // Optimize the IR.
+    // This also may not be thread-safe unless if we reconstruct the MPM.
+    MPM_->run(*M);
 
     easy::Function::WriteOptimizedToFile(*M, Cxt_->getDebugFile());
 
-    std::cout << "generating asm code...\n";
-    auto Start = std::chrono::system_clock::now();
-
-    std::unique_ptr<easy::Function> Fun = easy::Function::CompileAndWrap(Name, Globals, std::move(LLVMCxt), std::move(M));
+    // Compile to assembly.
+    std::unique_ptr<easy::Function> Fun =
+        easy::Function::CompileAndWrap(
+            Name, Globals, std::move(LLVMCxt), std::move(M));
 
     auto End = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
-    std::cout << "done in " << elapsed.count() << "ms\n";
+    std::cout << "done in " << elapsed.count() << " ms\n";
 
-    return {std::move(Fun), std::move(FB)};
+    recompileReady_.push_back({std::move(Fun), std::move(FB)});
 
   }
 

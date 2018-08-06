@@ -95,9 +95,18 @@ namespace tuner {
     // ensures derived destructors are called
     virtual ~Tuner() = default;
 
-    // NOTE: this method should not mutate the value of any Knobs,
+    // this method should not mutate the value of any Knobs,
     // it _may_ mutate the state of the Tuner.
+    // NOTE: NOT THREAD SAFE.
     virtual GenResult& getNextConfig () = 0;
+
+    // a method to query whether the tuner
+    // could produce a new config, given no
+    // additional measurement feedback information
+    // from prior configs. This is used to allow more
+    // compilation tasks to occur concurrently.
+    // NOTE: NOT THREAD SAFE
+    virtual bool nextConfigPossible() const = 0;
 
     virtual void analyze(llvm::Module &M) = 0;
 
@@ -163,6 +172,10 @@ namespace tuner {
 
     GenResult& getNextConfig () override {
       return NoOpConfig_;
+    }
+
+    bool nextConfigPossible () const override {
+      return true;
     }
 
     void analyze(llvm::Module &M) override { }

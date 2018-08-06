@@ -279,6 +279,11 @@ namespace tuner {
       }
     }
 
+    bool nextConfigPossible () const override {
+      size_t numConfg = Configs_.size();
+      return numConfg < BatchSz_  ||  Predictions_.size() > 0;
+    }
+
     GenResult& getNextConfig() override {
       // SURF
       size_t numConfg = Configs_.size();

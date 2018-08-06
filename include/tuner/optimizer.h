@@ -1,6 +1,10 @@
 #ifndef TUNER_OPTIMIZER
 #define TUNER_OPTIMIZER
 
+#include <list>
+
+#include <dispatch/dispatch.h>
+
 #include <easy/runtime/Context.h>
 #include <easy/runtime/BitcodeTracker.h>
 
@@ -13,6 +17,8 @@
 #include <tuner/Feedback.h>
 
 namespace tuner {
+
+  using CompileResult = std::pair<std::unique_ptr<easy::Function>, std::shared_ptr<tuner::Feedback>>;
 
 /////
 // each Optimizer instance is an encapsulation of the state of
@@ -33,13 +39,22 @@ private:
   std::unique_ptr<llvm::TargetMachine> TM_;
   bool InitializedSelf_;
 
+  //////////
+  // members related to concurrent JIT compilation
+
+  // a serial compilation-job queue, and results list.
+  dispatch_queue_t recompileQ_;
+  std::list<CompileResult> recompileReady_;
+  std::optional<CompileResult> obtainResult_;
+  const size_t RECOMPILE_MAX = 10;
+
+  /////////////
+
   void setupPassManager(KnobSet &);
   void findContextKnobs(KnobSet &);
 
   // members related to automatic tuning
   Tuner *Tuner_;
-
-  std::shared_ptr<Feedback> optimize(llvm::Module &M);
 
 public:
   Optimizer(void* Addr, std::shared_ptr<easy::Context> Cxt, bool LazyInit = false);
@@ -52,8 +67,10 @@ public:
 
   void* getAddr() const;
 
-  std::pair<std::unique_ptr<easy::Function>,
-            std::shared_ptr<tuner::Feedback>> recompile();
+  void recompile_callback(bool canChain);
+  void obtain_callback();
+
+  CompileResult recompile();
 
 }; // end class
 

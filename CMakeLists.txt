@@ -10,6 +10,7 @@ list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/c
 include(AddLLVM)
 include(Python)
 include(XGBoost)
+include(GCD)
 
 option(LLVM_ENABLE_PLUGINS "Generate build targets for LLVM plugins." ON)
 option (FORCE_COLORED_OUTPUT "Always produce ANSI-colored output (GNU/Clang only)." TRUE)

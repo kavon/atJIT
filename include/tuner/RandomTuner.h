@@ -42,6 +42,10 @@ namespace tuner {
       return Configs_.back();
     }
 
+    bool nextConfigPossible () const override {
+      return true;
+    }
+
   }; // end class RandomTuner
 
 } // namespace tuner

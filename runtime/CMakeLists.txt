@@ -28,6 +28,9 @@ set_target_properties(EasyJitRuntime PROPERTIES
                       INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 target_link_libraries(EasyJitRuntime PUBLIC ${XGB_LIB})
+target_link_libraries(EasyJitRuntime PUBLIC ${GCD_LIB})
+
+include_directories(${GCD_INCLUDE_DIR})
 
 llvm_config(EasyJitRuntime core codegen interpreter support mcjit native executionengine passes objcarcopts)
 
