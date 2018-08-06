@@ -111,6 +111,7 @@ namespace tuner {
     /////////
     // initialize concurrency stuff
     recompileQ_ = dispatch_queue_create("atJIT.recompileQueue", NULL);
+    listOperation_ = dispatch_queue_create("atJIT.listOperationQueue", NULL);
 
     /////////
     // initialize the metadata needed for JIT compilation
@@ -166,55 +167,97 @@ namespace tuner {
   // for proper standards compliance, we need to mark our
   // GCD call-back functions with C linkage.
   extern "C" {
+
     // NOTE: this task is only safe in a serial job queue.
     void recompileTask(void* P) {
       Optimizer* Opt = static_cast<Optimizer*>(P);
-      Opt->recompile_callback(true);
+      Opt->recompile_callback();
     }
+
+    // list tasks
 
     void obtainResultTask(void* P) {
       Optimizer* Opt = static_cast<Optimizer*>(P);
       Opt->obtain_callback();
     }
 
+    void addResultTask(void* P) {
+      Optimizer* Opt = static_cast<Optimizer*>(P);
+      Opt->addToList_callback();
+    }
+
   } // end extern C
 
 /////////////////////////////////
 
+  // adds a result to the list from the waiting queue.
+  // NOTE: must be holding BOTH recompileQ_ and listOperation_ queue!
+  void Optimizer::addToList_callback() {
+    assert(waiting_.has_value());
+
+    auto R = std::move(waiting_.value());
+    waiting_ = std::nullopt;
+
+    recompileReady_.push_back(std::move(R));
+  }
+
+  // tries once to pop a compile result off the list.
   void Optimizer::obtain_callback() {
     assert(!obtainResult_.has_value() && "should be None");
 
     if (recompileReady_.empty()) {
-      // we need the result asap, so we do it here
-      // since we're holding the semaphore for the recompile
-      // callback.
-      recompile_callback(false);
+      obtainResult_ = std::nullopt;
+      return;
     }
 
     assert(recompileReady_.size() > 0);
 
     obtainResult_ = std::move(recompileReady_.front());
     recompileReady_.pop_front();
-
-    // FIXME launch a chained recompile job!
   }
 
-  CompileResult Optimizer::recompile() {
 
-    // the user program needs a new version right now.
-    dispatch_sync_f(recompileQ_, this, obtainResultTask);
+  //////////////////////
+  /// STARTING POINT
+  //////////////////////
+  CompileResult Optimizer::recompile() {
+    auto Start = std::chrono::system_clock::now();
+
+    // check the list for already-compiled versions, blocking.
+    dispatch_sync_f(listOperation_, this, obtainResultTask);
+
+    if (!obtainResult_.has_value()) {
+      // add a compile job to the queue.
+      dispatch_async_f(recompileQ_, this, recompileTask);
+
+      // wait for the next job to finish.
+      do {
+        dispatch_sync_f(listOperation_, this, obtainResultTask);
+        // TODO: sleep a bit here.
+      } while (!obtainResult_.has_value());
+    }
 
     assert(obtainResult_.has_value() && "that's wrong");
 
     auto R = std::move(obtainResult_.value());
     obtainResult_ = std::nullopt;
 
+    auto End = std::chrono::system_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
+    std::cout << "reoptimize request finished in " << elapsed.count() << " ms\n";
+
     return R;
   }
 
 
-  void Optimizer::recompile_callback(bool canChain) {
-    std::cout << "recompiling...\n";
+  // must be dispatched from recompileQ_.
+  // this function will start a chain of recompile jobs
+  // up to the predefined max.
+  // it will then queue a new job that pushes the result
+  // onto the list. Thus, holding the list queue will deadlock
+  // this compile queue!
+  void Optimizer::recompile_callback() {
+
     auto Start = std::chrono::system_clock::now();
 
     auto &BT = easy::BitcodeTracker::GetTracker();
@@ -238,7 +281,18 @@ namespace tuner {
 
     Tuner_->applyConfig(*TunerConf, *M);
 
-    Tuner_->dump();
+    // Tuner_->dump();
+
+    // should we queue up another job to do after this?
+    if (CompileCount_ < RECOMPILE_MAX && Tuner_->nextConfigPossible()) {
+      CompileCount_++;
+      dispatch_async_f(recompileQ_, this, recompileTask);
+    } else {
+      // reset the counter and skip adding another task.
+      CompileCount_ = 0;
+      // FIXME: this doesn't work correctly.
+    }
+
     //////////////////////
 
     // Optimize the IR.
@@ -254,10 +308,13 @@ namespace tuner {
 
     auto End = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
-    std::cout << "done in " << elapsed.count() << " ms\n";
+    std::cout << "compile job finished in " << elapsed.count() << " ms\n";
 
-    recompileReady_.push_back({std::move(Fun), std::move(FB)});
+    // it's a pain to pass two values to the callback.
+    assert(waiting_.has_value() == false);
+    waiting_ = {std::move(Fun), std::move(FB)};
 
+    dispatch_sync_f(listOperation_, this, addResultTask);
   }
 
 } // namespace tuner

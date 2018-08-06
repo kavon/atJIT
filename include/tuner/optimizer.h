@@ -42,11 +42,20 @@ private:
   //////////
   // members related to concurrent JIT compilation
 
-  // a serial compilation-job queue, and results list.
+  // a serial compilation-job queue and list of
+  // results waiting to be moved to the ready queue.
+  const size_t RECOMPILE_MAX = 4;
+  size_t CompileCount_ = 0;
   dispatch_queue_t recompileQ_;
+  std::optional<CompileResult> waiting_;
+
+  // a serial list-access queue. The dispatch
+  // queue is basically a semaphore.
+  dispatch_queue_t listOperation_;
   std::list<CompileResult> recompileReady_;
   std::optional<CompileResult> obtainResult_;
-  const size_t RECOMPILE_MAX = 10;
+
+
 
   /////////////
 
@@ -67,7 +76,9 @@ public:
 
   void* getAddr() const;
 
-  void recompile_callback(bool canChain);
+  //// these callbacks are a bit ugly.
+  void addToList_callback();
+  void recompile_callback();
   void obtain_callback();
 
   CompileResult recompile();
