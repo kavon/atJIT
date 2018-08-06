@@ -37,8 +37,9 @@ auto jit_with_optimizer(tuner::Optimizer &Opt, T &&Fun) {
   using new_return_type = typename new_type_traits::return_type;
   using new_parameter_types = typename new_type_traits::parameter_list;
 
-  auto CompiledFunction =
-      Function::Compile(Opt);
+  assert(Opt.getAddr() == FunPtr && "mismatch between function and optimizer!");
+
+  auto CompiledFunction = Opt.recompile();
 
   auto Wrapper =
       WrapFunction(std::move(CompiledFunction.first), std::move(CompiledFunction.second),

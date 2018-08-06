@@ -1,6 +1,8 @@
 #include <tuple>
 #include <iostream>
 
+#include <dispatch/dispatch.h>
+
 #include <tuner/optimizer.h>
 
 #include <easy/runtime/Context.h>
@@ -106,11 +108,12 @@ namespace tuner {
     if (InitializedSelf_)
       return;
 
-      // steps:
-      // 1. collect all knobs
-      // 2. initialize the desired tuner with those knobs.
-
     std::cout << "initializing optimizer\n";
+
+    /////////
+    // initialize the metadata needed for JIT compilation
+    auto &BT = easy::BitcodeTracker::GetTracker();
+    GMap_ = BT.getNameAndGlobalMapping(Addr_);
 
     /////////
     // collect knobs
@@ -188,6 +191,40 @@ namespace tuner {
               << "+++++++\n";
 
     return FB;
+  }
+
+
+  ////////////////
+
+  std::pair<std::unique_ptr<easy::Function>, std::shared_ptr<tuner::Feedback>> Optimizer::recompile() {
+
+    auto &BT = easy::BitcodeTracker::GetTracker();
+
+    const char* Name;
+    easy::GlobalMapping* Globals;
+    std::tie(Name, Globals) = GMap_;
+
+    std::unique_ptr<llvm::Module> M;
+    std::unique_ptr<llvm::LLVMContext> LLVMCxt;
+    std::tie(M, LLVMCxt) = BT.getModule(Addr_);
+
+    easy::Function::WriteOptimizedToFile(*M, Cxt_->getDebugBeforeFile());
+
+    auto FB = optimize(*M);
+
+    easy::Function::WriteOptimizedToFile(*M, Cxt_->getDebugFile());
+
+    std::cout << "generating asm code...\n";
+    auto Start = std::chrono::system_clock::now();
+
+    std::unique_ptr<easy::Function> Fun = easy::Function::CompileAndWrap(Name, Globals, std::move(LLVMCxt), std::move(M));
+
+    auto End = std::chrono::system_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
+    std::cout << "done in " << elapsed.count() << "ms\n";
+
+    return {std::move(Fun), std::move(FB)};
+
   }
 
 } // namespace tuner

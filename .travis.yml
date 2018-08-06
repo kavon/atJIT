@@ -20,6 +20,8 @@ addons:
             - llvm-6.0-tools
             - clang-6.0
             - libopencv-dev
+            - libdispatch0
+            - libdispatch-dev
 
 before_install:
     - pip install --user --upgrade pip

@@ -15,6 +15,7 @@ namespace easy {
 
 namespace llvm {
   class Module;
+  class LLVMContext;
 }
 
 namespace tuner {
@@ -57,7 +58,13 @@ class Function {
 
   llvm::Module const& getLLVMModule() const;
 
-  static std::pair<std::unique_ptr<Function>, std::shared_ptr<tuner::Feedback>> Compile(tuner::Optimizer&);
+  static std::unique_ptr<Function> CompileAndWrap (
+    const char*Name, GlobalMapping* Globals,
+     std::unique_ptr<llvm::LLVMContext> LLVMCxt,
+     std::unique_ptr<llvm::Module> M
+  );
+
+  static void WriteOptimizedToFile(llvm::Module const &M, std::string const& File);
 
   friend
   std::hash<easy::Function>::result_type std::hash<easy::Function>::operator()(argument_type const& F) const noexcept;

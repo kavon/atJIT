@@ -44,6 +44,19 @@ class BitcodeTracker {
   std::tuple<const char*, GlobalMapping*> getNameAndGlobalMapping(void* FPtr);
   bool hasGlobalMapping(void* FPtr) const;
 
+  /*
+   NOTE: on getModule / getModuleWithContext
+
+   "LLVMContext owns and manages the core "global" data of LLVM's core
+   infrastructure, including the type and constant uniquing tables.
+   LLVMContext itself provides no locking guarantees, so you should be
+   careful to have one context per thread."
+
+   Thus, right now, it seems we're stuck with parsing the bitcode into a new
+   chunk of memory on each JIT event.
+
+   */
+
   using ModuleContextPair = std::pair<std::unique_ptr<llvm::Module>, std::unique_ptr<llvm::LLVMContext>>;
   ModuleContextPair getModule(void* FPtr);
   std::unique_ptr<llvm::Module> getModuleWithContext(void* FPtr, llvm::LLVMContext &C);

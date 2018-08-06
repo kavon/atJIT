@@ -53,7 +53,7 @@ static void MapGlobals(llvm::ExecutionEngine& EE, GlobalMapping* Globals) {
   }
 }
 
-static void WriteOptimizedToFile(llvm::Module const &M, std::string const& File) {
+void Function::WriteOptimizedToFile(llvm::Module const &M, std::string const& File) {
   if(File.empty())
     return;
   std::error_code Error;
@@ -70,7 +70,7 @@ static void WriteOptimizedToFile(llvm::Module const &M, std::string const& File)
 }
 
 std::unique_ptr<Function>
-CompileAndWrap(const char*Name, GlobalMapping* Globals,
+Function::CompileAndWrap(const char*Name, GlobalMapping* Globals,
                std::unique_ptr<llvm::LLVMContext> LLVMCxt,
                std::unique_ptr<llvm::Module> M) {
 
@@ -89,40 +89,6 @@ CompileAndWrap(const char*Name, GlobalMapping* Globals,
 
 llvm::Module const& Function::getLLVMModule() const {
   return *static_cast<LLVMHolderImpl const&>(*this->Holder).M_;
-}
-
-std::pair<std::unique_ptr<Function>, std::shared_ptr<tuner::Feedback>> Function::Compile(tuner::Optimizer &Opt) {
-
-  easy::Context const* Cxt = Opt.getContext();
-  void* Addr = Opt.getAddr();
-
-  auto &BT = BitcodeTracker::GetTracker();
-
-  const char* Name;
-  GlobalMapping* Globals;
-  std::tie(Name, Globals) = BT.getNameAndGlobalMapping(Addr);
-
-  std::unique_ptr<llvm::Module> M;
-  std::unique_ptr<llvm::LLVMContext> LLVMCxt;
-  std::tie(M, LLVMCxt) = BT.getModule(Addr);
-
-  WriteOptimizedToFile(*M, Cxt->getDebugBeforeFile());
-
-  auto FB = Opt.optimize(*M);
-
-  WriteOptimizedToFile(*M, Cxt->getDebugFile());
-
-  std::cout << "generating asm code...\n";
-  auto Start = std::chrono::system_clock::now();
-
-  std::unique_ptr<Function> Fun = CompileAndWrap(Name, Globals, std::move(LLVMCxt), std::move(M));
-
-  auto End = std::chrono::system_clock::now();
-  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
-  std::cout << "done in " << elapsed.count() << "ms\n";
-
-  return {std::move(Fun), std::move(FB)};
-
 }
 
 void easy::Function::serialize(std::ostream& os) const {

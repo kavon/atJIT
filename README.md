@@ -13,7 +13,7 @@ The code was originally based on the Easy::jit project.
 Prerequisites
 --------
 
-Before you can build atJIT, ensure that your system has
+Before you can build atJIT, ensure that your system has these essentials:
 
 - a C++ compiler with sufficient [C++17 support](https://en.cppreference.com/w/cpp/compiler_support#C.2B.2B17_features). This likely means GCC >= 7, or Clang >= 4, but slightly older versions may work.
 - cmake >= 3.5
@@ -45,10 +45,17 @@ invocation of CMake when building LLVM with the `-C` flag like so:
 cmake -C <path-to-atJit-root>/cmake/LLVM.cmake  .. other arguments ..
 ```
 
-
 #### Step 2
+Install [Grand Central Dispatch](https://apple.github.io/swift-corelibs-libdispatch/), which on
+Ubuntu amounts to running:
 
-Obtain and build XGBoost by running the following command:
+```bash
+sudo apt install libdispatch0 libdispatch-dev
+```
+
+#### Step 3
+
+Obtain and build [XGBoost](https://xgboost.ai/) by running the following command:
 
 ```
 ./xgboost/get.sh
