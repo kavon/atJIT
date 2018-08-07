@@ -7,6 +7,7 @@
 #include <bitset>
 
 #define DEFAULT_STD_ERR_PCT 1.0
+#define DEFAULT_COMPILE_AHEAD 3
 
 namespace tuner {
   // a "missing" value indicator

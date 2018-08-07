@@ -14,6 +14,7 @@ namespace tuner {
   class RandomTuner : public AnalyzingTuner {
   protected:
     std::mt19937_64 Gen_; // 64-bit mersenne twister random number generator
+    int aheadOfTimeCount = 0;
 
   public:
     RandomTuner(KnobSet KS, std::shared_ptr<easy::Context> Cxt) : AnalyzingTuner(KS, std::move(Cxt)) {
@@ -42,8 +43,15 @@ namespace tuner {
       return Configs_.back();
     }
 
-    bool nextConfigPossible () const override {
-      return true;
+    // we always know the next config, so we
+    // need to bound the number of yes's given
+    bool shouldCompileNext () override {
+      bool ans = aheadOfTimeCount < DEFAULT_COMPILE_AHEAD;
+      if (!ans)
+        aheadOfTimeCount = 0;
+      else
+        aheadOfTimeCount++;
+      return ans;
     }
 
   }; // end class RandomTuner

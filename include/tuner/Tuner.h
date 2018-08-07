@@ -101,12 +101,12 @@ namespace tuner {
     virtual GenResult& getNextConfig () = 0;
 
     // a method to query whether the tuner
-    // could produce a new config, given no
+    // should produce a new config, given no
     // additional measurement feedback information
     // from prior configs. This is used to allow more
     // compilation tasks to occur concurrently.
     // NOTE: NOT THREAD SAFE
-    virtual bool nextConfigPossible() const = 0;
+    virtual bool shouldCompileNext() = 0;
 
     virtual void analyze(llvm::Module &M) = 0;
 
@@ -174,8 +174,8 @@ namespace tuner {
       return NoOpConfig_;
     }
 
-    bool nextConfigPossible () const override {
-      return true;
+    bool shouldCompileNext () override {
+      return false; // no need
     }
 
     void analyze(llvm::Module &M) override { }

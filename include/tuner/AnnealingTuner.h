@@ -119,8 +119,10 @@ namespace tuner {
       }
     }
 
-    bool nextConfigPossible () const override {
-      return !(missingCost(currentState)) || missingCost(trialState);
+    bool shouldCompileNext () override {
+      // until we have feedback for the prior config,
+      // we can't produce the next one.
+      return false;
     }
 
     GenResult& getNextConfig() override {

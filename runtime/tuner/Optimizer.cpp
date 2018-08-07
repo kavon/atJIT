@@ -24,6 +24,10 @@ namespace {
     std::unique_ptr<llvm::TargetMachine> TM(llvm::EngineBuilder().selectTarget());
     return TM;
   }
+
+  void sleep_for(unsigned ms) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+  }
 } // end anonymous namespace
 
 namespace tuner {
@@ -100,6 +104,10 @@ namespace tuner {
       }
 
   Optimizer::~Optimizer() {
+    // first we need to make sure no concurrent compiles still running
+    while (recompileActive_)
+      sleep_for(1);
+
     delete Tuner_;
   }
 
@@ -230,13 +238,17 @@ namespace tuner {
     // check the list for already-compiled versions, blocking.
     dispatch_sync_f(listOperation_, this, obtainResultTask);
 
-    if (!obtainResult_.has_value()) {
-      // add a compile job to the queue
-      dispatch_async_f(recompileQ_, this, recompileTask);
+    if (obtainResult_.has_value() == false) {
+
+      if (recompileActive_ == false) {
+        // start a compile job
+        recompileActive_ = true;
+        dispatch_async_f(recompileQ_, this, recompileTask);
+      }
 
       // wait for the first job to finish.
       do {
-        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+        sleep_for(5);
         dispatch_sync_f(listOperation_, this, obtainResultTask);
       } while (!obtainResult_.has_value());
     }
@@ -287,16 +299,6 @@ namespace tuner {
 
     // Tuner_->dump();
 
-    // // should we queue up another job to do after this?
-    // if (CompileCount_ < RECOMPILE_MAX && Tuner_->nextConfigPossible()) {
-    //   CompileCount_++;
-    //   dispatch_async_f(recompileQ_, this, recompileTask);
-    // } else {
-    //   // reset the counter and skip adding another task.
-    //   CompileCount_ = 0;
-    //   // FIXME: this doesn't work correctly.
-    // }
-
     //////////////////////
 
     // Optimize the IR.
@@ -319,6 +321,15 @@ namespace tuner {
     toBeAdded_ = {std::move(Fun), std::move(FB)};
 
     dispatch_sync_f(listOperation_, this, addResultTask);
+
+    // ask the tuner if we're able to, and *should* try
+    // compiling the next config ahead-of-time.
+    if (Tuner_->shouldCompileNext()) {
+      dispatch_async_f(recompileQ_, this, recompileTask);
+    } else {
+      // i'm the end of the chain
+      recompileActive_ = false;
+    }
   }
 
 } // namespace tuner

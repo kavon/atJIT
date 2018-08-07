@@ -45,6 +45,7 @@ private:
   // a serial compilation-job queue and list of
   // results waiting to be moved to the ready queue.
   dispatch_queue_t recompileQ_;
+  bool recompileActive_ = false;
   std::optional<CompileResult> toBeAdded_;
 
   // a serial list-access queue. The dispatch

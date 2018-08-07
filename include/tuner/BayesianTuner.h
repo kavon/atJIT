@@ -279,7 +279,9 @@ namespace tuner {
       }
     }
 
-    bool nextConfigPossible () const override {
+    // either we're still establishing a random prior,
+    // or we have a bounded set of predictions still sitting around.
+    bool shouldCompileNext () override {
       size_t numConfg = Configs_.size();
       return numConfg < BatchSz_  ||  Predictions_.size() > 0;
     }
