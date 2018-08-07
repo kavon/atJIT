@@ -120,8 +120,17 @@ namespace tuner {
 
     /////////
     // initialize concurrency stuff
-    recompileQ_ = dispatch_queue_create("atJIT.recompileQueue", NULL);
-    listOperation_ = dispatch_queue_create("atJIT.listOperationQueue", NULL);
+    optimizeQ_ = dispatch_queue_create("atJIT.optimizeQ", NULL);
+
+    codegenQ_ = dispatch_queue_create("atJIT.codegenQ", NULL);
+
+    // FIXME: we should be able to parallelize this queue.
+    // one of the difficulties is that recompileActive can get
+    // set to false before all recompile jobs are flushed.
+    //
+    // codegenQ_ = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
+
+    mutate_recompileDone_ = dispatch_queue_create("atJIT.mutate_recompileDone", NULL);
 
     /////////
     // initialize the metadata needed for JIT compilation
@@ -184,6 +193,12 @@ namespace tuner {
       Opt->recompile_callback();
     }
 
+    void codegenTask(void* P) {
+      OptimizeResult* OR = static_cast<OptimizeResult*>(P);
+      OR->Opt->codegen_callback(OR);
+      delete OR;
+    }
+
     // list tasks
 
     void obtainResultTask(void* P) {
@@ -201,14 +216,14 @@ namespace tuner {
 /////////////////////////////////
 
   // adds a result to the list from the waiting queue.
-  // NOTE: must be holding BOTH recompileQ_ and listOperation_ queue!
+  // NOTE: must be holding BOTH codegenQ_ and mutate_recompileDone_ queue!
   void Optimizer::addToList_callback() {
     assert(toBeAdded_.has_value());
 
     auto R = std::move(toBeAdded_.value());
     toBeAdded_ = std::nullopt;
 
-    recompileReady_.push_back(std::move(R));
+    recompileDone_.push_back(std::move(R));
   }
 
   // tries once to pop a compile result off the ready list.
@@ -217,15 +232,15 @@ namespace tuner {
   void Optimizer::obtain_callback() {
     assert(!obtainResult_.has_value() && "should be None");
 
-    if (recompileReady_.empty()) {
+    if (recompileDone_.empty()) {
       obtainResult_ = std::nullopt;
       return;
     }
 
-    assert(recompileReady_.size() > 0);
+    assert(recompileDone_.size() > 0);
 
-    obtainResult_ = std::move(recompileReady_.front());
-    recompileReady_.pop_front();
+    obtainResult_ = std::move(recompileDone_.front());
+    recompileDone_.pop_front();
   }
 
 
@@ -236,20 +251,20 @@ namespace tuner {
     auto Start = std::chrono::system_clock::now();
 
     // check the list for already-compiled versions, blocking.
-    dispatch_sync_f(listOperation_, this, obtainResultTask);
+    dispatch_sync_f(mutate_recompileDone_, this, obtainResultTask);
 
     if (obtainResult_.has_value() == false) {
 
       if (recompileActive_ == false) {
         // start a compile job
         recompileActive_ = true;
-        dispatch_async_f(recompileQ_, this, recompileTask);
+        dispatch_async_f(optimizeQ_, this, recompileTask);
       }
 
       // wait for the first job to finish.
       do {
-        sleep_for(5);
-        dispatch_sync_f(listOperation_, this, obtainResultTask);
+        sleep_for(1);
+        dispatch_sync_f(mutate_recompileDone_, this, obtainResultTask);
       } while (!obtainResult_.has_value());
     }
 
@@ -260,13 +275,13 @@ namespace tuner {
 
     auto End = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
-    std::cout << "reoptimize request finished in " << elapsed.count() << " ms\n";
+    std::cout << ">> reoptimize request finished in " << elapsed.count() << " ms\n";
 
     return R;
   }
 
 
-  // must be dispatched from recompileQ_.
+  // must be dispatched from optimizeQ_.
   // this function will start a chain of recompile jobs
   // up to the predefined max.
   // it will then queue a new job that pushes the result
@@ -277,10 +292,6 @@ namespace tuner {
     auto Start = std::chrono::system_clock::now();
 
     auto &BT = easy::BitcodeTracker::GetTracker();
-
-    const char* Name;
-    easy::GlobalMapping* Globals;
-    std::tie(Name, Globals) = GMap_;
 
     std::unique_ptr<llvm::Module> M;
     std::unique_ptr<llvm::LLVMContext> LLVMCxt;
@@ -307,29 +318,52 @@ namespace tuner {
 
     easy::Function::WriteOptimizedToFile(*M, Cxt_->getDebugFile());
 
-    // Compile to assembly.
-    std::unique_ptr<easy::Function> Fun =
-        easy::Function::CompileAndWrap(
-            Name, Globals, std::move(LLVMCxt), std::move(M));
-
     auto End = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
-    std::cout << "compile job finished in " << elapsed.count() << " ms\n";
-
-    // it's a pain to pass two values to the callback.
-    assert(toBeAdded_.has_value() == false);
-    toBeAdded_ = {std::move(Fun), std::move(FB)};
-
-    dispatch_sync_f(listOperation_, this, addResultTask);
+    std::cout << "@@ optimize job finished in " << elapsed.count() << " ms\n";
 
     // ask the tuner if we're able to, and *should* try
     // compiling the next config ahead-of-time.
-    if (Tuner_->shouldCompileNext()) {
-      dispatch_async_f(recompileQ_, this, recompileTask);
-    } else {
-      // i'm the end of the chain
-      recompileActive_ = false;
+    bool shouldCompile = Tuner_->shouldCompileNext();
+
+    if (shouldCompile) {
+      // start an async recompile job
+      dispatch_async_f(optimizeQ_, this, recompileTask);
     }
+
+    OptimizeResult* OR = new OptimizeResult(this, std::move(FB), std::move(M), std::move(LLVMCxt), !shouldCompile);
+
+    // start an async codegen job
+    dispatch_async_f(codegenQ_, OR, codegenTask);
+  }
+
+
+
+  void Optimizer::codegen_callback(OptimizeResult* OR) {
+    auto Start = std::chrono::system_clock::now();
+
+    const char* Name;
+    easy::GlobalMapping* Globals;
+    std::tie(Name, Globals) = GMap_;
+
+    // Compile to assembly.
+    std::unique_ptr<easy::Function> Fun =
+        easy::Function::CompileAndWrap(
+            Name, Globals, std::move(OR->LLVMCxt), std::move(OR->M));
+
+    // it's a pain to pass two values to the callback.
+    assert(toBeAdded_.has_value() == false);
+    toBeAdded_ = {std::move(Fun), std::move(OR->FB)};
+
+    dispatch_sync_f(mutate_recompileDone_, this, addResultTask);
+
+    auto End = std::chrono::system_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
+    std::cout << "$$ codegen job finished in " << elapsed.count() << " ms\n";
+
+    // am I the end of the chain?
+    if (OR->End)
+      recompileActive_ = false;
   }
 
 } // namespace tuner
