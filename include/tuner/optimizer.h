@@ -18,7 +18,22 @@
 
 namespace tuner {
 
-  using CompileResult = std::pair<std::unique_ptr<easy::Function>, std::shared_ptr<tuner::Feedback>>;
+  using CompileResult =
+   std::pair<std::unique_ptr<easy::Function>, std::shared_ptr<tuner::Feedback>>;
+
+  struct OptimizeResult {
+  public:
+    std::unique_ptr<llvm::Module> M;
+    std::unique_ptr<llvm::LLVMContext> LLVMCxt;
+    std::shared_ptr<tuner::Feedback> FB;
+    Optimizer* Opt;
+    bool End;
+
+    OptimizeResult(Optimizer* Opt_, std::shared_ptr<tuner::Feedback> FB_, std::unique_ptr<llvm::Module> M_, std::unique_ptr<llvm::LLVMContext> LLVMCxt_,
+    bool End_)
+      :
+      M(std::move(M_)), LLVMCxt(std::move(LLVMCxt_)), FB(std::move(FB_)), Opt(Opt_), End(End_) {}
+  };
 
 /////
 // each Optimizer instance is an encapsulation of the state of
@@ -42,16 +57,19 @@ private:
   //////////
   // members related to concurrent JIT compilation
 
-  // a serial compilation-job queue and list of
-  // results waiting to be moved to the ready queue.
-  dispatch_queue_t recompileQ_;
+  // the initial job queue for recompile requests.
+  // it is a serial queue that optimizes the IR.
+  dispatch_queue_t optimizeQ_;
+
+  // a serial job queue for IR -> asm compilation
+  dispatch_queue_t codegenQ_;
   bool recompileActive_ = false;
   std::optional<CompileResult> toBeAdded_;
 
-  // a serial list-access queue. The dispatch
+  // serial list-access queues. The dispatch
   // queue is basically a semaphore.
-  dispatch_queue_t listOperation_;
-  std::list<CompileResult> recompileReady_;
+  dispatch_queue_t mutate_recompileDone_;
+  std::list<CompileResult> recompileDone_;
 
   // this is owned exclusively by the main thread.
   std::optional<CompileResult> obtainResult_;
@@ -80,6 +98,7 @@ public:
   //// these callbacks are a bit ugly.
   void addToList_callback();
   void recompile_callback();
+  void codegen_callback(OptimizeResult*);
   void obtain_callback();
 
   CompileResult recompile();
