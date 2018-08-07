@@ -44,15 +44,15 @@ private:
 
   // a serial compilation-job queue and list of
   // results waiting to be moved to the ready queue.
-  const size_t RECOMPILE_MAX = 4;
-  size_t CompileCount_ = 0;
   dispatch_queue_t recompileQ_;
-  std::optional<CompileResult> waiting_;
+  std::optional<CompileResult> toBeAdded_;
 
   // a serial list-access queue. The dispatch
   // queue is basically a semaphore.
   dispatch_queue_t listOperation_;
   std::list<CompileResult> recompileReady_;
+
+  // this is owned exclusively by the main thread.
   std::optional<CompileResult> obtainResult_;
 
 

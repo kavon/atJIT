@@ -1,4 +1,6 @@
 #include <tuple>
+#include <chrono>
+#include <thread>
 #include <iostream>
 
 #include <tuner/optimizer.h>
@@ -193,15 +195,17 @@ namespace tuner {
   // adds a result to the list from the waiting queue.
   // NOTE: must be holding BOTH recompileQ_ and listOperation_ queue!
   void Optimizer::addToList_callback() {
-    assert(waiting_.has_value());
+    assert(toBeAdded_.has_value());
 
-    auto R = std::move(waiting_.value());
-    waiting_ = std::nullopt;
+    auto R = std::move(toBeAdded_.value());
+    toBeAdded_ = std::nullopt;
 
     recompileReady_.push_back(std::move(R));
   }
 
-  // tries once to pop a compile result off the list.
+  // tries once to pop a compile result off the ready list.
+  // result is placed into obtainResult_, which is
+  // only to be accessed by the main thread.
   void Optimizer::obtain_callback() {
     assert(!obtainResult_.has_value() && "should be None");
 
@@ -227,13 +231,13 @@ namespace tuner {
     dispatch_sync_f(listOperation_, this, obtainResultTask);
 
     if (!obtainResult_.has_value()) {
-      // add a compile job to the queue.
+      // add a compile job to the queue
       dispatch_async_f(recompileQ_, this, recompileTask);
 
-      // wait for the next job to finish.
+      // wait for the first job to finish.
       do {
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
         dispatch_sync_f(listOperation_, this, obtainResultTask);
-        // TODO: sleep a bit here.
       } while (!obtainResult_.has_value());
     }
 
@@ -283,15 +287,15 @@ namespace tuner {
 
     // Tuner_->dump();
 
-    // should we queue up another job to do after this?
-    if (CompileCount_ < RECOMPILE_MAX && Tuner_->nextConfigPossible()) {
-      CompileCount_++;
-      dispatch_async_f(recompileQ_, this, recompileTask);
-    } else {
-      // reset the counter and skip adding another task.
-      CompileCount_ = 0;
-      // FIXME: this doesn't work correctly.
-    }
+    // // should we queue up another job to do after this?
+    // if (CompileCount_ < RECOMPILE_MAX && Tuner_->nextConfigPossible()) {
+    //   CompileCount_++;
+    //   dispatch_async_f(recompileQ_, this, recompileTask);
+    // } else {
+    //   // reset the counter and skip adding another task.
+    //   CompileCount_ = 0;
+    //   // FIXME: this doesn't work correctly.
+    // }
 
     //////////////////////
 
@@ -311,8 +315,8 @@ namespace tuner {
     std::cout << "compile job finished in " << elapsed.count() << " ms\n";
 
     // it's a pain to pass two values to the callback.
-    assert(waiting_.has_value() == false);
-    waiting_ = {std::move(Fun), std::move(FB)};
+    assert(toBeAdded_.has_value() == false);
+    toBeAdded_ = {std::move(Fun), std::move(FB)};
 
     dispatch_sync_f(listOperation_, this, addResultTask);
   }

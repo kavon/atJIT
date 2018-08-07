@@ -120,8 +120,7 @@ namespace tuner {
     }
 
     bool nextConfigPossible () const override {
-      return initalizedFirstState &&
-        (!(missingCost(currentState)) || missingCost(trialState));
+      return !(missingCost(currentState)) || missingCost(trialState);
     }
 
     GenResult& getNextConfig() override {
