@@ -1,2 +1,2 @@
 REQUIRES: benchmark
-RUN: %bin/easyjit-benchmark 
+RUN: catchsegv %bin/easyjit-benchmark 

@@ -21,6 +21,16 @@ namespace tuner {
   using CompileResult =
    std::pair<std::unique_ptr<easy::Function>, std::shared_ptr<tuner::Feedback>>;
 
+  struct RecompileRequest {
+    Optimizer* Opt;
+    std::optional<CompileResult> RetVal;
+  };
+
+  struct AddCompileResult {
+    Optimizer* Opt;
+    CompileResult Result;
+  };
+
   struct OptimizeResult {
   public:
     std::unique_ptr<llvm::Module> M;
@@ -64,15 +74,11 @@ private:
   // a serial job queue for IR -> asm compilation
   dispatch_queue_t codegenQ_;
   bool recompileActive_ = false;
-  std::optional<CompileResult> toBeAdded_;
 
   // serial list-access queues. The dispatch
   // queue is basically a semaphore.
   dispatch_queue_t mutate_recompileDone_;
   std::list<CompileResult> recompileDone_;
-
-  // this is owned exclusively by the main thread.
-  std::optional<CompileResult> obtainResult_;
 
 
 
@@ -96,10 +102,10 @@ public:
   void* getAddr() const;
 
   //// these callbacks are a bit ugly.
-  void addToList_callback();
-  void recompile_callback();
+  void addToList_callback(AddCompileResult*);
+  void optimize_callback();
   void codegen_callback(OptimizeResult*);
-  void obtain_callback();
+  void obtain_callback(RecompileRequest*);
 
   CompileResult recompile();
 

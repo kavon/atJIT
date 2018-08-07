@@ -187,10 +187,9 @@ namespace tuner {
   // GCD call-back functions with C linkage.
   extern "C" {
 
-    // NOTE: this task is only safe in a serial job queue.
-    void recompileTask(void* P) {
+    void optimizeTask(void* P) {
       Optimizer* Opt = static_cast<Optimizer*>(P);
-      Opt->recompile_callback();
+      Opt->optimize_callback();
     }
 
     void codegenTask(void* P) {
@@ -202,13 +201,13 @@ namespace tuner {
     // list tasks
 
     void obtainResultTask(void* P) {
-      Optimizer* Opt = static_cast<Optimizer*>(P);
-      Opt->obtain_callback();
+      RecompileRequest* R = static_cast<RecompileRequest*>(P);
+      R->Opt->obtain_callback(R);
     }
 
     void addResultTask(void* P) {
-      Optimizer* Opt = static_cast<Optimizer*>(P);
-      Opt->addToList_callback();
+      AddCompileResult* ACR = static_cast<AddCompileResult*>(P);
+      ACR->Opt->addToList_callback(ACR);
     }
 
   } // end extern C
@@ -216,30 +215,25 @@ namespace tuner {
 /////////////////////////////////
 
   // adds a result to the list from the waiting queue.
-  // NOTE: must be holding BOTH codegenQ_ and mutate_recompileDone_ queue!
-  void Optimizer::addToList_callback() {
-    assert(toBeAdded_.has_value());
-
-    auto R = std::move(toBeAdded_.value());
-    toBeAdded_ = std::nullopt;
-
-    recompileDone_.push_back(std::move(R));
+  // NOTE: must be holding mutate_recompileDone_ queue!
+  void Optimizer::addToList_callback(AddCompileResult* ACR) {
+    recompileDone_.push_back(std::move(ACR->Result));
   }
 
   // tries once to pop a compile result off the ready list.
   // result is placed into obtainResult_, which is
   // only to be accessed by the main thread.
-  void Optimizer::obtain_callback() {
-    assert(!obtainResult_.has_value() && "should be None");
+  void Optimizer::obtain_callback(RecompileRequest* R) {
+    assert(!R->RetVal.has_value() && "should be None");
 
     if (recompileDone_.empty()) {
-      obtainResult_ = std::nullopt;
+      R->RetVal = std::nullopt;
       return;
     }
 
     assert(recompileDone_.size() > 0);
 
-    obtainResult_ = std::move(recompileDone_.front());
+    R->RetVal = std::move(recompileDone_.front());
     recompileDone_.pop_front();
   }
 
@@ -249,35 +243,34 @@ namespace tuner {
   //////////////////////
   CompileResult Optimizer::recompile() {
     auto Start = std::chrono::system_clock::now();
+    RecompileRequest R;
+    R.Opt = this;
+    R.RetVal = std::nullopt;
 
     // check the list for already-compiled versions, blocking.
-    dispatch_sync_f(mutate_recompileDone_, this, obtainResultTask);
+    dispatch_sync_f(mutate_recompileDone_, &R, obtainResultTask);
 
-    if (obtainResult_.has_value() == false) {
+    if (R.RetVal.has_value() == false) {
 
       if (recompileActive_ == false) {
         // start a compile job
         recompileActive_ = true;
-        dispatch_async_f(optimizeQ_, this, recompileTask);
+        dispatch_async_f(optimizeQ_, this, optimizeTask);
       }
 
       // wait for the first job to finish.
       do {
         sleep_for(1);
-        dispatch_sync_f(mutate_recompileDone_, this, obtainResultTask);
-      } while (!obtainResult_.has_value());
+        dispatch_sync_f(mutate_recompileDone_, &R, obtainResultTask);
+      } while (!R.RetVal.has_value());
     }
-
-    assert(obtainResult_.has_value() && "that's wrong");
-
-    auto R = std::move(obtainResult_.value());
-    obtainResult_ = std::nullopt;
 
     auto End = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
     std::cout << ">> reoptimize request finished in " << elapsed.count() << " ms\n";
 
-    return R;
+    assert(R.RetVal.has_value() && "that's wrong");
+    return std::move(R.RetVal.value());
   }
 
 
@@ -287,7 +280,7 @@ namespace tuner {
   // it will then queue a new job that pushes the result
   // onto the list. Thus, holding the list queue will deadlock
   // this compile queue!
-  void Optimizer::recompile_callback() {
+  void Optimizer::optimize_callback() {
 
     auto Start = std::chrono::system_clock::now();
 
@@ -328,7 +321,7 @@ namespace tuner {
 
     if (shouldCompile) {
       // start an async recompile job
-      dispatch_async_f(optimizeQ_, this, recompileTask);
+      dispatch_async_f(optimizeQ_, this, optimizeTask);
     }
 
     OptimizeResult* OR = new OptimizeResult(this, std::move(FB), std::move(M), std::move(LLVMCxt), !shouldCompile);
@@ -351,11 +344,11 @@ namespace tuner {
         easy::Function::CompileAndWrap(
             Name, Globals, std::move(OR->LLVMCxt), std::move(OR->M));
 
-    // it's a pain to pass two values to the callback.
-    assert(toBeAdded_.has_value() == false);
-    toBeAdded_ = {std::move(Fun), std::move(OR->FB)};
+    AddCompileResult ACR;
+    ACR.Opt = this;
+    ACR.Result = {std::move(Fun), std::move(OR->FB)};
 
-    dispatch_sync_f(mutate_recompileDone_, this, addResultTask);
+    dispatch_sync_f(mutate_recompileDone_, &ACR, addResultTask);
 
     auto End = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
