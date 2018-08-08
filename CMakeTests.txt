@@ -1,5 +1,7 @@
 find_python_module(lit REQUIRED)
 
+include(Valgrind)
+
 set(ALL_TESTS tests/)
 
 # it is not possible to use add_dependencies on the install target, since it's

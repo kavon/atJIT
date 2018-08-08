@@ -104,11 +104,18 @@ namespace tuner {
       }
 
   Optimizer::~Optimizer() {
-    // first we need to make sure no concurrent compiles still running
+    // first we need to make sure no concurrent compiles are still running
     while (recompileActive_)
       sleep_for(1);
 
     delete Tuner_;
+
+    if (InitializedSelf_) {
+      // we're not using ARC, so we need to manually deallocate the queues.
+      dispatch_release(optimizeQ_);
+      dispatch_release(codegenQ_);
+      dispatch_release(mutate_recompileDone_);
+    }
   }
 
   // the "lazy" initializer

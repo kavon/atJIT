@@ -22,6 +22,7 @@ addons:
             - libopencv-dev
             - libdispatch0
             - libdispatch-dev
+            - valgrind
 
 before_install:
     - pip install --user --upgrade pip

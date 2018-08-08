@@ -17,7 +17,10 @@ Before you can build atJIT, ensure that your system has these essentials:
 
 - a C++ compiler with sufficient [C++17 support](https://en.cppreference.com/w/cpp/compiler_support#C.2B.2B17_features). This likely means GCC >= 7, or Clang >= 4, but slightly older versions may work.
 - cmake >= 3.5
-- to run the test suite (the `check` target), python 2.7 + [the lit package](https://pypi.org/project/lit/)
+- The test suite (the `check` build target) requires the following:
+  - Python 2.7
+  - The Python [lit package](https://pypi.org/project/lit/), installable with `pip install lit`
+  - [Valgrind](http://valgrind.org/), installable with `sudo apt install valgrind` on Ubuntu.
 
 Then, do the following:
 

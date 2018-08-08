@@ -34,6 +34,7 @@ config.substitutions.append(('%llvm_tools_dir', "@LLVM_TOOLS_BINARY_DIR@"))
 common_flags =  "-g -Xclang -disable-O0-optnone "
 
 config.substitutions.append(('%atjitc', "@CMAKE_ARCHIVE_OUTPUT_DIRECTORY@/atjitc"))
+config.substitutions.append(('%valgrind', "@VALGRIND_EXE@"))
 
 config.substitutions.append(('%clangxx', os.path.join("@LLVM_TOOLS_BINARY_DIR@", "clang++")))
 config.substitutions.append(('%clang', os.path.join("@LLVM_TOOLS_BINARY_DIR@", "clang")))
