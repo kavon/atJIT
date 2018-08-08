@@ -5,6 +5,8 @@
 
 #include <easy/runtime/LLVMHolder.h>
 
+#include <llvm/Support/CodeGen.h>
+
 // NOTE(kavon): everything somehow breaks if you try to include any
 // type definitions here. you need to forward-declare anything
 // you need here instead.
@@ -61,7 +63,8 @@ class Function {
   static std::unique_ptr<Function> CompileAndWrap (
     const char*Name, GlobalMapping* Globals,
      std::unique_ptr<llvm::LLVMContext> LLVMCxt,
-     std::unique_ptr<llvm::Module> M
+     std::unique_ptr<llvm::Module> M,
+     llvm::CodeGenOpt::Level CGLevel
   );
 
   static void WriteOptimizedToFile(llvm::Module const &M, std::string const& File);

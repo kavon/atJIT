@@ -153,6 +153,8 @@ namespace tuner {
 
     findContextKnobs(KS);
 
+    KS.IntKnobs[CGOption.getID()] = &CGOption;
+
 
     /////////
     // create tuner
@@ -310,6 +312,9 @@ namespace tuner {
 
     // Tuner_->dump();
 
+    // save the current level to pass it to the CG thread
+    auto CGLevel = CGOption.getLevel();
+
     //////////////////////
 
     // Optimize the IR.
@@ -331,7 +336,7 @@ namespace tuner {
       dispatch_async_f(optimizeQ_, this, optimizeTask);
     }
 
-    OptimizeResult* OR = new OptimizeResult(this, std::move(FB), std::move(M), std::move(LLVMCxt), !shouldCompile);
+    OptimizeResult* OR = new OptimizeResult(this, std::move(FB), std::move(M), std::move(LLVMCxt), !shouldCompile, CGLevel);
 
     // start an async codegen job
     dispatch_async_f(codegenQ_, OR, codegenTask);
@@ -349,7 +354,7 @@ namespace tuner {
     // Compile to assembly.
     std::unique_ptr<easy::Function> Fun =
         easy::Function::CompileAndWrap(
-            Name, Globals, std::move(OR->LLVMCxt), std::move(OR->M));
+            Name, Globals, std::move(OR->LLVMCxt), std::move(OR->M), OR->CGLevel);
 
     AddCompileResult ACR;
     ACR.Opt = this;

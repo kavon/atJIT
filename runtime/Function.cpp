@@ -30,14 +30,14 @@ Function::Function(void* Addr, std::unique_ptr<LLVMHolder> H)
   : Address(Addr), Holder(std::move(H)) {
 }
 
-static std::unique_ptr<llvm::ExecutionEngine> GetEngine(std::unique_ptr<llvm::Module> M, const char *Name) {
+static std::unique_ptr<llvm::ExecutionEngine> GetEngine(std::unique_ptr<llvm::Module> M, const char *Name, llvm::CodeGenOpt::Level CGLevel) {
   llvm::EngineBuilder ebuilder(std::move(M));
   std::string eeError;
 
   std::unique_ptr<llvm::ExecutionEngine> EE(ebuilder.setErrorStr(&eeError)
           .setMCPU(llvm::sys::getHostCPUName())
           .setEngineKind(llvm::EngineKind::JIT)
-          .setOptLevel(llvm::CodeGenOpt::Level::Aggressive)
+          .setOptLevel(CGLevel)
           .create());
 
   if(!EE) {
@@ -72,10 +72,11 @@ void Function::WriteOptimizedToFile(llvm::Module const &M, std::string const& Fi
 std::unique_ptr<Function>
 Function::CompileAndWrap(const char*Name, GlobalMapping* Globals,
                std::unique_ptr<llvm::LLVMContext> LLVMCxt,
-               std::unique_ptr<llvm::Module> M) {
+               std::unique_ptr<llvm::Module> M,
+               llvm::CodeGenOpt::Level CGLevel) {
 
   llvm::Module* MPtr = M.get();
-  std::unique_ptr<llvm::ExecutionEngine> EE = GetEngine(std::move(M), Name);
+  std::unique_ptr<llvm::ExecutionEngine> EE = GetEngine(std::move(M), Name, CGLevel);
 
   if(Globals) {
     MapGlobals(*EE, Globals);
@@ -124,7 +125,9 @@ std::unique_ptr<easy::Function> easy::Function::deserialize(std::istream& is) {
     std::tie(std::ignore, Globals) = BT.getNameAndGlobalMapping(OrigFunPtr);
   }
 
-  return CompileAndWrap(FunName.c_str(), Globals, std::move(Ctx), std::move(M));
+  return
+    CompileAndWrap(FunName.c_str(), Globals,
+            std::move(Ctx), std::move(M), llvm::CodeGenOpt::Level::Aggressive);
 }
 
 bool Function::operator==(easy::Function const& other) const {
