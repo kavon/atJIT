@@ -12,6 +12,7 @@
 #include <llvm/Bitcode/BitcodeReader.h>
 #include <llvm/Support/Host.h>
 #include <llvm/Target/TargetMachine.h>
+#include <llvm/Target/TargetOptions.h>
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Analysis/TargetTransformInfo.h>
 #include <llvm/Analysis/TargetLibraryInfo.h>
@@ -30,14 +31,18 @@ Function::Function(void* Addr, std::unique_ptr<LLVMHolder> H)
   : Address(Addr), Holder(std::move(H)) {
 }
 
-static std::unique_ptr<llvm::ExecutionEngine> GetEngine(std::unique_ptr<llvm::Module> M, const char *Name, llvm::CodeGenOpt::Level CGLevel) {
+static std::unique_ptr<llvm::ExecutionEngine> GetEngine(std::unique_ptr<llvm::Module> M, const char *Name, llvm::CodeGenOpt::Level CGLevel, bool UseFastISel) {
   llvm::EngineBuilder ebuilder(std::move(M));
   std::string eeError;
+
+  llvm::TargetOptions TO;
+  TO.EnableFastISel = UseFastISel;
 
   std::unique_ptr<llvm::ExecutionEngine> EE(ebuilder.setErrorStr(&eeError)
           .setMCPU(llvm::sys::getHostCPUName())
           .setEngineKind(llvm::EngineKind::JIT)
           .setOptLevel(CGLevel)
+          .setTargetOptions(TO)
           .create());
 
   if(!EE) {
@@ -73,10 +78,11 @@ std::unique_ptr<Function>
 Function::CompileAndWrap(const char*Name, GlobalMapping* Globals,
                std::unique_ptr<llvm::LLVMContext> LLVMCxt,
                std::unique_ptr<llvm::Module> M,
-               llvm::CodeGenOpt::Level CGLevel) {
+               llvm::CodeGenOpt::Level CGLevel,
+               bool UseFastISel) {
 
   llvm::Module* MPtr = M.get();
-  std::unique_ptr<llvm::ExecutionEngine> EE = GetEngine(std::move(M), Name, CGLevel);
+  std::unique_ptr<llvm::ExecutionEngine> EE = GetEngine(std::move(M), Name, CGLevel, UseFastISel);
 
   if(Globals) {
     MapGlobals(*EE, Globals);
@@ -127,7 +133,8 @@ std::unique_ptr<easy::Function> easy::Function::deserialize(std::istream& is) {
 
   return
     CompileAndWrap(FunName.c_str(), Globals,
-            std::move(Ctx), std::move(M), llvm::CodeGenOpt::Level::Aggressive);
+            std::move(Ctx), std::move(M), llvm::CodeGenOpt::Level::Aggressive,
+            /*UseFastISel=*/ false);
 }
 
 bool Function::operator==(easy::Function const& other) const {

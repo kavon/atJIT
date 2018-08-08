@@ -64,7 +64,8 @@ class Function {
     const char*Name, GlobalMapping* Globals,
      std::unique_ptr<llvm::LLVMContext> LLVMCxt,
      std::unique_ptr<llvm::Module> M,
-     llvm::CodeGenOpt::Level CGLevel
+     llvm::CodeGenOpt::Level CGLevel,
+     bool UseFastISel
   );
 
   static void WriteOptimizedToFile(llvm::Module const &M, std::string const& File);

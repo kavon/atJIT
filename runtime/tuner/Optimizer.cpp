@@ -153,7 +153,8 @@ namespace tuner {
 
     findContextKnobs(KS);
 
-    KS.IntKnobs[CGOption.getID()] = &CGOption;
+    KS.IntKnobs[CGOptLvl.getID()] = &CGOptLvl;
+    KS.IntKnobs[FastISelOpt.getID()] = &FastISelOpt;
 
 
     /////////
@@ -312,8 +313,10 @@ namespace tuner {
 
     // Tuner_->dump();
 
-    // save the current level to pass it to the CG thread
-    auto CGLevel = CGOption.getLevel();
+    // save the current compilation config to pass it
+    // along to the codegen thread.
+    auto CGLevel = CGOptLvl.getLevel();
+    auto FastISel = FastISelOpt.getFlag();
 
     //////////////////////
 
@@ -336,7 +339,14 @@ namespace tuner {
       dispatch_async_f(optimizeQ_, this, optimizeTask);
     }
 
-    OptimizeResult* OR = new OptimizeResult(this, std::move(FB), std::move(M), std::move(LLVMCxt), !shouldCompile, CGLevel);
+    OptimizeResult* OR = new OptimizeResult();
+    OR->M = std::move(M);
+    OR->LLVMCxt = std::move(LLVMCxt);
+    OR->FB = std::move(FB);
+    OR->Opt = this;
+    OR->End = !shouldCompile;
+    OR->CGLevel = CGLevel;
+    OR->FastISel = FastISel;
 
     // start an async codegen job
     dispatch_async_f(codegenQ_, OR, codegenTask);
@@ -354,7 +364,8 @@ namespace tuner {
     // Compile to assembly.
     std::unique_ptr<easy::Function> Fun =
         easy::Function::CompileAndWrap(
-            Name, Globals, std::move(OR->LLVMCxt), std::move(OR->M), OR->CGLevel);
+            Name, Globals, std::move(OR->LLVMCxt), std::move(OR->M), OR->CGLevel,
+            OR->FastISel);
 
     AddCompileResult ACR;
     ACR.Opt = this;

@@ -80,6 +80,33 @@ namespace tuner {
   }; // end class ScalarRange
 
 
+  // a boolean-like scalar range
+  class FlagKnob : public ScalarRange<int> {
+  private:
+    static constexpr int TRUE = 1;
+    static constexpr int FALSE = 0;
+    int current;
+    int dflt;
+  public:
+    FlagKnob(bool dflt_) : dflt(dflt_ ? TRUE : FALSE) {
+      current = dflt;
+    }
+    int getDefault() const override { return dflt; }
+    int getVal() const override { return current; }
+    void setVal(int newVal) override {
+      assert(newVal == TRUE || newVal == FALSE);
+      current = newVal;
+    }
+    void apply(llvm::Module &M) override { } // do nothing by default
+    int min() const override { return FALSE; }
+    int max() const override { return TRUE; }
+
+    bool getFlag() const {
+      return current != FALSE;
+    }
+
+  }; // end class FlagKnob
+
 ////////////////////////
 // handy type aliases and type utilities
 
