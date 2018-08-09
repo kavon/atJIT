@@ -4,6 +4,7 @@
 #include <tuner/Knob.h>
 #include <tuner/LoopKnob.h>
 #include <tuner/KnobSet.h>
+#include <tuner/Feedback.h>
 
 #include <vector>
 #include <utility>
@@ -67,6 +68,16 @@ namespace tuner {
   void applyToConfig(KnobIDAppFn &F, KnobConfig const &Settings);
   void applyToConfig(KnobConfigSelFun &F, KnobConfig const &Settings);
 
-}
+  ///////////
+  // printing utils
+
+  namespace {
+    using T = std::pair<std::shared_ptr<KnobConfig>, std::shared_ptr<Feedback>>;
+  }
+
+  void dumpConfigInstance (KnobSet const& KS, T const &Entry);
+  void dumpConfig (KnobSet const& KS, KnobConfig const &Config);
+
+} // end namespace
 
 #endif // TUNER_KNOBCONFIG

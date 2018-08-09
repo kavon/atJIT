@@ -114,11 +114,6 @@ public:
 
 
 
-// FIXME: I'm not particularly happy with this low-effort implementation.
-// I don't think we should delegate to GenSimpleRandConfig... instead,
-// we should delegate to a config mutator that takes the energy into account.
-// For example, a "large" move is moving between unrolling <-> full unrolling,
-// whereas a small move would be just bumping to a knob a little bit!
 template < typename RNE >
 class GenPartialNearbyConfig : public GenNearbyConfig<RNE> {
   std::unordered_set<KnobID> chosen;
@@ -284,6 +279,60 @@ void applyToConfig(KnobConfigAppFn &F, KnobConfig const &Settings) {
    F.notFound();
 
    #undef LOOKUP
+ }
+
+/////////////////////////////////////////////
+ // textual output of configs.
+
+ class ConfigDumper : public KnobConfigAppFn {
+   KnobSet const &KS;
+ public:
+   ConfigDumper(KnobSet const &KSet) : KS(KSet) {}
+
+   #define HANDLE_CASE(ValTy, KnobMap)                                      \
+   void operator()(std::pair<KnobID, ValTy> Entry) override {               \
+     auto ID = Entry.first;                                                 \
+     auto Val = Entry.second;                                               \
+                                                                            \
+     auto search = KS.KnobMap.find(ID);                                     \
+     if (search == KS.KnobMap.end()) {                                      \
+       std::cout << "dumpConfig ERROR: a knob in the given Config "         \
+                 << "is not in Tuner's KnobSet!\n";                         \
+                                                                            \
+       throw std::runtime_error("unknown knob ID");                         \
+     }                                                                      \
+                                                                            \
+     auto Knob = search->second;                                            \
+     std::cout << Knob->getName() << " := " << Val << "\n";                 \
+   }
+
+   HANDLE_CASE(int, IntKnobs)
+   HANDLE_CASE(LoopSetting, LoopKnobs)
+
+   #undef HANDLE_CASE
+
+ }; // end class
+
+ /////////
+ // utilites
+
+ void dumpConfig (KnobSet const& KS, KnobConfig const &Config) {
+   std::cout << "{\n";
+   ConfigDumper F(KS);
+   applyToConfig(F, Config);
+   std::cout << "}\n";
+ }
+
+namespace {
+  using T = std::pair<std::shared_ptr<KnobConfig>, std::shared_ptr<Feedback>>;
+}
+
+ void dumpConfigInstance (KnobSet const& KS, T const &Entry) {
+   auto Conf = Entry.first;
+   auto FB = Entry.second;
+   FB->dump();
+   dumpConfig(KS, *Conf);
+   std::cout << "\n";
  }
 
 } // end namespace

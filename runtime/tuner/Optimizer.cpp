@@ -311,7 +311,10 @@ namespace tuner {
 
     Tuner_->applyConfig(*TunerConf, *M);
 
-    // Tuner_->dump();
+    std::cout << "@@ optimize job starting using this config:\n";
+    dumpConfig(Tuner_->getKnobSet(), *TunerConf);
+
+    Tuner_->dump();
 
     // save the current compilation config to pass it
     // along to the codegen thread.

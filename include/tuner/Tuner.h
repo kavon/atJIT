@@ -41,35 +41,6 @@ namespace tuner {
 
     }; // end class
 
-    class ConfigDumper : public KnobConfigAppFn {
-      KnobSet const &KS;
-    public:
-      ConfigDumper(KnobSet const &KSet) : KS(KSet) {}
-
-      #define HANDLE_CASE(ValTy, KnobMap)                                      \
-      void operator()(std::pair<KnobID, ValTy> Entry) override {               \
-        auto ID = Entry.first;                                                 \
-        auto Val = Entry.second;                                               \
-                                                                               \
-        auto search = KS.KnobMap.find(ID);                                     \
-        if (search == KS.KnobMap.end()) {                                      \
-          std::cout << "dumpConfig ERROR: a knob in the given Config "         \
-                    << "is not in Tuner's KnobSet!\n";                         \
-                                                                               \
-          throw std::runtime_error("unknown knob ID");                         \
-        }                                                                      \
-                                                                               \
-        auto Knob = search->second;                                            \
-        std::cout << Knob->getName() << " := " << Val << "\n";                 \
-      }
-
-      HANDLE_CASE(int, IntKnobs)
-      HANDLE_CASE(LoopSetting, LoopKnobs)
-
-      #undef HANDLE_CASE
-
-    }; // end class
-
   } // end anonymous namespace
 
   struct {
@@ -117,37 +88,8 @@ namespace tuner {
       applyToConfig(F, Config);
     }
 
-    /////////
-    // utilites
-
-    void dumpConfig (KnobConfig const &Config) const {
-      std::cout << "{\n";
-      ConfigDumper F(KS_);
-      applyToConfig(F, Config);
-      std::cout << "}\n";
-    }
-
-    void dumpConfigInstance (GenResult const &Entry) const {
-      auto Conf = Entry.first;
-      auto FB = Entry.second;
-      FB->dump();
-      dumpConfig(*Conf);
-      std::cout << "\n";
-    }
-
-    virtual void dump() {
-
-
-      std::sort(Configs_.begin(), Configs_.end(), resultGEQ);
-
-      std::cout << "-----------\n";
-      for (auto Entry : Configs_) {
-        dumpConfigInstance(Entry);
-      }
-      std::cout << "-----------\n";
-    }
-
-    std::optional<GenResult> bestSeen() {
+    // NOTE: NOT THREAD SAFE
+    std::optional<GenResult> bestSeen() const {
       std::optional<GenResult> best = std::nullopt;
 
       for (auto Entry : Configs_) {
@@ -156,6 +98,20 @@ namespace tuner {
       }
 
       return best;
+    }
+
+    KnobSet const& getKnobSet() const {
+      return KS_;
+    }
+
+    virtual void dump() {
+      auto best = bestSeen();
+      std::cout << "\n---------- best config ----------\n";
+
+      if (best.has_value())
+        dumpConfigInstance(KS_, best.value());
+      else
+        std::cout << "<no configs generated yet>\n";
     }
 
   }; // end class Tuner
