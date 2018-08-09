@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cassert>
 #include <iostream>
+#include <mutex>
 
 #include <tuner/Util.h>
 
@@ -17,31 +18,32 @@
 namespace tuner {
 
 class Feedback {
-  using Token = uint64_t;
-
 public:
+  using Token = std::chrono::time_point<std::chrono::system_clock>;
+
   virtual ~Feedback() = default;
   virtual Token startMeasurement() = 0;
   virtual void endMeasurement(Token) = 0;
 
   // "None" indicates that there is no accurate average available yet.
-  virtual std::optional<double> avgMeasurement() const {
+  virtual std::optional<double> avgMeasurement() {
     return std::nullopt;
   }
 
-  virtual void dump() const = 0;
+  virtual void dump() = 0;
 };
 
 
 
 class NoOpFeedback : public Feedback {
-  using Token = uint64_t;
-
+private:
+  Token dummy;
 public:
-  Token startMeasurement() override { return 0; }
+  NoOpFeedback() : dummy(std::chrono::system_clock::now()) { }
+  Token startMeasurement() override { return dummy; }
   void endMeasurement(Token t) override { }
 
-  virtual void dump() const override {
+  virtual void dump() override {
     std::cout << "NoOpFeedback did not measure anything.\n";
   }
 }; // end class
@@ -50,36 +52,28 @@ public:
 
 // does not compute an average, etc. nice for debugging.
 class DebuggingFB : public Feedback {
-  using Token = uint64_t;
-
-  std::chrono::time_point<std::chrono::system_clock> Start_;
-
   Token startMeasurement() override {
-    Start_ = std::chrono::system_clock::now();
-    return 0;
+    return std::chrono::system_clock::now();
   }
 
-  void endMeasurement(Token t) override {
+  void endMeasurement(Token Start) override {
     auto End = std::chrono::system_clock::now();
-    std::chrono::duration<int64_t, std::nano> elapsed = (End - Start_);
+    std::chrono::duration<int64_t, std::nano> elapsed = (End - Start);
     std::cout << "== elapsed time: " << elapsed.count() << " ns ==\n";
   }
 
-  void dump() const override {
+  void dump() override {
     std::cout << "DebuggingFB does not save measurements\n";
   }
 
 }; // end class
 
 
-
-// TODO: make this resistant to recursion by using the tokens properly
-// i.e., with a stack.
 class ExecutionTime : public Feedback {
-  using Token = uint64_t;
 
-  std::chrono::time_point<std::chrono::system_clock> Start_;
-
+  //////////////
+  // this lock protects all fields of this object.
+  std::mutex protecc;
 
   double average = 0; // cumulative
   double sampleVariance = 0; // unbiased sample variance
@@ -91,31 +85,36 @@ class ExecutionTime : public Feedback {
   uint64_t dataPoints = 0;
 
 public:
-
-  ExecutionTime() : ExecutionTime(DEFAULT_STD_ERR_PCT) {}
-
   //////////////////////////
   // a value < 0 says:   ignore the stdErr and always return the average, if
   //                     it exists
   // a value >= 0 says:  return if you have at least 2 observations, where
   //                     the precent std err of the mean is <= the value.
-  ExecutionTime(double errPctBound) : errBound(errPctBound) {}
+  ExecutionTime(double errPctBound = DEFAULT_STD_ERR_PCT)
+      : errBound(errPctBound) {}
 
   Token startMeasurement() override {
-    Start_ = std::chrono::system_clock::now();
-    return dataPoints;
+    return std::chrono::system_clock::now();
   }
 
-  void endMeasurement(Token t) override {
-    assert(t == dataPoints && "out of order datapoints"); // probably recursion
-    dataPoints++;
-
+  void endMeasurement(Token Start) override {
     auto End = std::chrono::system_clock::now();
-    std::chrono::duration<int64_t, std::nano> elapsedDur = (End - Start_);
+    std::chrono::duration<int64_t, std::nano> elapsedDur = (End - Start);
+
     int64_t elapsedTime = elapsedDur.count();
+
+    ////////////////////////////////////////////////////////////////////
+    // START the critical section
+    protecc.lock();
+
+    dataPoints++;
 
     if (dataPoints == 1) {
       average = elapsedTime;
+
+      ////////////////////////////////////////////////////////////////////
+      // END of critical section
+      protecc.unlock();
       return;
     }
 
@@ -143,17 +142,32 @@ public:
 
     average = newAvg;
 
+    ////////////////////////////////////////////////////////////////////
+    // END of critical section
+    protecc.unlock();
+    return;
   }
 
-  std::optional<double> avgMeasurement() const override {
+  std::optional<double> avgMeasurement() override {
+    ////////////////////////////////////////////////////////////////////
+    // START the critical section
+    protecc.lock();
+
+    std::optional<double> retVal = std::nullopt;
     if (   (dataPoints > 1 && stdErrorPct <= errBound)
-        || ((dataPoints >= 1) && errBound < 0) )
-      return average;
-
-    return std::nullopt;
+        || ((dataPoints >= 1) && errBound < 0) ) {
+      retVal = average;
+    }
+    ////////////////////////////////////////////////////////////////////
+    // END of critical section
+    protecc.unlock();
+    return retVal;
   }
 
-  void dump () const override {
+  void dump () override {
+    ////////////////////////////////////////////////////////////////////
+    // START the critical section
+    protecc.lock();
 
     std::cout << "avg time: ";
     if (dataPoints)
@@ -194,6 +208,10 @@ public:
     std::cout << ") ";
 
     std::cout << "from " << dataPoints << " measurements\n";
+
+    ////////////////////////////////////////////////////////////////////
+    // END of critical section
+    protecc.unlock();
   }
 }; // end class
 

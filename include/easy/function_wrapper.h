@@ -40,7 +40,7 @@ class FunctionWrapperBase {
     return *Fun_;
   }
 
-  tuner::Feedback const& getFeedback() const {
+  tuner::Feedback& getFeedback() const {
     return *FB_;
   }
 
