@@ -111,7 +111,7 @@ namespace tuner {
       if (best.has_value())
         dumpConfigInstance(KS_, best.value());
       else
-        std::cout << "<no configs generated yet>\n";
+        std::cout << "<no configs generated yet>\n\n";
     }
 
   }; // end class Tuner
@@ -135,6 +135,10 @@ namespace tuner {
     }
 
     void analyze(llvm::Module &M) override { }
+
+    // dump nothing if using the noop tuner. This should
+    // quiet down some noise when using standard JIT calls.
+    void dump() override { }
   };
 
 } // namespace tuner
