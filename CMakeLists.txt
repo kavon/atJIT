@@ -15,6 +15,8 @@ include(GCD)
 option(LLVM_ENABLE_PLUGINS "Generate build targets for LLVM plugins." ON)
 option (FORCE_COLORED_OUTPUT "Always produce ANSI-colored output (GNU/Clang only)." TRUE)
 
+option(POLLY_KNOBS "Enable the use of Polly knobs" ON)
+
 
 include_directories(SYSTEM
                     ${LLVM_INCLUDE_DIRS}

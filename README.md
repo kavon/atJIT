@@ -26,8 +26,26 @@ Then, do the following:
 
 #### Step 1
 
-Install a compatible version of [clang](http://clang.llvm.org/) and [LLVM](http://llvm.org/) version 6.
-To do this on Ubuntu 18.04, you can simply install using the following command:
+Install a compatible version of [clang](http://clang.llvm.org/) and [LLVM](http://llvm.org/).
+You have two options for this:
+
+###### Option 1 -- Polly Knobs *(recommended)*
+
+In order for the tuner to make use of powerful loop transformations via [Polly](https://polly.llvm.org/), you'll need to download and build an out-of-tree version of LLVM + Clang + Polly by simply running the following:
+
+```bash
+mkdir llvm
+./get-llvm-with-polly.sh ./llvm
+```
+
+The location of this custom-built LLVM will be `./llvm/install`
+
+
+
+###### Option 2 -- Vanilla
+
+You can also use plain-old LLVM + Clang version 6. To do this on Ubuntu 18.04,
+you can install using APT:
 
 ```bash
 sudo apt update
@@ -38,7 +56,7 @@ For versions of Debian or Ubuntu that do not have version 6 available in the
 default APT repositories, you can first add the appropriate APT repository
 [from this list](http://apt.llvm.org/).
 
-In order to use a clang + LLVM that was built from source, you will need to
+In order to use a LLVM + Clang 6 that was built from source, you will need to
 configure the build of LLVM with special CMake options (e.g., we require RTTI).
 We have collected these options in the `./cmake/LLVM.cmake` file, which can
 be added to your usual
@@ -73,16 +91,25 @@ Starting from the root of the project, the general build steps are:
 ```bash
 mkdir build install
 cd build
-cmake -DCMAKE_INSTALL_PREFIX=../install ..
+cmake -DCMAKE_INSTALL_PREFIX=../install -DPOLLY_KNOBS=<ON/OFF>..
 cmake --build . --target install
 ```
+
+Where the argument for `POLLY_KNOBS` is set to `OFF` if and only if you are
+using the Vanilla, non-Polly LLVM.
+
+By default, `POLLY_KNOBS` is set to `ON`. If you followed the **Polly Knobs** instructions above, jump to the Build Options section below for more information.
 
 Once this completes, you can jump to the usage section. For special builds of
 atJIT, see below.
 
+
+
 ##### Build Options
 
-If you are using a custom LLVM that is not installed system-wide, you'll need to add `-DCMAKE_PREFIX_PATH=<path-to-where-LLVM-was-installed>` to the first CMake command above. For example, `-DCMAKE_PREFIX_PATH=~/bin/llvm6/install`.
+If you are using a custom-built LLVM that is not installed system-wide, or followed the **Polly Knobs** instructions, you'll need to add `-DCMAKE_PREFIX_PATH=<path-to-where-LLVM-was-installed>` to the first CMake command above.
+
+For example, for **Polly Knobs**, use `-DCMAKE_PREFIX_PATH=../llvm/install`.
 
 To build the examples, install the [opencv](https://opencv.org/) library,
 and add the flags ```-DEASY_JIT_EXAMPLE=1``` to the cmake command.
