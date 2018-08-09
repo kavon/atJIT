@@ -21,7 +21,7 @@ namespace {
   using namespace llvm;
 
   // make sure to keep this in sync with LoopKnob.h
-  char const* TAG = "atJit.loop";
+  char const* TAG = "llvm.loop.id";
 
   Metadata* mkMDInt(IntegerType* Ty, uint64_t Val, bool isSigned = false) {
     auto ConstInt = ConstantInt::get(Ty, Val, isSigned);
@@ -29,12 +29,12 @@ namespace {
   }
 
   MDNode* createLoopName(LLVMContext& Context, unsigned &LoopIDs) {
-    // build a custom knob tag for the loop
+    // build a Polly-compatible ID for the loop
     MDString *Tag = MDString::get(Context, TAG);
-    auto Val = ConstantInt::get(IntegerType::get(Context, 32),
-                                LoopIDs++, /*Signed=*/false);
+    unsigned IntVal = LoopIDs++;
+    MDString* Val = MDString::get(Context, std::to_string(IntVal));
 
-    MDNode *KnobTag = MDNode::get(Context, {Tag, ValueAsMetadata::get(Val)});
+    MDNode *KnobTag = MDNode::get(Context, {Tag, Val});
     return KnobTag;
   }
 
@@ -46,17 +46,25 @@ namespace {
         continue;
 
       MDString *Tag = dyn_cast<MDString>(Entry->getOperand(0).get());
-      ValueAsMetadata *Val = dyn_cast<ValueAsMetadata>(Entry->getOperand(1).get());
+      MDString *Val = dyn_cast<MDString>(Entry->getOperand(1).get());
 
       if (!Tag || !Val)
         continue;
 
-      ConstantInt *ValConst = dyn_cast_or_null<ConstantInt>(Val->getValue());
-      if (ValConst && Tag->getString() == TAG) {
-        return ValConst->getZExtValue();
-      }
-    }
-    report_fatal_error("not all loops have an atJit tag for tuning");
+      if (Tag->getString() != TAG)
+        continue;
+
+      llvm::StringRef Str = Val->getString();
+      unsigned IntVal = ~0;
+      Str.getAsInteger(10, IntVal);
+
+      if (IntVal == ~0)
+        report_fatal_error("bad loop ID metadata on our tag!");
+
+      return IntVal;
+    } // end loop
+
+    report_fatal_error("not all loops have an ID tag for tuning");
   }
 
   inline bool matchesLoopOption(Metadata *MD, StringRef &Key) {

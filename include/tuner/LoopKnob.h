@@ -14,7 +14,8 @@ namespace tuner {
 #pragma GCC diagnostic ignored "-Wunused-variable"
 
   namespace loop_md {
-    static char const* TAG = "atJit.loop"; // make sure to keep this in sync with MDUtils.h
+    // make sure to keep this in sync with MDUtils.h
+    static char const* TAG = "llvm.loop.id";
 
     static char const* UNROLL_DISABLE = "llvm.loop.unroll.disable";
     static char const* UNROLL_COUNT = "llvm.loop.unroll.count";
