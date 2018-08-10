@@ -24,12 +24,12 @@ Before you can build atJIT, ensure that your system has these essentials:
 
 Then, do the following:
 
-#### Step 1
+### Step 1
 
 Install a compatible version of [clang](http://clang.llvm.org/) and [LLVM](http://llvm.org/).
 You have two options for this:
 
-###### Option 1 -- Polly Knobs *(recommended)*
+#### Option 1 — Polly Knobs *(recommended)*
 
 In order for the tuner to make use of powerful loop transformations via [Polly](https://polly.llvm.org/), you'll need to download and build an out-of-tree version of LLVM + Clang + Polly by simply running the following:
 
@@ -42,7 +42,7 @@ The location of this custom-built LLVM will be `./llvm/install`
 
 
 
-###### Option 2 -- Vanilla
+#### Option 2 — Vanilla
 
 You can also use plain-old LLVM + Clang version 6. To do this on Ubuntu 18.04,
 you can install using APT:
@@ -66,7 +66,7 @@ invocation of CMake when building LLVM with the `-C` flag like so:
 cmake -C <path-to-atJit-root>/cmake/LLVM.cmake  .. other arguments ..
 ```
 
-#### Step 2
+### Step 2
 Install [Grand Central Dispatch](https://apple.github.io/swift-corelibs-libdispatch/), which on
 Ubuntu amounts to running:
 
@@ -74,7 +74,7 @@ Ubuntu amounts to running:
 sudo apt install libdispatch0 libdispatch-dev
 ```
 
-#### Step 3
+### Step 3
 
 Obtain and build [XGBoost](https://xgboost.ai/) by running the following command:
 
