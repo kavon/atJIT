@@ -23,7 +23,7 @@ Todos
     so that we're not only doing random exploration.~~
 - ~~Improve Simulated Annealing tuner~~
   - ~~see the GenPartialRandConfig FIXME~~
-- Parallelize the JIT compilation.
+- ~~Parallelize the JIT compilation.~~
 - integrate with Michael's LLVM branch
   - learn how to map permutation (with dupes) onto the machine learning model.
   - handle tuning the pass-ordering problem, since that happens with the loop transform MDs

@@ -16,7 +16,7 @@ Prerequisites
 Before you can build atJIT, ensure that your system has these essentials:
 
 - a C++ compiler with sufficient [C++17 support](https://en.cppreference.com/w/cpp/compiler_support#C.2B.2B17_features). This likely means GCC >= 7, or Clang >= 4, but slightly older versions may work.
-- cmake >= 3.5
+- cmake >= 3.5, and make
 - The test suite (the `check` build target) requires the following:
   - Python 2.7
   - The Python [lit package](https://pypi.org/project/lit/), installable with `pip install lit`
@@ -31,7 +31,8 @@ You have two options for this:
 
 #### Option 1 — Polly Knobs *(recommended)*
 
-In order for the tuner to make use of powerful loop transformations via [Polly](https://polly.llvm.org/), you'll need to download and build an out-of-tree version of LLVM + Clang + Polly by simply running the following:
+In order for the tuner to make use of powerful loop transformations via [Polly](https://polly.llvm.org/), you'll need to download and build an out-of-tree version of LLVM + Clang + Polly.
+We have automated this process with a script, which you can use in the following way:
 
 ```bash
 mkdir llvm
@@ -105,7 +106,7 @@ atJIT, see below.
 
 
 
-##### Build Options
+#### Build Options
 
 If you are using a custom-built LLVM that is not installed system-wide, or followed the **Polly Knobs** instructions, you'll need to add `-DCMAKE_PREFIX_PATH=<path-to-where-LLVM-was-installed>` to the first CMake command above.
 
@@ -117,7 +118,7 @@ and add the flags ```-DEASY_JIT_EXAMPLE=1``` to the cmake command.
 To enable benchmarking, install the [google benchmark](https://github.com/google/benchmark) framework,
 and add the flags ```-DEASY_JIT_BENCHMARK=1 -DBENCHMARK_DIR=<path_to_google_benchmark_install>``` to the cmake command.
 
-##### Regression Testing
+#### Regression Testing
 
 The test suite (`check` target) can be run after the `install` target has been built:
 

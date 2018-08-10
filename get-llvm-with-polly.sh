@@ -9,16 +9,21 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 
 LLVM_REV=64bb270506ea371f015a7da370518a9512dc10ba
 
-if [ $# -neq 1 ]; then
-  echo "exactly one argument is expected: an empty directory to work in."
+if [ $# -ne 1 ]; then
+  echo "expected args:  <path to empty dir>"
   exit 1
 fi
+
+NUM_CPUS=`getconf _NPROCESSORS_ONLN`
+
+GENERATOR="Unix Makefiles"
+BUILD_CMD="make install -j${NUM_CPUS}"
 
 pushd $1
 
 #####
 # make sure we're in an empty dir
-if [ `ls -1A . | wc -l` -neq 0 ]; then
+if [ `ls -1A . | wc -l` -ne 0 ]; then
   echo "provided directory must be empty!"
   exit 1
 fi
@@ -44,6 +49,6 @@ popd
 
 mkdir build install
 pushd build
-cmake -C $DIR/cmake/LLVM.cmake -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD="X86" -DCMAKE_INSTALL_PREFIX=../install ../src
+cmake -C $DIR/cmake/LLVM.cmake -G "$GENERATOR" -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD="X86" -DCMAKE_INSTALL_PREFIX=../install ../src
 
-ninja install
+$BUILD_CMD
