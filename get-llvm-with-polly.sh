@@ -7,17 +7,23 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 
-LLVM_REV=64bb270506ea371f015a7da370518a9512dc10ba
-
 if [ $# -ne 1 ]; then
   echo "expected args:  <path to empty dir>"
   exit 1
 fi
 
-NUM_CPUS=`getconf _NPROCESSORS_ONLN`
+############
+# prefer using Ninja if available
+command -v ninja
+if [ $? -eq 0 ]; then
+  GENERATOR="Ninja"
+  BUILD_CMD="ninja install"
+else
+  NUM_CPUS=`getconf _NPROCESSORS_ONLN`
+  GENERATOR="Unix Makefiles"
+  BUILD_CMD="make install -j${NUM_CPUS}"
+fi
 
-GENERATOR="Unix Makefiles"
-BUILD_CMD="make install -j${NUM_CPUS}"
 
 pushd $1
 
@@ -31,17 +37,14 @@ fi
 #####
 # get sources
 
-git clone --no-checkout https://github.com/llvm-mirror/llvm.git src
-pushd src
-git checkout $LLVM_REV
+git clone --branch pragma --single-branch --depth 1 https://github.com/Meinersbur/llvm.git src
 
-pushd tools
+pushd src/tools
 
 git clone --branch pragma --single-branch --depth 1 https://github.com/Meinersbur/clang.git
 
 git clone --branch pragma --single-branch --depth 1 https://github.com/Meinersbur/polly.git
 
-popd
 popd
 
 ##################
