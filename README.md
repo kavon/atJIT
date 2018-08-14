@@ -45,7 +45,7 @@ The location of this custom-built LLVM will be `./llvm/install`
 
 #### Option 2 — Vanilla
 
-You can also use plain-old LLVM + Clang version 6. To do this on Ubuntu 18.04,
+You can also use plain-old LLVM + Clang version 6 or newer. To do this on Ubuntu 18.04,
 you can install using APT:
 
 ```bash
@@ -108,9 +108,13 @@ atJIT, see below.
 
 #### Build Options
 
-If you are using a custom-built LLVM that is not installed system-wide, or followed the **Polly Knobs** instructions, you'll need to add `-DCMAKE_PREFIX_PATH=<path-to-where-LLVM-was-installed>` to the first CMake command above.
+If you are using a custom-built LLVM that is not installed system-wide, or followed the **Polly Knobs** instructions, you'll need to add `-DLLVM_ROOT=<absolute-path-to-LLVM-install>` to the first CMake command above.
 
-For example, for **Polly Knobs**, use `-DCMAKE_PREFIX_PATH=../llvm/install`.
+For example, for **Polly Knobs**, you could use this flag:
+
+```bash
+-DLLVM_ROOT=`pwd`/../llvm/install
+```
 
 To build the examples, install the [opencv](https://opencv.org/) library,
 and add the flags ```-DEASY_JIT_EXAMPLE=1``` to the cmake command.

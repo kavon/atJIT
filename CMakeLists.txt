@@ -1,13 +1,32 @@
 cmake_minimum_required(VERSION 3.5)
 
-find_package(LLVM 6.0 REQUIRED CONFIG)
+#### identify and configure LLVM
+
+if ((DEFINED LLVM_ROOT) AND (NOT (DEFINED LLVM_DIR)))
+  set(LLVM_DIR "${LLVM_ROOT}/lib/cmake/llvm")
+endif()
+
+if ((DEFINED LLVM_DIR) AND (NOT (IS_ABSOLUTE ${LLVM_DIR})))
+    message(FATAL_ERROR "LLVM_DIR / LLVM_ROOT must be an absolute path. Tried dir: ${LLVM_DIR}")
+endif()
+
+find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in ${LLVM_DIR}")
 message(STATUS "LLVM Root: ${LLVM_TOOLS_BINARY_DIR}")
 message(STATUS "LLVM Include dirs: ${LLVM_INCLUDE_DIRS}")
 
+if (${LLVM_VERSION_MAJOR} LESS 6)
+  message(FATAL_ERROR "atJIT is not known to support LLVM < 6")
+endif()
+
+if (${LLVM_ENABLE_RTTI} EQUAL "ON")
+  message(FATAL_ERROR "atJIT currently requires LLVM with RTTI.")
+endif()
+
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 include(AddLLVM)
+
 include(Python)
 include(XGBoost)
 include(GCD)
