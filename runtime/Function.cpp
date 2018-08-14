@@ -91,6 +91,8 @@ Function::CompileAndWrap(const char*Name, GlobalMapping* Globals,
 
   void *Address = (void*)EE->getFunctionAddress(Name);
 
+  assert(Address != 0);
+
   std::unique_ptr<LLVMHolder> Holder(new easy::LLVMHolderImpl{std::move(EE), std::move(LLVMCxt), MPtr});
   return std::unique_ptr<Function>(new Function(Address, std::move(Holder)));
 }
