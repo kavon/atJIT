@@ -44,6 +44,7 @@ include_directories(SYSTEM
 
 link_directories(${LLVM_LIBRARY_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
+add_definitions(-DLLVM_VERSION_MAJOR=${LLVM_VERSION_MAJOR})
 
 
 set(CLANGXX_BIN "${LLVM_TOOLS_BINARY_DIR}/clang++")

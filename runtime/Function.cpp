@@ -1,4 +1,5 @@
 #include <easy/runtime/BitcodeTracker.h>
+#include <easy/runtime/Compat.h>
 #include <easy/runtime/Function.h>
 #include <easy/runtime/RuntimePasses.h>
 #include <easy/runtime/LLVMHolderImpl.h>
@@ -103,7 +104,7 @@ void easy::Function::serialize(std::ostream& os) const {
   llvm::raw_string_ostream stream(buf);
 
   LLVMHolderImpl const *H = reinterpret_cast<LLVMHolderImpl const*>(Holder.get());
-  llvm::WriteBitcodeToFile(H->M_, stream);
+  llvm::WriteBitcodeToFile(PASS_MODULE_ARG(*(H->M_)), stream);
   stream.flush();
 
   os << buf;

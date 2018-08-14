@@ -8,6 +8,7 @@
 #include <string>
 
 #include <easy/runtime/Utils.h>
+#include <easy/runtime/Compat.h>
 
 using namespace llvm;
 
@@ -57,7 +58,7 @@ easy::CloneModuleWithContext(llvm::Module const &LM, llvm::LLVMContext &C) {
   // write module
   {
     llvm::raw_string_ostream stream(buf);
-    llvm::WriteBitcodeToFile(&LM, stream);
+    llvm::WriteBitcodeToFile(PASS_MODULE_ARG(LM), stream);
     stream.flush();
   }
 

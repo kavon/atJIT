@@ -94,7 +94,7 @@ void GetInlineArgs(easy::Context const &C, FunctionType& OldTy, Function &Wrappe
                                   [](Module &, const StringSet<> &){}))
           {
             GlobalValue *GV = M->getNamedValue(LName);
-            if(GlobalVariable* G = dyn_cast<GlobalVariable>(GV)) {
+            if(dyn_cast<GlobalVariable>(GV)) {
               GV->setLinkage(Function::PrivateLinkage);
               Repl = GV;
 
