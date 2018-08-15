@@ -9,11 +9,12 @@
 #include <easy/runtime/BitcodeTracker.h>
 #include <easy/runtime/RuntimePasses.h>
 
-#include <tuner/TunableInliner.h>
 #include <tuner/RandomTuner.h>
 #include <tuner/BayesianTuner.h>
 #include <tuner/AnnealingTuner.h>
 
+#include <llvm/Analysis/TargetLibraryInfo.h>
+#include <llvm/Analysis/TargetTransformInfo.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
@@ -32,43 +33,48 @@ namespace {
 
 namespace tuner {
 
-  void Optimizer::setupPassManager(KnobSet &KS) {
+  // generates a fresh PassManager to optimize the module.
+  // This MPM should be generated _after_ the Tuner has applied a configuration
+  // to the KnobSet!
+  std::unique_ptr<llvm::legacy::PassManager> Optimizer::genPassManager() {
     auto &BT = easy::BitcodeTracker::GetTracker();
     const char* Name = BT.getName(Addr_);
 
+    // TODO: tune these too!
     unsigned OptLevel;
     unsigned OptSize;
     std::tie(OptLevel, OptSize) = Cxt_->getOptLevel();
 
     llvm::Triple Triple{llvm::sys::getProcessTriple()};
 
-    auto Inliner = tuner::createTunableInlinerPass(OptLevel, OptSize);
-    KS.IntKnobs[Inliner->getID()] = Inliner;
-
-    llvm::PassManagerBuilder Builder_;
-    Builder_.OptLevel = OptLevel;
-    Builder_.SizeLevel = OptSize;
-    Builder_.LibraryInfo = new llvm::TargetLibraryInfoImpl(Triple);
-    Builder_.Inliner = Inliner;
+    llvm::PassManagerBuilder Builder;
+    Builder.OptLevel = OptLevel;
+    Builder.SizeLevel = OptSize;
+    Builder.LibraryInfo = new llvm::TargetLibraryInfoImpl(Triple);
+    Builder.Inliner = llvm::createFunctionInliningPass(InlineThresh.getVal());
 
     TM_ = GetHostTargetMachine();
     assert(TM_);
-    TM_->adjustPassManager(Builder_);
+    TM_->adjustPassManager(Builder);
 
-    MPM_ = std::make_unique<llvm::legacy::PassManager>();
-    MPM_->add(llvm::createTargetTransformInfoWrapperPass(TM_->getTargetIRAnalysis()));
+    auto MPM = std::make_unique<llvm::legacy::PassManager>();
+
+    MPM->add(llvm::createTargetTransformInfoWrapperPass(TM_->getTargetIRAnalysis()));
 
     // We absolutely must run this first!
-    MPM_->add(easy::createContextAnalysisPass(Cxt_));
-    MPM_->add(easy::createInlineParametersPass(Name));
+    MPM->add(easy::createContextAnalysisPass(Cxt_));
+    MPM->add(easy::createInlineParametersPass(Name));
 
     // After some cleanup etc, run devirtualization.
-    Builder_.addExtension(llvm::PassManagerBuilder::EP_ScalarOptimizerLate,
+    Builder.addExtension(llvm::PassManagerBuilder::EP_ScalarOptimizerLate,
         [=] (auto const& Builder, auto &PM) {
           PM.add(easy::createDevirtualizeConstantPass(Name));
         });
 
-    Builder_.populateModulePassManager(*MPM_);
+    // fill in the rest of the pass manager.
+    Builder.populateModulePassManager(*MPM);
+
+    return std::move(MPM);
   }
 
   void Optimizer::findContextKnobs(KnobSet &KS) {
@@ -153,10 +159,21 @@ namespace tuner {
 
     KnobSet KS;
 
-    setupPassManager(KS);
-
     findContextKnobs(KS);
 
+    // IR Opt knobs
+    unsigned OptLevel;
+    unsigned OptSize;
+    std::tie(OptLevel, OptSize) = Cxt_->getOptLevel();
+
+    InlineThresh = InlineThreshold(OptLevel, OptSize);
+
+
+    KS.IntKnobs[InlineThresh.getID()] = &InlineThresh;
+
+    ////////
+
+    // Codegen knobs
     KS.IntKnobs[CGOptLvl.getID()] = &CGOptLvl;
     KS.IntKnobs[FastISelOpt.getID()] = &FastISelOpt;
 
@@ -328,8 +345,8 @@ namespace tuner {
     //////////////////////
 
     // Optimize the IR.
-    // This also may not be thread-safe unless if we reconstruct the MPM.
-    MPM_->run(*M);
+    auto MPM = genPassManager();
+    MPM->run(*M);
 
     easy::Function::WriteOptimizedToFile(*M, Cxt_->getDebugFile());
 

@@ -1,5 +1,7 @@
 #include <tuner/Knob.h>
 
+#include <llvm/Analysis/InlineCost.h>
+
 namespace tuner {
 
 class CodeGenOptLvl : public ScalarRange<int> {
@@ -41,5 +43,49 @@ public:
      return "use FastISel";
   }
 }; // end class
+
+class InlineThreshold : public ScalarRange<int> {
+  llvm::InlineParams Params;
+  llvm::InlineParams DefaultParams;
+
+public:
+  InlineThreshold() {
+    Params = llvm::getInlineParams();
+    DefaultParams = Params;
+    assert(getVal() <= max() && getVal() >= min());
+  }
+
+  InlineThreshold(unsigned OptLevel, unsigned SizeOptLevel) {
+    Params = llvm::getInlineParams(OptLevel, SizeOptLevel);
+    DefaultParams = Params;
+    assert(getVal() <= max() && getVal() >= min());
+  }
+
+  void setVal(int Threshold) override {
+    Params.DefaultThreshold = Threshold;
+  }
+
+  int getVal() const override {
+    return Params.DefaultThreshold;
+  }
+
+  int getDefault() const override {
+    return DefaultParams.DefaultThreshold;
+  }
+
+  int min() const override {
+    return -1000;
+  }
+
+  int max() const override {
+    return 1000;
+  }
+
+  std::string getName() const override {
+    return "inlining threshold";
+  }
+
+  void apply(llvm::Module &M) override { }
+};
 
 } // end namespace

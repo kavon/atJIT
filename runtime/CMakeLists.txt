@@ -8,7 +8,6 @@ add_library(EasyJitRuntime SHARED
   pass/ContextAnalysis.cpp
   pass/DevirtualizeConstant.cpp
   pass/InlineParameters.cpp
-  tuner/TunableInliner.cpp
   tuner/Optimizer.cpp
   tuner/AnalyzingTuner.cpp
   tuner/LoopKnob.cpp

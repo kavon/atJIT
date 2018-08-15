@@ -60,7 +60,6 @@ private:
   std::tuple<const char*, easy::GlobalMapping*> GMap_;
 
   // members related to the pass manager that we need to keep alive.
-  std::unique_ptr<llvm::legacy::PassManager> MPM_;
   std::unique_ptr<llvm::TargetMachine> TM_;
   bool InitializedSelf_;
 
@@ -68,6 +67,7 @@ private:
   // knobs that control the compilation process
   CodeGenOptLvl CGOptLvl;
   FastISelOption FastISelOpt;
+  InlineThreshold InlineThresh;
 
   //////////
   // members related to concurrent JIT compilation
@@ -89,7 +89,7 @@ private:
 
   /////////////
 
-  void setupPassManager(KnobSet &);
+  std::unique_ptr<llvm::legacy::PassManager> genPassManager();
   void findContextKnobs(KnobSet &);
 
   // members related to automatic tuning
