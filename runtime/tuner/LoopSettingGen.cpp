@@ -9,14 +9,20 @@ namespace tuner {
 
 // CNT is in the range [2^min, 2^max]
 static constexpr int UNROLL_CNT_MIN = 1;
-static constexpr int UNROLL_CNT_MAX = 12;
+static constexpr int UNROLL_CNT_MAX = 6; // 2 ^ 6 = 64
 
+static constexpr int UNROLL_DISABLE = UNROLL_CNT_MIN-2;
 static constexpr int UNROLL_MISSING = UNROLL_CNT_MIN-1;
-static constexpr int UNROLL_DISABLE = UNROLL_MISSING-1;
 static constexpr int UNROLL_FULL = UNROLL_CNT_MAX+1;
 
+// NOTE: I don't see a reason to generate code that disables unrolling.
+// It's better to just not say anything about unrolling.
+//
+// Plus, it messes with how I have setup the exponential distribution
+// since we don't want to have a high chance of turning unrolling off.
 static constexpr int UNROLL_MAX = UNROLL_FULL;
-static constexpr int UNROLL_MIN = UNROLL_DISABLE;
+static constexpr int UNROLL_MIN = UNROLL_MISSING; // NOTE see above.
+static constexpr int UNROLL_DFLT = 2; // 2 ^ 2 = 4
 
 
 int unrollAsInt(LoopSetting const& LS) {
@@ -192,8 +198,23 @@ LoopSetting genRandomLoopSetting(RNE &Eng) {
   LoopSetting LS;
 
   { // UNROLLING
-    std::uniform_int_distribution<int> dist(UNROLL_MIN, UNROLL_MAX);
-    setUnroll(LS, dist(Eng));
+
+    // NOTE: we use an exponential distribution whose mean is
+    // at a reasonable unrolling factor, because it should be rare
+    // that we end up asking to do a full unroll.
+    // mean of exp dist = 1 / lambda.
+
+    double lambda = 1.0 / (UNROLL_DFLT - UNROLL_MIN);
+    std::exponential_distribution<double> dist(lambda);
+
+    int point = std::round(dist(Eng));
+
+    // we shift the point generated to start at our min, instead of 0
+    int val = UNROLL_MIN + point;
+    val = std::min(val, UNROLL_MAX);
+    val = std::max(val, UNROLL_MIN);
+
+    setUnroll(LS, val);
   }
 
   { // VECTORIZE WIDTH
