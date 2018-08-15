@@ -40,10 +40,8 @@ namespace tuner {
     auto &BT = easy::BitcodeTracker::GetTracker();
     const char* Name = BT.getName(Addr_);
 
-    // TODO: tune these too!
-    unsigned OptLevel;
-    unsigned OptSize;
-    std::tie(OptLevel, OptSize) = Cxt_->getOptLevel();
+    unsigned OptLevel = OptLvl.getVal();
+    unsigned OptSize = OptSz.getVal();
 
     llvm::Triple Triple{llvm::sys::getProcessTriple()};
 
@@ -74,7 +72,7 @@ namespace tuner {
     // fill in the rest of the pass manager.
     Builder.populateModulePassManager(*MPM);
 
-    return std::move(MPM);
+    return MPM;
   }
 
   void Optimizer::findContextKnobs(KnobSet &KS) {
@@ -161,17 +159,24 @@ namespace tuner {
 
     findContextKnobs(KS);
 
+    //////////
     // IR Opt knobs
+
+    // start at defaults, as requested by user.
     unsigned OptLevel;
     unsigned OptSize;
     std::tie(OptLevel, OptSize) = Cxt_->getOptLevel();
 
     InlineThresh = InlineThreshold(OptLevel, OptSize);
+    OptLvl = OptimizerOptLvl(OptLevel);
+    OptSz = OptimizerSizeLvl(OptSize);
 
 
+    KS.IntKnobs[OptLvl.getID()] = &OptLvl;
+    KS.IntKnobs[OptSz.getID()] = &OptSz;
     KS.IntKnobs[InlineThresh.getID()] = &InlineThresh;
 
-    ////////
+    ////////////////////////////
 
     // Codegen knobs
     KS.IntKnobs[CGOptLvl.getID()] = &CGOptLvl;

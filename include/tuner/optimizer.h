@@ -68,6 +68,8 @@ private:
   CodeGenOptLvl CGOptLvl;
   FastISelOption FastISelOpt;
   InlineThreshold InlineThresh;
+  OptimizerOptLvl OptLvl;
+  OptimizerSizeLvl OptSz;
 
   //////////
   // members related to concurrent JIT compilation
