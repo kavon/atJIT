@@ -7,7 +7,7 @@ git clone --depth=1 https://github.com/google/benchmark.git
 git clone --depth=1 https://github.com/google/googletest.git benchmark/googletest
 mkdir benchmark/build
 pushd benchmark/build
-cmake .. -GNinja -DCMAKE_INSTALL_PREFIX=`pwd`/../install
-ninja
-ninja install
+cmake .. -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX=`pwd`/../install
+make
+make install -j 3
 popd
