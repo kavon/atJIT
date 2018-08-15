@@ -57,14 +57,18 @@ namespace tuner {
 
     MPM_ = std::make_unique<llvm::legacy::PassManager>();
     MPM_->add(llvm::createTargetTransformInfoWrapperPass(TM_->getTargetIRAnalysis()));
+
+    // We absolutely must run this first!
     MPM_->add(easy::createContextAnalysisPass(Cxt_));
     MPM_->add(easy::createInlineParametersPass(Name));
-    Builder_.populateModulePassManager(*MPM_);
 
-    // FIXME: would rather not run the whole pass sequence twice!
-    MPM_->add(easy::createDevirtualizeConstantPass(Name));
-    Builder_.populateModulePassManager(*MPM_);
+    // After some cleanup etc, run devirtualization.
+    Builder_.addExtension(llvm::PassManagerBuilder::EP_ScalarOptimizerLate,
+        [=] (auto const& Builder, auto &PM) {
+          PM.add(easy::createDevirtualizeConstantPass(Name));
+        });
 
+    Builder_.populateModulePassManager(*MPM_);
   }
 
   void Optimizer::findContextKnobs(KnobSet &KS) {
