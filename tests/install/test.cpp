@@ -1,10 +1,10 @@
 // REQUIRES: install
 //
-// clean before, if not there may be unconsistencies 
+// clean before, if not there may be inconsistencies
 // RUN: rm -fr build.ninja CMakeCache.txt CMakeFiles cmake_install.cmake InstallTest rules.ninja
 //
-// RUN: cmake -DCMAKE_CXX_COMPILER=%clang++ -DEasyJit_DIR=%install_dir/lib/cmake %S -G Ninja 
-// RUN: cmake --build . 
+// RUN: cmake -DCMAKE_CXX_COMPILER=%clang++ -DEasyJit_DIR=%install_dir/lib/cmake %S
+// RUN: cmake --build .
 // RUN: ./InstallTest > %t.out
 // RUN: %FileCheck %s < %t.out
 
