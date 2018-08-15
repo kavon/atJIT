@@ -59,6 +59,9 @@ void AnalyzingTuner::analyze(llvm::Module &M) {
     return;
   alreadyRun = true;
 
+  // initialize dependencies
+  initializeLoopInfoWrapperPassPass(*PassRegistry::getPassRegistry());
+
   legacy::PassManager Passes;
   Passes.add(new LoopKnobCreator(&KS_));
   Passes.run(M);

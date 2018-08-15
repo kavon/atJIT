@@ -106,6 +106,9 @@ void LoopKnob::apply (llvm::Module &M) {
   // an invocation of this method. I believe this would work
   // if the Loop* is stable throughout the tuning process.
 
+  // initialize dependencies
+  initializeLoopInfoWrapperPassPass(*PassRegistry::getPassRegistry());
+
   legacy::PassManager Passes;
   Passes.add(new LoopKnobAdjustor(this));
   Passes.run(M);
