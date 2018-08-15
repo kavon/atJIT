@@ -51,6 +51,11 @@ namespace tuner {
     Builder.LibraryInfo = new llvm::TargetLibraryInfoImpl(Triple);
     Builder.Inliner = llvm::createFunctionInliningPass(InlineThresh.getVal());
 
+#ifndef NDEBUG
+    Builder.VerifyInput = true;
+    Builder.VerifyOutput = true;
+#endif
+
     TM_ = GetHostTargetMachine();
     assert(TM_);
     TM_->adjustPassManager(Builder);
