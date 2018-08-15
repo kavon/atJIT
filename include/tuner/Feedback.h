@@ -154,7 +154,7 @@ public:
     protecc.lock();
 
     std::optional<double> retVal = std::nullopt;
-    if (   (dataPoints > 1 && stdErrorPct <= errBound)
+    if (   (dataPoints > DEFAULT_MIN_TRIALS && stdErrorPct <= errBound)
         || ((dataPoints >= 1) && errBound < 0) ) {
       retVal = average;
     }

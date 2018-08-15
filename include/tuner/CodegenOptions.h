@@ -111,11 +111,11 @@ public:
   }
 
   int min() const override {
-    return -1000;
+    return -2000;
   }
 
   int max() const override {
-    return 1000;
+    return 2000;
   }
 
   std::string getName() const override {

@@ -6,7 +6,8 @@
 #include <random>
 #include <bitset>
 
-#define DEFAULT_STD_ERR_PCT 1.0
+#define DEFAULT_MIN_TRIALS 3
+#define DEFAULT_STD_ERR_PCT 2.0
 #define DEFAULT_COMPILE_AHEAD 10
 
 namespace tuner {
