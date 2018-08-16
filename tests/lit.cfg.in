@@ -35,6 +35,8 @@ common_flags =  "-g -Xclang -disable-O0-optnone "
 
 config.substitutions.append(('%atjitc', "@CMAKE_ARCHIVE_OUTPUT_DIRECTORY@/atjitc"))
 config.substitutions.append(('%valgrind', "@VALGRIND_EXE@"))
+config.substitutions.append(('%time', "@TIME_EXE@ -p -o"))
+config.substitutions.append(('%compareTimes', config.test_exec_root + "/compare.sh"))
 
 config.substitutions.append(('%clangxx', os.path.join("@LLVM_TOOLS_BINARY_DIR@", "clang++")))
 config.substitutions.append(('%clang', os.path.join("@LLVM_TOOLS_BINARY_DIR@", "clang")))

@@ -1,3 +1,21 @@
+// RUN: %atjitc -O2 -DBLOCKING_DRIVER %s -o %t.blocking
+// RUN: %atjitc -O2 %s -o %t.default
+// RUN: %time %t.blocking.time %t.blocking 7
+// RUN: %time %t.default.time %t.default 7
+
+// FIXME: we can't run this comparison reliably because
+// the time here includes compile jobs still in the queue.
+// plus I don't know if this is a good test cause it's so fast.
+
+// %compareTimes %t.default.time %t.blocking.time
+
+
+
+// NOTE: this test ensures that recompile requests are faster
+// if blocking mode is not turned on.
+// This test also makes sure blocking mode is off by default.
+
+
 /* The Computer Language Benchmarks Game
    https://salsa.debian.org/benchmarksgame-team/benchmarksgame/
 
@@ -8,7 +26,6 @@
 #include <algorithm>
 
 #include <tuner/driver.h>
-#include <easy/code_cache.h>
 
 typedef unsigned char int_t;
 
@@ -76,18 +93,18 @@ int main(int argc, char** argv)
    using namespace easy::options;
    using namespace std::placeholders;
    tuner::ATDriver AT;
-   easy::Cache<> C;
    Result r;
 
-   const int ITERS = 500;
+   const int ITERS = 5000;
    for (int i = 0; i < ITERS; i++) {
 
-     // auto const& fannkuch_cached = C.jit(fannkuch, _1);
-     // r = fannkuch_cached(n);
-
      auto const& fannkuch_tuned =
-        AT.reoptimize(fannkuch, _1, tuner_kind(tuner::AT_Bayes));
-     r = fannkuch_tuned(n);
+        AT.reoptimize(fannkuch, n, tuner_kind(tuner::AT_Random), pct_err(-1)
+#ifdef BLOCKING_DRIVER
+        , blocking(true)
+#endif
+      );
+     r = fannkuch_tuned();
 
      // r = fannkuch(n);
    }

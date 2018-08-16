@@ -2,6 +2,8 @@ find_python_module(lit REQUIRED)
 
 include(Valgrind)
 
+find_program(TIME_EXE time)
+
 set(ALL_TESTS tests/)
 
 # it is not possible to use add_dependencies on the install target, since it's
@@ -14,3 +16,5 @@ add_custom_target(check
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tests/lit.cfg.in" "${CMAKE_CURRENT_BINARY_DIR}/tests/lit.cfg")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tests/doc/lit.cfg.in" "${CMAKE_CURRENT_BINARY_DIR}/tests/doc/lit.cfg")
+
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tests/compare.sh" "${CMAKE_CURRENT_BINARY_DIR}/tests/compare.sh")
