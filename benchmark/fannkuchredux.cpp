@@ -8,6 +8,7 @@
 #include <algorithm>
 
 #include <tuner/driver.h>
+#include <easy/code_cache.h>
 
 typedef unsigned char int_t;
 
@@ -75,16 +76,20 @@ int main(int argc, char** argv)
    using namespace easy::options;
    using namespace std::placeholders;
    tuner::ATDriver AT;
+   easy::Cache<> C;
    Result r;
 
    const int ITERS = 500;
    for (int i = 0; i < ITERS; i++) {
-     auto const& fannkuch_jit =
-        AT.reoptimize(fannkuch, _1, tuner_kind(tuner::AT_Bayes));
 
-     printf("executing...");
-     r = fannkuch_jit(n);
-     printf(" done!\n");
+     // auto const& fannkuch_cached = C.jit(fannkuch, _1);
+     // r = fannkuch_cached(n);
+
+     auto const& fannkuch_tuned =
+        AT.reoptimize(fannkuch, _1, tuner_kind(tuner::AT_Bayes));
+     r = fannkuch_tuned(n);
+
+     // r = fannkuch(n);
    }
 
    printf("%d\nPfannkuchen(%d) = %d\n",r.checksum,n,r.maxflips);
