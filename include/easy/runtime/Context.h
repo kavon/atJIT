@@ -148,9 +148,11 @@ class Context {
 
   tuner::AutoTuner TunerKind_ = tuner::AT_None;
 
-  // NOTE: this value does not factor into the equality of two contexts:
-  // they are blind to this option.
+  // NOTE: these values do not factor into the equality of two contexts,
+  // they are blind to these options.
   double FeedbackStdErr_ = DEFAULT_STD_ERR_PCT;
+  bool WaitForCompile_ = false;
+
 
   template<class ArgTy, class ... Args>
   inline Context& setArg(Args && ... args) {
@@ -195,6 +197,15 @@ class Context {
 
   double getFeedbackStdErr() const {
     return FeedbackStdErr_;
+  }
+
+  Context& setWaitForCompile(bool val) {
+    WaitForCompile_ = val;
+    return *this;
+  }
+
+  bool waitForCompile() const {
+    return WaitForCompile_;
   }
 
   tuner::AutoTuner getTunerKind() const {

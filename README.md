@@ -242,7 +242,8 @@ printf("fsubJIT(3, 2) == %f\n", fsubJIT(3.0, 2.0));
 The current list of tuning options (namespaces omitted) are:
 
 - `tuner_kind(x)` — where `x` is one of `AT_None`, `AT_Random`, `AT_Bayes`, `AT_Anneal`.
-- `pct_err(x)` — where `x` is a double representing the precentage of tolerated time-measurement error during tuning. If `x < 0` then the first measurement is always accepted. The default is currently `1.0`.
+- `pct_err(x)` — where `x` is a double representing the precentage of tolerated time-measurement error during tuning. If `x < 0` then the first measurement is always accepted. The default is currently `2.0`.
+- `blocking(x)` — where `x` is a bool indicating whether `reoptimize` should wait on concurrent compile jobs when it is not required. The default is `false`.
 
 #### Autotuning a Function
 

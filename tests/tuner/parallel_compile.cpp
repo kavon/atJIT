@@ -18,6 +18,7 @@
 
 using namespace std::placeholders;
 using namespace tuned_param;
+using namespace easy::options;
 
 std::atomic<int> dummy;
 
@@ -40,8 +41,10 @@ int main(int argc, char** argv) {
     auto const &OptimizedFun = AT.reoptimize(spin,
           IntRange(minVal, maxVal, dflt),
           dummy,
-          easy::options::tuner_kind(TunerKind),
-          easy::options::pct_err(50));
+          tuner_kind(TunerKind),
+          pct_err(50),
+          blocking(true)
+          );
 
     OptimizedFun();
   }

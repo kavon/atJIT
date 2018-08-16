@@ -44,6 +44,14 @@ namespace tuner {
     bool FastISel;
   };
 
+namespace opt_status {
+  enum Value {
+    Empty,   // nothing ready, no workers.
+    Working, // empty but working on jobs
+    Ready    // at least one is available, maybe working.
+  };
+}
+
 
 /////
 // each Optimizer instance is an encapsulation of the state of
@@ -86,6 +94,7 @@ private:
   // queue is basically a semaphore.
   dispatch_queue_t mutate_recompileDone_;
   std::list<CompileResult> recompileDone_;
+  bool doneQueueEmpty_ = true;
 
 
 
@@ -107,6 +116,12 @@ public:
   easy::Context const* getContext() const;
 
   void* getAddr() const;
+
+  // NOTE: The answer is imprecise, especially if another thread might call
+  // `recompile` while this function is executing!
+  // We accept this lower reliability in order to keep this
+  // test very efficient (no synchronization needed).
+  opt_status::Value status() const;
 
   //// these callbacks are a bit ugly.
   void addToList_callback(AddCompileResult*);

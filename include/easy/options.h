@@ -46,7 +46,7 @@ namespace options{
       tuner::AutoTuner kind_;
   };
 
-  // tuner kind option & correspondence.
+  // tuner's willingness to accept noise
   EASY_NEW_OPTION_STRUCT(pct_err) {
 
     pct_err(double val)
@@ -58,6 +58,21 @@ namespace options{
 
     private:
       double val_;
+  };
+
+  // if true, the driver will be more willing to
+  // wait, i.e. block, on compilation jobs.
+  EASY_NEW_OPTION_STRUCT(blocking) {
+
+    blocking(bool val)
+               : val_(val) {}
+
+    EASY_HANDLE_OPTION_STRUCT(IGNORED, C) {
+      C.setWaitForCompile(val_);
+    }
+
+    private:
+      bool val_;
   };
 
   // option used for writing the ir to a file, useful for debugging

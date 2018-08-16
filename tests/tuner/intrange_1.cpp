@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
   for (int i = 0; i < ITERS; i++) {
     auto const &OptimizedFun = AT.reoptimize(show,
           IntRange(-8, 9, 9), _1,
-          tuner_kind(TunerKind), pct_err(-1));
+          tuner_kind(TunerKind), pct_err(-1), blocking(true));
 
     OptimizedFun(i);
   }

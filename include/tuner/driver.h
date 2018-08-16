@@ -54,39 +54,51 @@ class ATDriver {
     easy::FunctionWrapperBase &Trial = Info.Trial;
     easy::FunctionWrapperBase &Best = Info.Best;
 
+    opt_status::Value Status = OptFromEntry.status();
+    bool MustWait = OptFromEntry.getContext()->waitForCompile();
     bool WasNotInCache = EmplaceResult.second;
 
+    ////////
     // decide whether to recompile or not.
+
     if (WasNotInCache) {
       // this is the first encounter of the function + context
       // we must submit a compilation job
       OptFromEntry.initialize();
-      auto FW = easy::jit_with_optimizer<T, Args...>(OptFromEntry, std::forward<T>(Fun));
-      Trial = std::move(FW);
+      Trial = easy::jit_with_optimizer<T, Args...>(OptFromEntry, std::forward<T>(Fun));
+      return reinterpret_cast<wrapper_ty&>(Trial);
+    }
 
-    } else if (!Trial.isEmpty() && Trial.getFeedback().avgMeasurement()) {
-      // the existing optimized function has recieved enough feedback,
-      // so we can proceed to the next trial version.
-
-      // save the trial version if it's the best we've seen.
+    // try to update the Best version
+    if (!Trial.isEmpty() && Trial.getFeedback().avgMeasurement()) {
+      // save the trial version only if it's the best we've seen.
       if (Best.isEmpty() || Trial.getFeedback()
                             .betterThan(
                             Best.getFeedback())) {
         Best = std::move(Trial);
         Trial = easy::FunctionWrapperBase();
       }
-
-      // auto FW = easy::jit_with_optimizer<T, Args...>(OptFromEntry, std::forward<T>(Fun));
-      // Info.Trial = std::move(FW);
-
     }
 
-    // priority is to give out the trial version if there is one.
+    // are we still evaluating a trial version?
     if (Trial.isEmpty()) {
-      assert(!Best.isEmpty() && "logic issue");
-      return reinterpret_cast<wrapper_ty&>(Best);
+
+      // if the optimizer is cooking up a new version for us,
+      // just return the best one for now.
+      if (!MustWait && Status == opt_status::Working) {
+        assert(!Best.isEmpty() && "logic error!");
+        return reinterpret_cast<wrapper_ty&>(Best);
+      }
+
+      // Either the optimizer has nothing available and is inactive,
+      // or we have something ready to go. Either way, get a new version.
+      Trial = easy::jit_with_optimizer<T, Args...>(OptFromEntry, std::forward<T>(Fun));
+      return reinterpret_cast<wrapper_ty&>(Trial);
     }
 
+    assert(!Trial.isEmpty() && "error");
+
+    // trial version is not done, return it
     return reinterpret_cast<wrapper_ty&>(Trial);
   }
 

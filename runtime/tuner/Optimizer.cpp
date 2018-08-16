@@ -118,8 +118,12 @@ namespace tuner {
 
   Optimizer::~Optimizer() {
     // first we need to make sure no concurrent compiles are still running
-    while (recompileActive_)
-      sleep_for(1);
+    if (recompileActive_) {
+      std::cerr << "note: optimizer's destructor is waiting for compile threads to finish... ";
+      while (recompileActive_)
+        sleep_for(1);
+      std::cerr << "done.";
+    }
 
     delete Tuner_;
 
@@ -261,6 +265,7 @@ namespace tuner {
   // NOTE: must be holding mutate_recompileDone_ queue!
   void Optimizer::addToList_callback(AddCompileResult* ACR) {
     recompileDone_.push_back(std::move(ACR->Result));
+    doneQueueEmpty_ = false;
   }
 
   // tries once to pop a compile result off the ready list.
@@ -270,6 +275,7 @@ namespace tuner {
     assert(!R->RetVal.has_value() && "should be None");
 
     if (recompileDone_.empty()) {
+      doneQueueEmpty_ = true;
       R->RetVal = std::nullopt;
       return;
     }
@@ -278,6 +284,18 @@ namespace tuner {
 
     R->RetVal = std::move(recompileDone_.front());
     recompileDone_.pop_front();
+
+    doneQueueEmpty_ = recompileDone_.empty();
+  }
+
+  opt_status::Value Optimizer::status() const {
+    if (doneQueueEmpty_) {
+      if (recompileActive_)
+        return opt_status::Working;
+      else
+        return opt_status::Empty;
+    }
+    return opt_status::Ready;
   }
 
 
