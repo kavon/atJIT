@@ -136,7 +136,9 @@ namespace tuner {
     if (InitializedSelf_)
       return;
 
+#ifndef NDEBUG
     std::cout << "initializing optimizer\n";
+#endif
 
     /////////
     // initialize concurrency stuff
@@ -283,7 +285,9 @@ namespace tuner {
   /// STARTING POINT
   //////////////////////
   CompileResult Optimizer::recompile() {
+#ifndef NDEBUG
     auto Start = std::chrono::system_clock::now();
+#endif
     RecompileRequest R;
     R.Opt = this;
     R.RetVal = std::nullopt;
@@ -306,9 +310,11 @@ namespace tuner {
       } while (!R.RetVal.has_value());
     }
 
+#ifndef NDEBUG
     auto End = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
     std::cout << ">> reoptimize request finished in " << elapsed.count() << " ms\n";
+#endif
 
     assert(R.RetVal.has_value() && "that's wrong");
     return std::move(R.RetVal.value());
@@ -322,8 +328,9 @@ namespace tuner {
   // onto the list. Thus, holding the list queue will deadlock
   // this compile queue!
   void Optimizer::optimize_callback() {
-
+#ifndef NDEBUG
     auto Start = std::chrono::system_clock::now();
+#endif
 
     auto &BT = easy::BitcodeTracker::GetTracker();
 
@@ -342,10 +349,12 @@ namespace tuner {
 
     Tuner_->applyConfig(*TunerConf, *M);
 
+#ifndef NDEBUG
     std::cout << "@@ optimize job starting using this config:\n";
     dumpConfig(Tuner_->getKnobSet(), *TunerConf);
 
     Tuner_->dump();
+#endif
 
     // save the current compilation config to pass it
     // along to the codegen thread.
@@ -360,9 +369,11 @@ namespace tuner {
 
     easy::Function::WriteOptimizedToFile(*M, Cxt_->getDebugFile());
 
+#ifndef NDEBUG
     auto End = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
     std::cout << "@@ optimize job finished in " << elapsed.count() << " ms\n";
+#endif
 
     // ask the tuner if we're able to, and *should* try
     // compiling the next config ahead-of-time.
@@ -389,7 +400,9 @@ namespace tuner {
 
 
   void Optimizer::codegen_callback(OptimizeResult* OR) {
+#ifndef NDEBUG
     auto Start = std::chrono::system_clock::now();
+#endif
 
     const char* Name;
     easy::GlobalMapping* Globals;
@@ -407,9 +420,11 @@ namespace tuner {
 
     dispatch_sync_f(mutate_recompileDone_, &ACR, addResultTask);
 
+#ifndef NDEBUG
     auto End = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
     std::cout << "$$ codegen job finished in " << elapsed.count() << " ms\n";
+#endif
 
     // am I the end of the chain?
     if (OR->End)

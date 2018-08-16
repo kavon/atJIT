@@ -108,7 +108,9 @@ namespace tuner {
       // First, we need to retrain a new model.
       ///////
 
-      printf("STARTING TO SURF\n");
+#ifndef NDEBUG
+      std::cout << "Bayesian Tuner is making predictions..."
+#endif
 
       updateDataset();
 
@@ -127,6 +129,7 @@ namespace tuner {
       BoosterHandle booster;
       XGBoosterCreate(dmat, 1, &booster);
       // FIXME: all of these settings were picked arbitrarily
+      XGBoosterSetParam(booster, "silent", "1");
       XGBoosterSetParam(booster, "booster", "gbtree");
       XGBoosterSetParam(booster, "objective", "reg:linear");
       XGBoosterSetParam(booster, "max_depth", "5");
@@ -203,8 +206,9 @@ namespace tuner {
 
       std::multiset<SetKey, lessThan> Best;
       for (uint32_t i = 0; i < out_len; i++) {
-        // DEBUG
+#ifndef NDEBUG
         std::cout << "prediction[" << i << "]=" << out[i] << std::endl;
+#endif
         auto Cur = std::make_pair(i, out[i]);
 
         if (Best.size() < BatchSz_) {
@@ -222,8 +226,10 @@ namespace tuner {
 
       for (auto Entry : Best) {
         auto Chosen = Entry.first;
+#ifndef NDEBUG
         std::cout << "chose config " << Chosen
                   << " with estimated time " << Entry.second << std::endl;
+#endif
         Predictions_.push_back(Test[Chosen]);
       }
 

@@ -2,6 +2,7 @@
 
 #include <llvm/Bitcode/BitcodeReader.h>
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/IR/DiagnosticHandler.h>
 
 #include <easy/exceptions.h>
 
@@ -68,10 +69,29 @@ std::unique_ptr<llvm::Module> BitcodeTracker::getModuleWithContext(void* FPtr, l
   return std::move(ModuleOrErr.get());
 }
 
+#ifdef NDEBUG
+class DiagnosticSilencer : public llvm::DiagnosticHandler {
+public:
+  DiagnosticSilencer() {}
+  bool handleDiagnostics(const DiagnosticInfo &DI) override { return true; }
+  bool isAnalysisRemarkEnabled(StringRef PassName) const override { return false; }
+  bool isMissedOptRemarkEnabled(StringRef PassName) const override { return false; }
+  bool isPassedOptRemarkEnabled(StringRef PassName) const override { return false; }
+}; // end class
+#endif
+
 BitcodeTracker::ModuleContextPair BitcodeTracker::getModule(void* FPtr) {
 
   std::unique_ptr<llvm::LLVMContext> Context(new llvm::LLVMContext());
+
+#ifdef NDEBUG
+  // silence the output as much as possible!
+  Context->setDiagnosticHandler(std::make_unique<DiagnosticSilencer>());
+  Context->setDiagnosticsHotnessThreshold(~0);
+#endif
+
   auto Module = getModuleWithContext(FPtr, *Context);
+
   return ModuleContextPair(std::move(Module), std::move(Context));
 }
 

@@ -68,11 +68,15 @@ void Function::WriteOptimizedToFile(llvm::Module const &M, std::string const& Fi
   if(Error)
     throw CouldNotOpenFile(Error.message());
 
+#ifndef NDEBUG
   std::cout << "dumping to file...\n";
+#endif
 
   Out << M;
 
+#ifndef NDEBUG
   std::cout << "done\n";
+#endif
 }
 
 std::unique_ptr<Function>

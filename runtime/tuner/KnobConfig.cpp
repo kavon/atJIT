@@ -296,7 +296,7 @@ void applyToConfig(KnobConfigAppFn &F, KnobConfig const &Settings) {
                                                                             \
      auto search = KS.KnobMap.find(ID);                                     \
      if (search == KS.KnobMap.end()) {                                      \
-       std::cout << "dumpConfig ERROR: a knob in the given Config "         \
+       std::cerr << "dumpConfig ERROR: a knob in the given Config "         \
                  << "is not in Tuner's KnobSet!\n";                         \
                                                                             \
        throw std::runtime_error("unknown knob ID");                         \
