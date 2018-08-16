@@ -18,23 +18,28 @@ class FunctionWrapperBase {
 
   std::shared_ptr<tuner::Feedback> FB_;
 
+  bool noInit_ = true;
+
   public:
   // null object
   FunctionWrapperBase() = default;
 
   // default constructor
   FunctionWrapperBase(std::unique_ptr<Function> F, std::shared_ptr<tuner::Feedback> FB)
-    : Fun_(std::move(F)), FB_(std::move(FB)) { }
+    : Fun_(std::move(F)), FB_(std::move(FB)), noInit_(false) { }
 
   // steal the implementation
   FunctionWrapperBase(FunctionWrapperBase &&FW)
-    : Fun_(std::move(FW.Fun_)), FB_(std::move(FW.FB_)) { }
+    : Fun_(std::move(FW.Fun_)), FB_(std::move(FW.FB_)), noInit_(FW.noInit_) { }
 
   FunctionWrapperBase& operator=(FunctionWrapperBase &&FW) {
     Fun_ = std::move(FW.Fun_);
     FB_ = std::move(FW.FB_);
+    noInit_ = FW.noInit_;
     return *this;
   }
+
+  bool isEmpty() const { return noInit_; }
 
   Function const& getFunction() const {
     return *Fun_;

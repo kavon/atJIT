@@ -11,9 +11,20 @@
 
 namespace tuner {
 
+  namespace {
+    struct OptimizationInfo {
+      OptimizationInfo(std::unique_ptr<tuner::Optimizer> Opt_)
+          : Opt(std::move(Opt_)), Trial(easy::FunctionWrapperBase()), Best(easy::FunctionWrapperBase()) {}
+
+      std::unique_ptr<tuner::Optimizer> Opt;
+      easy::FunctionWrapperBase Trial;
+      easy::FunctionWrapperBase Best;
+    };
+  }
+
 class ATDriver {
   using Key = std::pair<void*, std::shared_ptr<easy::Context>>;
-  using Entry = std::pair<std::unique_ptr<tuner::Optimizer>, easy::FunctionWrapperBase>;
+  using Entry = OptimizationInfo;
 
   using iterator = typename std::unordered_map<Key, Entry>::iterator;
 
@@ -33,28 +44,50 @@ class ATDriver {
 
     std::pair<iterator, bool> EmplaceResult =
             DriverState_.emplace(Key(FunPtr, Cxt),
-            std::make_pair(std::move(Opt), easy::FunctionWrapperBase()));
+                                 OptimizationInfo(std::move(Opt)));
 
 
     // pull out data from the emplace
     Key const &KeyVals = EmplaceResult.first->first;
-    Entry &EntryVals = EmplaceResult.first->second;
-    easy::FunctionWrapperBase &FWB = EntryVals.second;
-    tuner::Optimizer &OptFromEntry = *(EntryVals.first);
+    Entry &Info = EmplaceResult.first->second;
+    tuner::Optimizer &OptFromEntry = *(Info.Opt);
+    easy::FunctionWrapperBase &Trial = Info.Trial;
+    easy::FunctionWrapperBase &Best = Info.Best;
 
     bool WasNotInCache = EmplaceResult.second;
 
-    // reasons we will JIT, in order:
-    // 1. this is the first encounter of the function + context
-    // 2. the existing optimized function has recieved enough feedback,
-    //    so the optimizer can make a decision on reoptimizing it.
-    if (WasNotInCache || FWB.getFeedback().avgMeasurement()) {
+    // decide whether to recompile or not.
+    if (WasNotInCache) {
+      // this is the first encounter of the function + context
+      // we must submit a compilation job
       OptFromEntry.initialize();
       auto FW = easy::jit_with_optimizer<T, Args...>(OptFromEntry, std::forward<T>(Fun));
-      FWB = std::move(FW);
+      Trial = std::move(FW);
+
+    } else if (!Trial.isEmpty() && Trial.getFeedback().avgMeasurement()) {
+      // the existing optimized function has recieved enough feedback,
+      // so we can proceed to the next trial version.
+
+      // save the trial version if it's the best we've seen.
+      if (Best.isEmpty() || Trial.getFeedback()
+                            .betterThan(
+                            Best.getFeedback())) {
+        Best = std::move(Trial);
+        Trial = easy::FunctionWrapperBase();
+      }
+
+      // auto FW = easy::jit_with_optimizer<T, Args...>(OptFromEntry, std::forward<T>(Fun));
+      // Info.Trial = std::move(FW);
+
     }
 
-    return reinterpret_cast<wrapper_ty&>(FWB);
+    // priority is to give out the trial version if there is one.
+    if (Trial.isEmpty()) {
+      assert(!Best.isEmpty() && "logic issue");
+      return reinterpret_cast<wrapper_ty&>(Best);
+    }
+
+    return reinterpret_cast<wrapper_ty&>(Trial);
   }
 
 }; // end class

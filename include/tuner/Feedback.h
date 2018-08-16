@@ -8,6 +8,7 @@
 #include <cassert>
 #include <iostream>
 #include <mutex>
+#include <cfloat>
 
 #include <tuner/Util.h>
 
@@ -24,6 +25,16 @@ public:
   virtual ~Feedback() = default;
   virtual Token startMeasurement() = 0;
   virtual void endMeasurement(Token) = 0;
+
+  bool betterThan(Feedback& Other) {
+    // lower times are better, where `this` is selfish
+    // and says its better with an equivalent measure.
+
+    std::optional<double> mine = this->avgMeasurement();
+    std::optional<double> theirs = Other.avgMeasurement();
+
+    return mine.value_or(DBL_MAX) <= theirs.value_or(DBL_MAX);
+  }
 
   // "None" indicates that there is no accurate average available yet.
   virtual std::optional<double> avgMeasurement() {
