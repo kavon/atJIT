@@ -28,7 +28,7 @@ int int_cmp(int a, int b)
 }
 
 // https://github.com/ctasims/The-C-Programming-Language--Kernighan-and-Ritchie/blob/master/ch04-functions-and-program-structure/qsort.c
-void __attribute__((noinline)) Qsort(int v[], int left, int right, int (*cmp)(int, int)) 
+void __attribute__((noinline)) Qsort(int v[], int left, int right, int (*cmp)(int, int))
 {
     int i, last;
     void swap(int v[], int i, int j);
@@ -72,7 +72,10 @@ static void BM_convolve_jit(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(BM_convolve_jit)->RangeMultiplier(2)->Range(16,1024);
+// NOTE: this test was disabled due to it crashing sometimes. See
+// here for more info:  https://github.com/kavon/atJIT/issues/2
+//
+// BENCHMARK(BM_convolve_jit)->RangeMultiplier(2)->Range(16,1024);
 
 static void BM_convolve(benchmark::State& state) {
   int n = state.range(0);
