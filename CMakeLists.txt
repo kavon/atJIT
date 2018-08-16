@@ -58,7 +58,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic -Werror=return-type -Wno-unused-parameter")
 
-# set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
+# NOTE: -O2 and -O3 cause the plugin to segfault _only_ on Travis CI with LLVM 6.
+# it happens when the bitcode register pass tries to construct a Twine, so
+# there's no straight-forward fix.
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O1")
 
 # needed for colors when using Ninja
