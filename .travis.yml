@@ -27,11 +27,16 @@ before_install:
     - pip install --user --upgrade pip
     - pip install --user lit
 
+matrix:
+  env:
+    - BUILD_KIND=Debug
+    - BUILD_KIND=Release
+
 script:
   - ./xgboost/get.sh
   - mkdir _build && cd _build
   - ../benchmark/setup.sh
-  - cmake -DLLVM_DIR=/usr/lib/llvm-6.0/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DEASY_JIT_EXAMPLE=ON -DEASY_JIT_BENCHMARK=ON -DBENCHMARK_DIR=`pwd`/benchmark/install -DCMAKE_INSTALL_PREFIX=`pwd`/../install .. -G "Unix Makefiles"
+  - cmake -DLLVM_DIR=/usr/lib/llvm-6.0/cmake -DCMAKE_BUILD_TYPE=${BUILD_KIND} -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DEASY_JIT_EXAMPLE=ON -DEASY_JIT_BENCHMARK=ON -DBENCHMARK_DIR=`pwd`/benchmark/install -DCMAKE_INSTALL_PREFIX=`pwd`/../install .. -G "Unix Makefiles"
   - make -j 3
   - make install
   - make check

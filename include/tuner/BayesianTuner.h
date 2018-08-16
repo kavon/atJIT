@@ -109,7 +109,7 @@ namespace tuner {
       ///////
 
 #ifndef NDEBUG
-      std::cout << "Bayesian Tuner is making predictions..."
+      std::cout << "Bayesian Tuner is making predictions...\n";
 #endif
 
       updateDataset();
