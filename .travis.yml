@@ -27,10 +27,10 @@ before_install:
     - pip install --user --upgrade pip
     - pip install --user lit
 
-matrix:
-  env:
-    - BUILD_KIND=Debug
-    - BUILD_KIND=Release
+
+env:
+  - BUILD_KIND=Debug
+  - BUILD_KIND=Release
 
 script:
   - ./xgboost/get.sh
