@@ -119,10 +119,10 @@ namespace tuner {
   Optimizer::~Optimizer() {
     // first we need to make sure no concurrent compiles are still running
     if (recompileActive_) {
-      std::cerr << "note: optimizer's destructor is waiting for compile threads to finish... ";
+      std::cerr << "\nnote: optimizer's destructor is waiting for compile threads to finish... ";
       while (recompileActive_)
         sleep_for(1);
-      std::cerr << "done.";
+      std::cerr << "done.\n";
     }
 
     delete Tuner_;
@@ -173,7 +173,7 @@ namespace tuner {
     //////////
     // IR Opt knobs
 
-    // start at defaults, as requested by user.
+    // start at defaults, as requested by user in the Context.
     unsigned OptLevel;
     unsigned OptSize;
     std::tie(OptLevel, OptSize) = Cxt_->getOptLevel();
@@ -190,6 +190,13 @@ namespace tuner {
     ////////////////////////////
 
     // Codegen knobs
+    if (!isNoopTuner_) {
+      // if we're not servicing a plain non-tuning JIT request,
+      // make codegen as fast as possible by default.
+      CGOptLvl = CodeGenOptLvl(1);
+      FastISelOpt = FastISelOption(true);
+    }
+
     KS.IntKnobs[CGOptLvl.getID()] = &CGOptLvl;
     KS.IntKnobs[FastISelOpt.getID()] = &FastISelOpt;
 
@@ -214,6 +221,7 @@ namespace tuner {
       case tuner::AT_None:
       default:
         Tuner_ = new NoOpTuner(std::move(KS));
+        isNoopTuner_ = true;
     }
 
     InitializedSelf_ = true;

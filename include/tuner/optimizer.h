@@ -105,6 +105,7 @@ private:
 
   // members related to automatic tuning
   Tuner *Tuner_;
+  bool isNoopTuner_ = false;
 
 public:
   Optimizer(void* Addr, std::shared_ptr<easy::Context> Cxt, bool LazyInit = false);

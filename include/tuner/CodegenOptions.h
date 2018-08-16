@@ -19,7 +19,7 @@ public:
 
 class FastISelOption : public FlagKnob {
 public:
-  FastISelOption() : FlagKnob(false) {}
+  FastISelOption(bool dflt_ = false) : FlagKnob(dflt_) {}
   std::string getName() const override {
      return "use FastISel";
   }
