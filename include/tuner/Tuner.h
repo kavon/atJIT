@@ -44,8 +44,8 @@ namespace tuner {
 
   struct {
     bool operator()(GenResult const &A, GenResult const &B) const
-    { // smallest time last. if no time is available, it goes to the front.
-        return A.second->betterThan(*B.second);
+    {  // A >= B if B is better than A
+        return B.second->betterThan(*A.second);
     }
   } resultGEQ;
 
