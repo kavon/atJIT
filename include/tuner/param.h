@@ -14,7 +14,7 @@ private:
   int cur, dflt_;
 
 public:
-
+  virtual ~IntRange() = default;
   int min() const override { return lo_; }
   int max() const override { return hi_; }
   int getVal() const override { return cur; }

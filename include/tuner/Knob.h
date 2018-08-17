@@ -40,6 +40,7 @@ namespace tuner {
         throw std::runtime_error("exhausted the KnobTicker!");
       id__ = KnobTicker++;
     }
+    virtual ~Knob() = default;
     // value accessors
     virtual ValTy getDefault() const = 0;
     virtual ValTy getVal() const = 0;
@@ -69,6 +70,7 @@ namespace tuner {
   template < typename ValTy >
   class ScalarRange : public Knob<ValTy> {
   public:
+    virtual ~ScalarRange() = default;
 
     // inclusive ranges
     virtual ValTy min() const = 0;
@@ -88,6 +90,7 @@ namespace tuner {
     int current;
     int dflt;
   public:
+    virtual ~FlagKnob() = default;
     FlagKnob(bool dflt_) : dflt(dflt_ ? TRUE : FALSE) {
       current = dflt;
     }

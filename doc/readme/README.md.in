@@ -119,8 +119,17 @@ For example, for **Polly Knobs**, you could use this flag:
 To build the examples, install the [opencv](https://opencv.org/) library,
 and add the flags ```-DEASY_JIT_EXAMPLE=1``` to the cmake command.
 
-To enable benchmarking, install the [google benchmark](https://github.com/google/benchmark) framework,
-and add the flags ```-DEASY_JIT_BENCHMARK=1 -DBENCHMARK_DIR=<path_to_google_benchmark_install>``` to the cmake command.
+To enable **benchmarking**, first install the [Google Benchmark](https://github.com/google/benchmark) framework.
+You can do this by running `../benchmark/setup.sh` from the `build` directory, which will install
+Google Benchmark under `<build dir>/benchmark/install`.
+Then, you would add the following flags to cmake when configuring:
+
+```bash
+-DBENCHMARK=ON -DBENCHMARK_DIR=`pwd`/benchmark/install
+```
+
+After building, the benchmark executable will output as `<build dir>/bin/atjit-benchmark`.
+[See here for instructions](https://github.com/google/benchmark/blob/master/docs/tools.md) on using other tools in the Google Benchmark suite to help analyze the results, etc.
 
 #### Regression Testing
 

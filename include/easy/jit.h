@@ -30,14 +30,13 @@ WrapFunction(std::unique_ptr<Function> F, std::shared_ptr<tuner::Feedback> FB, m
 template<class T, class ... Args>
 auto jit_with_optimizer(tuner::Optimizer &Opt, T &&Fun) {
 
-  auto* FunPtr = meta::get_as_pointer(Fun);
   using FunOriginalTy = std::remove_pointer_t<std::decay_t<T>>;
 
   using new_type_traits = meta::new_function_traits<FunOriginalTy, meta::type_list<Args...>>;
   using new_return_type = typename new_type_traits::return_type;
   using new_parameter_types = typename new_type_traits::parameter_list;
 
-  assert(Opt.getAddr() == FunPtr && "mismatch between function and optimizer!");
+  assert(Opt.getAddr() == meta::get_as_pointer(Fun) && "mismatch between function and optimizer!");
 
   auto CompiledFunction = Opt.recompile();
 

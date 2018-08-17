@@ -7,8 +7,8 @@ namespace tuner {
 // a typical, simple integer range knob
 class SimpleRange : public ScalarRange<int> {
 private:
-  int current;
   int dflt;
+  int current;
 public:
   SimpleRange(int dflt_) : dflt(dflt_), current(dflt_) {}
   int getDefault() const override { return dflt; }
