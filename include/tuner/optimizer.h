@@ -88,13 +88,13 @@ private:
 
   // a serial job queue for IR -> asm compilation
   dispatch_queue_t codegenQ_;
-  bool recompileActive_ = false;
+  std::atomic<bool> recompileActive_ = false;
 
   // serial list-access queues. The dispatch
   // queue is basically a semaphore.
   dispatch_queue_t mutate_recompileDone_;
   std::list<CompileResult> recompileDone_;
-  bool doneQueueEmpty_ = true;
+  std::atomic<bool> doneQueueEmpty_ = true;
 
 
 

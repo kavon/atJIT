@@ -54,8 +54,7 @@ class ATDriver {
     easy::FunctionWrapperBase &Trial = Info.Trial;
     easy::FunctionWrapperBase &Best = Info.Best;
 
-    opt_status::Value Status = OptFromEntry.status();
-    bool MustWait = OptFromEntry.getContext()->waitForCompile();
+    bool WantToWait = OptFromEntry.getContext()->waitForCompile();
     bool WasNotInCache = EmplaceResult.second;
 
     ////////
@@ -85,7 +84,7 @@ class ATDriver {
 
       // if the optimizer is cooking up a new version for us,
       // just return the best one for now.
-      if (!MustWait && Status == opt_status::Working) {
+      if (!WantToWait && OptFromEntry.status() == opt_status::Working) {
         assert(!Best.isEmpty() && "logic error!");
         return reinterpret_cast<wrapper_ty&>(Best);
       }
