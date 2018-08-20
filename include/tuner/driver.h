@@ -30,6 +30,7 @@ class ATDriver {
 
   protected:
   std::unordered_map<Key, Entry> DriverState_;
+  unsigned ticket = 0;
 
   public:
 
@@ -82,9 +83,17 @@ class ATDriver {
     // are we still evaluating a trial version?
     if (Trial.isEmpty()) {
 
-      // if the optimizer is cooking up a new version for us,
-      // just return the best one for now.
-      if (!WantToWait && OptFromEntry.status() == opt_status::Working) {
+      bool shouldReturnBest =
+            // Rate-limiter for experimental configs. We only experiment
+            // on 1/EXPERIMENT_RATE requests
+          (ticket++ % EXPERIMENT_RATE) == 0
+            ||
+            // if the optimizer is cooking up a new version for us,
+            // just return the best one for now.
+          (!WantToWait && OptFromEntry.status() == opt_status::Working);
+
+
+      if (shouldReturnBest) {
         assert(!Best.isEmpty() && "logic error!");
         return reinterpret_cast<wrapper_ty&>(Best);
       }
