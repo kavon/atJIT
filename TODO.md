@@ -25,9 +25,13 @@ Todos
   - ~~see the GenPartialRandConfig FIXME~~
 - ~~Parallelize the JIT compilation.~~
 - integrate with Michael's LLVM branch
-  - learn how to map permutation (with dupes) onto the machine learning model.
-  - handle tuning the pass-ordering problem, since that happens with the loop transform MDs
-  - generate polly knobs
+  - Generate fixed-dimensional loop-tiling knob
+- Fix up Bayes tuner
+  - cross-validation
+  - reallocation
+- Add more benchmarks
+  - matrix multiply
+  - some other stencil
 
 ## JIT Compilation
 

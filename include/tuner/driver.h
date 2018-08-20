@@ -77,20 +77,21 @@ class ATDriver {
       return reinterpret_cast<wrapper_ty&>(Trial);
     }
 
-    // try to update the Best version
+    // Check if the trial version is done.
     if (!Trial.isEmpty() && Trial.getFeedback().avgMeasurement()) {
-      // save the trial version only if it's the best we've seen.
-      if (Best.isEmpty() || Trial.getFeedback()
+      auto MaybeGood = std::move(Trial);
+      Trial = easy::FunctionWrapperBase();
+
+      // Check to see which is better
+      if (Best.isEmpty() || MaybeGood.getFeedback()
                             .betterThan(
                             Best.getFeedback())) {
-        Best = std::move(Trial);
-        Trial = easy::FunctionWrapperBase();
+        Best = std::move(MaybeGood);
       }
     }
 
     // are we still evaluating a trial version?
     if (Trial.isEmpty()) {
-
       bool shouldReturnBest = false;
 
       if (Impatient) {
