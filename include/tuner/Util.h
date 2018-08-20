@@ -9,7 +9,7 @@
 #define DEFAULT_MIN_TRIALS 2
 #define DEFAULT_STD_ERR_PCT 1.5
 #define DEFAULT_COMPILE_AHEAD 10
-#define EXPERIMENT_RATE 1
+#define EXPERIMENT_RATE 2
 
 namespace tuner {
   // a "missing" value indicator

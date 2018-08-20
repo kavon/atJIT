@@ -30,7 +30,7 @@ class ATDriver {
 
   protected:
   std::unordered_map<Key, Entry> DriverState_;
-  unsigned ticket = 0;
+  int ticket = -1;
 
   public:
 
@@ -63,7 +63,7 @@ class ATDriver {
     easy::FunctionWrapperBase &Trial = Info.Trial;
     easy::FunctionWrapperBase &Best = Info.Best;
 
-    bool WantToWait = OptFromEntry.getContext()->waitForCompile();
+    bool Impatient = !(OptFromEntry.getContext()->waitForCompile());
     bool WasNotInCache = EmplaceResult.second;
 
     ////////
@@ -91,15 +91,16 @@ class ATDriver {
     // are we still evaluating a trial version?
     if (Trial.isEmpty()) {
 
-      bool shouldReturnBest =
-            // Rate-limiter for experimental configs. We only experiment
-            // on 1/EXPERIMENT_RATE requests
-          (ticket++ % EXPERIMENT_RATE) == 0
-            ||
-            // if the optimizer is cooking up a new version for us,
-            // just return the best one for now.
-          (!WantToWait && OptFromEntry.status() == opt_status::Working);
+      bool shouldReturnBest = false;
 
+      if (Impatient) {
+        if (OptFromEntry.status() == opt_status::Working) {
+          shouldReturnBest = true; // we're not going to wait
+        } else {
+          ticket = (ticket + 1) % EXPERIMENT_RATE; // take a ticket
+          shouldReturnBest = (ticket != 0); // 0 indicates doing an experiment
+        }
+      }
 
       if (shouldReturnBest) {
         assert(!Best.isEmpty() && "logic error!");

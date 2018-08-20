@@ -52,7 +52,7 @@ config.substitutions.append(('%not', "!"))
 
 config.substitutions.append(('%FileCheck', os.path.join("@LLVM_TOOLS_BINARY_DIR@", "FileCheck")))
 
-if "@EASY_JIT_BENCHMARK@" in ["1", "ON"] :
+if "@BENCHMARK@" in ["1", "ON"] :
   config.available_features.add('benchmark')
 
 if "@CMAKE_INSTALL_PREFIX@" and os.path.exists(os.path.join("@CMAKE_INSTALL_PREFIX@", "include", "easy")):
