@@ -40,21 +40,23 @@ namespace tuner {
   private:
     // the number of configs we have evaluated since we last trained a model
     uint32_t SinceLastTraining_ = 0;
-    uint32_t BatchSz_ = 5;
-    uint32_t SurrogateTestSz_ = 200;
-    double Tradeoff_ = 0.5; // [0,1] indicates how much to "explore", with
+    const uint32_t BatchSz_ = 5;
+    const uint32_t SurrogateTestSz_ = 200;
+    const double HeldoutRatio_ = 0.1; // training set vs validation set ratio.
+    const double AccuracyThresh_ = 0.85; //
+    const double Tradeoff_ = 0.5; // [0,1] indicates how much to "explore", with
                             // the remaining percent used to "exploit".
 
     std::list<KnobConfig> Predictions_; // current top predictions
 
     /////// members related to the dataset
-    ////////////////////////////
+    //////////////////////////// FIXME: all of these comments are out of date now
     // cfg -- dense matrix where each row represents a knob configuration,
     //        and each column represents a knob. these are the measured inputs
     //        to our black-box function we're trying to model. the order of
     //        the rows corresponds to the order in Configs_
     //
-    // result -- an array of length nrow containing training labels.
+    // result -- an array of length trainingRows containing training labels.
     //           result[i] is the observed output of configuration cfg[i].
     //
     // colToKnob -- a map from column numbers -> KnobIDs.
@@ -62,44 +64,74 @@ namespace tuner {
     //              may be the same as col[i+1];
     //
     uint64_t ncol = 0;
-    uint64_t nrow = 0;
-    float *result = NULL;
     uint64_t* colToKnob = NULL;
 
     // 'cfg' is actually a _dense_ 2D array of configuration data, i.e.,
     //       cfg[rowNum][i]  must be written as  cfg[(rowNum * ncol) + i]
+    // this data is used for TRAINING
+    // each row corrsponds to one configuration.
     float *cfg = NULL;
+    float *result = NULL;
+    uint64_t trainingRows = 0;
 
-    // updates the cfg and result matrices with new observations
+    // same as cfg, but these observations are held-out for cross-validation
+    float *test = NULL;
+    float *testResult = NULL;
+    uint64_t validateRows = 0;
+
+    // updates the train, and result matrices with new observations
     void updateDataset() {
       if (SinceLastTraining_ == 0)
         return;
-
-      // resize the dataset as needed for new entries
-      uint64_t prevNumRows = nrow;
-      nrow += SinceLastTraining_;
       SinceLastTraining_ = 0;
-      cfg = (float*) std::realloc(cfg, ncol * nrow * sizeof(float));
-      result = (float*) std::realloc(result, nrow * sizeof(float));
 
-      if (cfg == NULL || result == NULL)
+      // reconstruct held-out set and training set
+      const uint64_t numConfigs = Configs_.size();
+      validateRows = std::max(1, (int) std::round(HeldoutRatio_ * numConfigs));
+      trainingRows = numConfigs - validateRows;
+
+      const size_t rowSize = ncol * sizeof(float);
+
+      cfg = (float*) std::realloc(cfg, rowSize * trainingRows);
+      result = (float*) std::realloc(result, sizeof(float) * trainingRows);
+
+      test = (float*) std::realloc(test, rowSize * validateRows);
+      testResult = (float*) std::realloc(testResult, sizeof(float) * validateRows);
+
+      if (cfg == NULL || result == NULL || test == NULL || testResult == NULL)
         throw std::bad_alloc();
 
-      // add the new observations to the dataset.
-      for (uint64_t i = prevNumRows; i < nrow; ++i) {
-        auto Entry = Configs_[i];
+      // shuffle the data
+      std::random_shuffle(Configs_.begin(), Configs_.end());
+
+      // the first few will be part of the held-out set, and the
+      // rest go to the training set.
+      float* configOut = test;
+      float* resultOut = testResult;
+      size_t i = 0; // index into the current matrix's row
+      for (size_t count = 0; count < numConfigs; count++, i++) {
+        if (count == validateRows) {
+          // reset, the rest go to the training set
+          configOut = cfg;
+          resultOut = result;
+          i = 0;
+        }
+
+        auto Entry = Configs_[count];
         auto KC = Entry.first;
         auto FB = Entry.second;
 
-        exportConfig(*KC, cfg, i, ncol, colToKnob);
+        exportConfig(*KC, configOut, i, ncol, colToKnob);
 
         auto measure = FB->avgMeasurement();
         // NOTE: i'm not sure if we're allowed to use MISSING here.
         if (!measure)
           throw std::logic_error("Bayes Tuner: feedback has no measured value");
 
-        result[i] = measure.value();
+        resultOut[i] = measure.value();
       }
+
+      assert(i == trainingRows && "bad generation of dataset");
     }
 
     // returns true iff we succeeded in creating more predictions
@@ -114,15 +146,20 @@ namespace tuner {
 
       updateDataset();
 
+#ifndef NDEBUG
+        std::cout << trainingRows << " training observations, "
+                  << validateRows << " observations held out.\n";
+#endif
+
       // must be an array. not sure why.
       DMatrixHandle dmat[1];
 
       // add config data
-      if (XGDMatrixCreateFromMat((float *) cfg, nrow, ncol, MISSING, &dmat[0]))
+      if (XGDMatrixCreateFromMat((float *) cfg, trainingRows, ncol, MISSING, &dmat[0]))
         throw std::runtime_error("XGDMatrixCreateFromMat failed.");
 
       // add labels, aka, outputs corresponding to configs
-      if (XGDMatrixSetFloatInfo(dmat[0], "label", result, nrow))
+      if (XGDMatrixSetFloatInfo(dmat[0], "label", result, trainingRows))
         throw std::runtime_error("XGDMatrixSetFloatInfo failed.");
 
       // make a booster
