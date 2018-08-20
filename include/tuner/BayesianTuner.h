@@ -152,19 +152,19 @@ namespace tuner {
 #endif
 
       // must be an array. not sure why.
-      DMatrixHandle dmat[1];
+      DMatrixHandle train[1];
 
       // add config data
-      if (XGDMatrixCreateFromMat((float *) cfg, trainingRows, ncol, MISSING, &dmat[0]))
+      if (XGDMatrixCreateFromMat((float *) cfg, trainingRows, ncol, MISSING, &train[0]))
         throw std::runtime_error("XGDMatrixCreateFromMat failed.");
 
-      // add labels, aka, outputs corresponding to configs
-      if (XGDMatrixSetFloatInfo(dmat[0], "label", result, trainingRows))
+      // add labels, aka, outputs corresponding to datasets
+      if (XGDMatrixSetFloatInfo(train[0], "label", result, trainingRows))
         throw std::runtime_error("XGDMatrixSetFloatInfo failed.");
 
       // make a booster
       BoosterHandle booster;
-      XGBoosterCreate(dmat, 1, &booster);
+      XGBoosterCreate(train, 1, &booster);
       // FIXME: all of these settings were picked arbitrarily
       XGBoosterSetParam(booster, "silent", "1");
       XGBoosterSetParam(booster, "booster", "gbtree");
@@ -176,12 +176,29 @@ namespace tuner {
       XGBoosterSetParam(booster, "colsample_bytree", "1");
       XGBoosterSetParam(booster, "num_parallel_tree", "4");
 
+      // setup validation dataset
+      DMatrixHandle h_validate;
+      XGDMatrixCreateFromMat((float *) test, validateRows, ncol, MISSING, &h_validate);
+
       // learn
       for (int i = 0; i < 500; i++) {
-        // FIXME: I just picked an arbitrary # of iters.
-        // Using cross-validation to train up to some accuracy level
-        // would be smarter.
-        XGBoosterUpdateOneIter(booster, i, dmat[0]);
+        XGBoosterUpdateOneIter(booster, i, train[0]);
+
+        bst_ulong out_len;
+        const float *predict;
+        XGBoosterPredict(booster, h_validate, 0, 0, &out_len, &predict);
+
+        // calculate Mean Squared Error
+        assert(out_len == validateRows && "doesn't make sense!");
+
+        double err = 0.0;
+        for (size_t i = 0; i < validateRows; i++) {
+          err += std::pow(test[i] - predict[i], 2);
+        }
+
+        err = err * (1.0 / validateRows);
+
+        std::cout << "MSE = " << err << "\n";
       }
 
       ////////
@@ -189,7 +206,7 @@ namespace tuner {
       // in the pool.
       ///////
 
-      // build test cases
+      // build new configurations, aka test cases
       std::vector<KnobConfig> Test;
       float* testMat = (float*) malloc(SurrogateTestSz_ * ncol * sizeof(float));
       uint32_t ExploreSz = std::round(SurrogateTestSz_ * Tradeoff_);
@@ -273,9 +290,10 @@ namespace tuner {
       // DONE
 
       // free memory related to the XGB objects.
-      XGDMatrixFree(dmat[0]);
+      XGDMatrixFree(train[0]);
       XGBoosterFree(booster);
       XGDMatrixFree(h_test);
+      XGDMatrixFree(h_validate);
       free(testMat);
 
       return (Predictions_.size() > 0);
