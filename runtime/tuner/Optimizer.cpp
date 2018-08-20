@@ -119,10 +119,16 @@ namespace tuner {
   Optimizer::~Optimizer() {
     // first we need to make sure no concurrent compiles are still running
     if (recompileActive_) {
+#ifndef NDEBUG
       std::cerr << "\nnote: optimizer's destructor is waiting for compile threads to finish... ";
+#endif
+
       while (recompileActive_)
         sleep_for(1);
+
+#ifndef NDEBUG
       std::cerr << "done.\n";
+#endif
     }
 
     delete Tuner_;

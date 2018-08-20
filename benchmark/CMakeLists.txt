@@ -2,7 +2,7 @@ option(BENCHMARK "Enable benchmarking" OFF)
 
 if(BENCHMARK)
     set(CMAKE_CXX_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang++)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Xclang -disable-O0-optnone -Xclang -load -Xclang ${EASY_JIT_PASS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -disable-O0-optnone -Xclang -load -Xclang ${EASY_JIT_PASS}")
 
     # NOTE: add sources here
     add_executable(atjit-benchmark benchmark.cpp)
