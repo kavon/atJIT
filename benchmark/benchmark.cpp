@@ -6,6 +6,7 @@
 
 #include <numeric>
 #include <algorithm>
+#include <cassert>
 
 
 // benchmark components go here

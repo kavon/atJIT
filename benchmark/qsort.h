@@ -16,6 +16,17 @@ int int_cmp(int a, int b)
   }
 }
 
+bool isSorted(int v[], int lo, int hi, int (*cmp)(int, int)) {
+  if ((hi - lo + 1) < 2)
+    return true;
+
+  for (int i = lo+1; i <= hi; i++) {
+    if (cmp(v[i-1], v[i]) > 0)
+      return false;
+  }
+  return true;
+}
+
 /* swap: interchange v[i] and v[j] */
 void swap(int v[], int i, int j)
 {
@@ -25,11 +36,11 @@ void swap(int v[], int i, int j)
     v[j] = temp;
 }
 
-void isort(int v[], int sz, int (*cmp)(int, int)) {
-  int i = 1;
-  while (i < sz) {
+void isort(int v[], int lo, int hi, int (*cmp)(int, int)) {
+  int i = lo+1;
+  while (i <= hi) {
     int j = i;
-    while (j > 0 && cmp(v[j-1], v[j]) > 0) {
+    while (j > lo && cmp(v[j-1], v[j]) > 0) {
       swap(v, j-1, j);
       j--;
     }
@@ -37,41 +48,41 @@ void isort(int v[], int sz, int (*cmp)(int, int)) {
   }
 }
 
-// https://github.com/ctasims/The-C-Programming-Language--Kernighan-and-Ritchie/blob/master/ch04-functions-and-program-structure/qsort.c
+// https://en.wikipedia.org/wiki/Quicksort
 // with modifications to support a cutoff to switch to insertion sort
 void __attribute__((noinline)) Qsort(int v[], int left, int right, int (*cmp)(int, int), int cutOff)
 {
-    int i, last;
+    int sz = right - left + 1;
 
-    if (left >= right)  // do nothing if array contains < 2 elems
-        return;
+    if (sz < 2)  // do nothing if array contains < 2 elems
+      return;
 
-    int sz = right - left;
     if (sz <= cutOff) {
-      // use insertion sort to sort the entire array
-      isort(v, sz, cmp);
+      // have insertion sort handle the slice
+      isort(v, left, right, cmp);
       return;
     }
 
-    // move partition elem to v[0]
-    swap(v, left, (left + right)/2);
-    last = left;
+    int pivot = v[right];
+    int i = left;
+    for (int j = left; j < right; j++)  // partition
+      if (cmp(v[j], pivot) < 0) {
+        swap(v, i, j);
+        i++;
+      }
 
-    for (i = left+1; i <= right; i++)  // partition
-        if (cmp(v[i], v[left]) > 0)
-            swap(v, ++last, i);
+    swap(v, i, right);                // emplace pivot
 
-    swap(v, left, last);                // restore partition elem
-    Qsort(v, left, last-1, cmp, cutOff);
-    Qsort(v, last+1, right, cmp, cutOff);
+    Qsort(v, left, i-1, cmp, cutOff);
+    Qsort(v, i+1, right, cmp, cutOff);
 }
 
 
 /////////////////////////////////////////////////////////////////
 
-#define ISORT_MAX_CUTOFF 200
-#define ISORT_MIN_CUTOFF 0
-#define ISORT_IDEAL_CUTOFF 30
+#define ISORT_MAX_CUTOFF 512
+#define ISORT_MIN_CUTOFF 4
+#define ISORT_IDEAL_CUTOFF 32
 
 #define QSORT_MIN 128
 #define QSORT_MAX 8192
@@ -88,6 +99,7 @@ static void BM_qsort_jit_cache(benchmark::State& state) {
 
   for (auto _ : state) {
     state.PauseTiming();
+    assert( isSorted(vec.data(), 0, vec.size()-1, int_cmp) );
     std::random_shuffle(vec.begin(), vec.end());
     benchmark::ClobberMemory();
     state.ResumeTiming();
@@ -113,6 +125,7 @@ static void BM_qsort_tuned_bayes(benchmark::State& state) {
 
   for (auto _ : state) {
     state.PauseTiming();
+    assert( isSorted(vec.data(), 0, vec.size()-1, int_cmp) );
     std::random_shuffle(vec.begin(), vec.end());
     benchmark::ClobberMemory();
     state.ResumeTiming();
@@ -140,6 +153,7 @@ static void BM_qsort_tuned_anneal(benchmark::State& state) {
 
   for (auto _ : state) {
     state.PauseTiming();
+    assert( isSorted(vec.data(), 0, vec.size()-1, int_cmp) );
     std::random_shuffle(vec.begin(), vec.end());
     benchmark::ClobberMemory();
     state.ResumeTiming();
@@ -163,6 +177,7 @@ static void BM_qsort(benchmark::State& state) {
 
   for (auto _ : state) {
     state.PauseTiming();
+    assert( isSorted(vec.data(), 0, vec.size()-1, int_cmp) );
     std::random_shuffle(vec.begin(), vec.end());
     benchmark::ClobberMemory();
     state.ResumeTiming();
