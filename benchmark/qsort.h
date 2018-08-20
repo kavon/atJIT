@@ -50,7 +50,7 @@ void isort(int v[], int lo, int hi, int (*cmp)(int, int)) {
 
 // https://en.wikipedia.org/wiki/Quicksort
 // with modifications to support a cutoff to switch to insertion sort
-void __attribute__((noinline)) Qsort(int v[], int left, int right, int (*cmp)(int, int), int cutOff)
+void __attribute__((noinline)) Qsort(int v[], int left, int right, int (*cmp)(int, int), int cutOff, int dummy)
 {
     int sz = right - left + 1;
 
@@ -73,8 +73,8 @@ void __attribute__((noinline)) Qsort(int v[], int left, int right, int (*cmp)(in
 
     swap(v, i, right);                // emplace pivot
 
-    Qsort(v, left, i-1, cmp, cutOff);
-    Qsort(v, i+1, right, cmp, cutOff);
+    Qsort(v, left, i-1, cmp, cutOff, dummy);
+    Qsort(v, i+1, right, cmp, cutOff, dummy);
 }
 
 
@@ -84,108 +84,164 @@ void __attribute__((noinline)) Qsort(int v[], int left, int right, int (*cmp)(in
 #define ISORT_MIN_CUTOFF 4
 #define ISORT_IDEAL_CUTOFF 32
 
-#define QSORT_MIN 128
-#define QSORT_MAX 8192
+#define QSORT_MIN 2048
+#define QSORT_MAX 2048
+#define ITER_MIN 512
+#define ITER_MAX 8192
 
 using namespace tuned_param;
 
 static void BM_qsort_jit_cache(benchmark::State& state) {
   using namespace std::placeholders;
   int n = state.range(0);
+  const int ITERS = state.range(1);
   std::vector<int> vec(n);
   std::iota(vec.begin(), vec.end(), 0);
 
   static easy::Cache<> cache;
 
   for (auto _ : state) {
-    state.PauseTiming();
-    assert( isSorted(vec.data(), 0, vec.size()-1, int_cmp) );
-    std::random_shuffle(vec.begin(), vec.end());
-    benchmark::ClobberMemory();
-    state.ResumeTiming();
+    for (int i = 0; i < ITERS; i++) {
+      state.PauseTiming();
+      assert( isSorted(vec.data(), 0, vec.size()-1, int_cmp) );
+      std::random_shuffle(vec.begin(), vec.end());
+      benchmark::ClobberMemory();
+      state.ResumeTiming();
 
-    auto const& my_qsort = cache.jit(Qsort, _1, _2, _3, int_cmp, ISORT_IDEAL_CUTOFF);
+      auto const& my_qsort = cache.jit(Qsort, _1, _2, _3, int_cmp, ISORT_IDEAL_CUTOFF, n);
 
-    my_qsort(vec.data(), 0, vec.size()-1);
-
+      my_qsort(vec.data(), 0, vec.size()-1);
+    }
   }
 }
-BENCHMARK(BM_qsort_jit_cache)->RangeMultiplier(2)->Range(QSORT_MIN,QSORT_MAX);
-
+BENCHMARK(BM_qsort_jit_cache)
+  ->Unit(benchmark::kMillisecond)
+  ->RangeMultiplier(2)
+  ->Ranges({{QSORT_MIN, QSORT_MAX}, {ITER_MIN, ITER_MAX}});
 
 
 static void BM_qsort_tuned_bayes(benchmark::State& state) {
   using namespace std::placeholders;
   int n = state.range(0);
+  const int ITERS = state.range(1);
   std::vector<int> vec(n);
   std::iota(vec.begin(), vec.end(), 0);
 
   static tuner::ATDriver AT;
-  auto Tuner = easy::options::tuner_kind(tuner::AT_Bayes);
+  static auto Tuner = easy::options::tuner_kind(tuner::AT_Bayes);
+  static auto Range = IntRange(ISORT_MIN_CUTOFF, ISORT_MAX_CUTOFF, ISORT_IDEAL_CUTOFF);
 
   for (auto _ : state) {
-    state.PauseTiming();
-    assert( isSorted(vec.data(), 0, vec.size()-1, int_cmp) );
-    std::random_shuffle(vec.begin(), vec.end());
-    benchmark::ClobberMemory();
-    state.ResumeTiming();
+    for (int i = 0; i < ITERS; i++) {
+      state.PauseTiming();
+      assert( isSorted(vec.data(), 0, vec.size()-1, int_cmp) );
+      std::random_shuffle(vec.begin(), vec.end());
+      benchmark::ClobberMemory();
+      state.ResumeTiming();
 
-    auto const& my_qsort = AT.reoptimize(Qsort, _1, _2, _3, int_cmp,
-       IntRange(ISORT_MIN_CUTOFF, ISORT_MAX_CUTOFF, ISORT_IDEAL_CUTOFF), Tuner);
+      auto const& my_qsort = AT.reoptimize(Qsort, _1, _2, _3, int_cmp,
+         Range, n, Tuner);
 
-    my_qsort(vec.data(), 0, vec.size()-1);
-
+      my_qsort(vec.data(), 0, vec.size()-1);
+    }
   }
 
 }
-BENCHMARK(BM_qsort_tuned_bayes)->RangeMultiplier(2)->Range(QSORT_MIN,QSORT_MAX);
+BENCHMARK(BM_qsort_tuned_bayes)
+  ->Unit(benchmark::kMillisecond)
+  ->RangeMultiplier(2)
+  ->Ranges({{QSORT_MIN, QSORT_MAX}, {ITER_MIN, ITER_MAX}});
 
 
 
 static void BM_qsort_tuned_anneal(benchmark::State& state) {
   using namespace std::placeholders;
   int n = state.range(0);
+  const int ITERS = state.range(1);
   std::vector<int> vec(n);
   std::iota(vec.begin(), vec.end(), 0);
 
   static tuner::ATDriver AT;
-  auto Tuner = easy::options::tuner_kind(tuner::AT_Anneal);
+  static auto Tuner = easy::options::tuner_kind(tuner::AT_Anneal);
+  static auto Range = IntRange(ISORT_MIN_CUTOFF, ISORT_MAX_CUTOFF, ISORT_IDEAL_CUTOFF);
 
   for (auto _ : state) {
-    state.PauseTiming();
-    assert( isSorted(vec.data(), 0, vec.size()-1, int_cmp) );
-    std::random_shuffle(vec.begin(), vec.end());
-    benchmark::ClobberMemory();
-    state.ResumeTiming();
+    for (int i = 0; i < ITERS; i++) {
+      state.PauseTiming();
+      assert( isSorted(vec.data(), 0, vec.size()-1, int_cmp) );
+      std::random_shuffle(vec.begin(), vec.end());
+      benchmark::ClobberMemory();
+      state.ResumeTiming();
 
-    auto const& my_qsort = AT.reoptimize(Qsort, _1, _2, _3, int_cmp,
-       IntRange(ISORT_MIN_CUTOFF, ISORT_MAX_CUTOFF, ISORT_IDEAL_CUTOFF), Tuner);
+      auto const& my_qsort = AT.reoptimize(Qsort, _1, _2, _3, int_cmp,
+         Range, n, Tuner);
 
-    my_qsort(vec.data(), 0, vec.size()-1);
-
+      my_qsort(vec.data(), 0, vec.size()-1);
+    }
   }
 
 }
-BENCHMARK(BM_qsort_tuned_anneal)->RangeMultiplier(2)->Range(QSORT_MIN,QSORT_MAX);
+BENCHMARK(BM_qsort_tuned_anneal)
+  ->Unit(benchmark::kMillisecond)
+  ->RangeMultiplier(2)
+  ->Ranges({{QSORT_MIN, QSORT_MAX}, {ITER_MIN, ITER_MAX}});
 
+
+  static void BM_qsort_tuned_random(benchmark::State& state) {
+    using namespace std::placeholders;
+    int n = state.range(0);
+    const int ITERS = state.range(1);
+    std::vector<int> vec(n);
+    std::iota(vec.begin(), vec.end(), 0);
+
+    static tuner::ATDriver AT;
+    static auto Tuner = easy::options::tuner_kind(tuner::AT_Random);
+    static auto Range = IntRange(ISORT_MIN_CUTOFF, ISORT_MAX_CUTOFF, ISORT_IDEAL_CUTOFF);
+
+    for (auto _ : state) {
+      for (int i = 0; i < ITERS; i++) {
+        state.PauseTiming();
+        assert( isSorted(vec.data(), 0, vec.size()-1, int_cmp) );
+        std::random_shuffle(vec.begin(), vec.end());
+        benchmark::ClobberMemory();
+        state.ResumeTiming();
+
+        auto const& my_qsort = AT.reoptimize(Qsort, _1, _2, _3, int_cmp,
+           Range, n, Tuner);
+
+        my_qsort(vec.data(), 0, vec.size()-1);
+      }
+    }
+
+  }
+  BENCHMARK(BM_qsort_tuned_random)
+    ->Unit(benchmark::kMillisecond)
+    ->RangeMultiplier(2)
+    ->Ranges({{QSORT_MIN, QSORT_MAX}, {ITER_MIN, ITER_MAX}});
 
 
 static void BM_qsort(benchmark::State& state) {
   int n = state.range(0);
+  const int ITERS = state.range(1);
   std::vector<int> vec(n);
   std::iota(vec.begin(), vec.end(), 0);
 
   for (auto _ : state) {
-    state.PauseTiming();
-    assert( isSorted(vec.data(), 0, vec.size()-1, int_cmp) );
-    std::random_shuffle(vec.begin(), vec.end());
-    benchmark::ClobberMemory();
-    state.ResumeTiming();
+    for (int i = 0; i < ITERS; i++) {
+      state.PauseTiming();
+      assert( isSorted(vec.data(), 0, vec.size()-1, int_cmp) );
+      std::random_shuffle(vec.begin(), vec.end());
+      benchmark::ClobberMemory();
+      state.ResumeTiming();
 
-    Qsort(vec.data(), 0, vec.size()-1, int_cmp, ISORT_IDEAL_CUTOFF);
-
+      Qsort(vec.data(), 0, vec.size()-1, int_cmp, ISORT_IDEAL_CUTOFF, n);
+    }
   }
 }
-BENCHMARK(BM_qsort)->RangeMultiplier(2)->Range(QSORT_MIN,QSORT_MAX);
+BENCHMARK(BM_qsort)
+  ->Unit(benchmark::kMillisecond)
+  ->RangeMultiplier(2)
+  ->Ranges({{QSORT_MIN, QSORT_MAX}, {ITER_MIN, ITER_MAX}});
+
 
 #endif // BENCH_QSORT

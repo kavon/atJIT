@@ -34,6 +34,14 @@ class ATDriver {
 
   public:
 
+  ATDriver() {
+    // std::cerr << "Create ATDriver\n";
+  }
+
+  ~ATDriver() {
+    // std::cerr << "Destroy ATDriver\n";
+  }
+
   template<class T, class ... Args>
   auto const& EASY_JIT_COMPILER_INTERFACE reoptimize(T &&Fun, Args&& ... args) {
     void* FunPtr = reinterpret_cast<void*>(easy::meta::get_as_pointer(Fun));
