@@ -73,6 +73,9 @@ void __attribute__((noinline)) Qsort(int v[], int left, int right, int (*cmp)(in
 #define ISORT_MIN_CUTOFF 0
 #define ISORT_IDEAL_CUTOFF 30
 
+#define QSORT_MIN 128
+#define QSORT_MAX 8192
+
 using namespace tuned_param;
 
 static void BM_qsort_jit_cache(benchmark::State& state) {
@@ -96,7 +99,7 @@ static void BM_qsort_jit_cache(benchmark::State& state) {
 
   }
 }
-BENCHMARK(BM_qsort_jit_cache)->RangeMultiplier(2)->Range(16,1024);
+BENCHMARK(BM_qsort_jit_cache)->RangeMultiplier(2)->Range(QSORT_MIN,QSORT_MAX);
 
 
 
@@ -124,7 +127,7 @@ static void BM_qsort_tuned_bayes(benchmark::State& state) {
   }
 
 }
-BENCHMARK(BM_qsort_tuned_bayes)->RangeMultiplier(2)->Range(16,1024);
+BENCHMARK(BM_qsort_tuned_bayes)->RangeMultiplier(2)->Range(QSORT_MIN,QSORT_MAX);
 
 
 
@@ -152,7 +155,7 @@ static void BM_qsort_tuned_anneal(benchmark::State& state) {
   }
 
 }
-BENCHMARK(BM_qsort_tuned_anneal)->RangeMultiplier(2)->Range(16,1024);
+BENCHMARK(BM_qsort_tuned_anneal)->RangeMultiplier(2)->Range(QSORT_MIN,QSORT_MAX);
 
 
 
@@ -171,6 +174,6 @@ static void BM_qsort(benchmark::State& state) {
 
   }
 }
-BENCHMARK(BM_qsort)->RangeMultiplier(2)->Range(16,1024);
+BENCHMARK(BM_qsort)->RangeMultiplier(2)->Range(QSORT_MIN,QSORT_MAX);
 
 #endif // BENCH_QSORT
