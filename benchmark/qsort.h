@@ -90,10 +90,9 @@ static void BM_qsort_jit_cache(benchmark::State& state) {
     state.PauseTiming();
     std::random_shuffle(vec.begin(), vec.end());
     benchmark::ClobberMemory();
+    state.ResumeTiming();
 
     auto const& my_qsort = cache.jit(Qsort, _1, _2, _3, int_cmp, ISORT_IDEAL_CUTOFF);
-
-    state.ResumeTiming();
 
     my_qsort(vec.data(), 0, vec.size()-1);
 
@@ -116,11 +115,10 @@ static void BM_qsort_tuned_bayes(benchmark::State& state) {
     state.PauseTiming();
     std::random_shuffle(vec.begin(), vec.end());
     benchmark::ClobberMemory();
+    state.ResumeTiming();
 
     auto const& my_qsort = AT.reoptimize(Qsort, _1, _2, _3, int_cmp,
        IntRange(ISORT_MIN_CUTOFF, ISORT_MAX_CUTOFF, ISORT_IDEAL_CUTOFF), Tuner);
-
-    state.ResumeTiming();
 
     my_qsort(vec.data(), 0, vec.size()-1);
 
@@ -144,11 +142,10 @@ static void BM_qsort_tuned_anneal(benchmark::State& state) {
     state.PauseTiming();
     std::random_shuffle(vec.begin(), vec.end());
     benchmark::ClobberMemory();
+    state.ResumeTiming();
 
     auto const& my_qsort = AT.reoptimize(Qsort, _1, _2, _3, int_cmp,
        IntRange(ISORT_MIN_CUTOFF, ISORT_MAX_CUTOFF, ISORT_IDEAL_CUTOFF), Tuner);
-
-    state.ResumeTiming();
 
     my_qsort(vec.data(), 0, vec.size()-1);
 
