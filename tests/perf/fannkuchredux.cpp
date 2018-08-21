@@ -99,7 +99,7 @@ int main(int argc, char** argv)
    for (int i = 0; i < ITERS; i++) {
 
      auto const& fannkuch_tuned =
-        AT.reoptimize(fannkuch, n, tuner_kind(tuner::AT_Bayes), pct_err(-1)
+        AT.reoptimize(fannkuch, n, tuner_kind(tuner::AT_Bayes)
 #ifdef BLOCKING_DRIVER
         , blocking(true)
 #endif
