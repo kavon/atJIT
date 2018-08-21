@@ -1,6 +1,9 @@
 
 #include <tuner/Util.h>
 
+#include <chrono>
+#include <thread>
+
 namespace tuner {
 
 int pow2Bit(uint64_t val) {
@@ -14,6 +17,10 @@ int pow2Bit(uint64_t val) {
   val -= 1;
   std::bitset<16> bits(val);
   return bits.count();
+}
+
+void sleep_for(unsigned ms) {
+  std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
 
 } // end namespace

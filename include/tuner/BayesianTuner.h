@@ -148,10 +148,17 @@ namespace tuner {
 
         exportConfig(*KC, configOut, i, ncol, colToKnob);
 
-        auto measure = FB->avgMeasurement();
-        // NOTE: i'm not sure if we're allowed to use MISSING here.
-        if (!measure)
-          throw std::logic_error("Bayes Tuner: feedback has no measured value");
+        std::optional<double> measure = std::nullopt;
+        while( !(measure = FB->avgMeasurement()) ) {
+          // we're stuck until there's a measurement for this
+
+          // NOTE: I believe this does not deadlock, and it doesn't seem
+          // to in practice, but I am not sure why. :(
+#ifndef NDEBUG
+          std::cout << "WARNING: stuck waiting on feedback!\n";
+#endif
+          sleep_for(1);
+        }
 
         resultOut[i] = measure.value();
       }
@@ -405,6 +412,8 @@ namespace tuner {
     ~BayesianTuner() {
       std::free(cfg);
       std::free(result);
+      std::free(test);
+      std::free(testResult);
       std::free(colToKnob);
     }
 

@@ -1,6 +1,4 @@
 #include <tuple>
-#include <chrono>
-#include <thread>
 #include <iostream>
 
 #include <tuner/optimizer.h>
@@ -24,10 +22,6 @@ namespace {
   static std::unique_ptr<llvm::TargetMachine> GetHostTargetMachine() {
     std::unique_ptr<llvm::TargetMachine> TM(llvm::EngineBuilder().selectTarget());
     return TM;
-  }
-
-  void sleep_for(unsigned ms) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
   }
 } // end anonymous namespace
 
@@ -120,14 +114,14 @@ namespace tuner {
     // first we need to make sure no concurrent compiles are still running
     if (recompileActive_) {
 #ifndef NDEBUG
-      std::cerr << "\nnote: optimizer's destructor is waiting for compile threads to finish... ";
+      std::cerr << "\nNOTE: optimizer's destructor is waiting for compile threads to finish.\n";
 #endif
 
       while (recompileActive_)
         sleep_for(1);
 
 #ifndef NDEBUG
-      std::cerr << "done.\n";
+      std::cerr << "NOTE: compile threads flushed.\n";
 #endif
     }
 

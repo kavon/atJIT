@@ -86,8 +86,8 @@ void __attribute__((noinline)) Qsort(int v[], int left, int right, int (*cmp)(in
 
 #define QSORT_MIN 2048
 #define QSORT_MAX 2048
-#define ITER_MIN 512
-#define ITER_MAX 8192
+#define ITER_MIN 128
+#define ITER_MAX 512
 
 using namespace tuned_param;
 

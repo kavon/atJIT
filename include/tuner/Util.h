@@ -47,6 +47,9 @@ namespace tuner {
   // log_2(val) where val is a power-of-two.
   int pow2Bit(uint64_t val);
 
+  // sleeps the current thread
+  void sleep_for(unsigned ms);
+
 }
 
 
