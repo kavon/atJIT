@@ -1,6 +1,7 @@
 
 #include <cinttypes>
+#include <atomic>
 
 namespace tuner {
-  uint64_t KnobTicker = 1;
+  std::atomic<uint64_t> KnobTicker = 1;
 }

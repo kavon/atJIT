@@ -5,6 +5,7 @@
 #include <climits>
 #include <string>
 #include <cassert>
+#include <atomic>
 
 #include <tuner/Util.h>
 
@@ -24,7 +25,7 @@ namespace tuner {
 
   // used to ensure knob IDs are unique.
   // we rely on the fact that 0 is an invalid knob ID
-  extern KnobID KnobTicker;
+  extern std::atomic<KnobID> KnobTicker;
 
   // Base class for tunable compiler "knobs", which
   // are simply tunable components.
@@ -36,9 +37,8 @@ namespace tuner {
 
   public:
     Knob() {
-      if (KnobTicker == 0)
-        throw std::runtime_error("exhausted the KnobTicker!");
-      id__ = KnobTicker++;
+      id__ = KnobTicker.fetch_add(1);
+      assert(id__ != 0 && "exhausted the knob ticker!");
     }
     virtual ~Knob() = default;
     // value accessors

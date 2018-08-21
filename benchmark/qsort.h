@@ -98,7 +98,7 @@ static void BM_qsort_jit_cache(benchmark::State& state) {
   std::vector<int> vec(n);
   std::iota(vec.begin(), vec.end(), 0);
 
-  static easy::Cache<> cache;
+  easy::Cache<> cache;
 
   for (auto _ : state) {
     for (int i = 0; i < ITERS; i++) {
@@ -127,9 +127,9 @@ static void BM_qsort_tuned_bayes(benchmark::State& state) {
   std::vector<int> vec(n);
   std::iota(vec.begin(), vec.end(), 0);
 
-  static tuner::ATDriver AT;
-  static auto Tuner = easy::options::tuner_kind(tuner::AT_Bayes);
-  static auto Range = IntRange(ISORT_MIN_CUTOFF, ISORT_MAX_CUTOFF, ISORT_IDEAL_CUTOFF);
+  tuner::ATDriver AT;
+  auto Tuner = easy::options::tuner_kind(tuner::AT_Bayes);
+  auto Range = IntRange(ISORT_MIN_CUTOFF, ISORT_MAX_CUTOFF, ISORT_IDEAL_CUTOFF);
 
   for (auto _ : state) {
     for (int i = 0; i < ITERS; i++) {
@@ -161,9 +161,9 @@ static void BM_qsort_tuned_anneal(benchmark::State& state) {
   std::vector<int> vec(n);
   std::iota(vec.begin(), vec.end(), 0);
 
-  static tuner::ATDriver AT;
-  static auto Tuner = easy::options::tuner_kind(tuner::AT_Anneal);
-  static auto Range = IntRange(ISORT_MIN_CUTOFF, ISORT_MAX_CUTOFF, ISORT_IDEAL_CUTOFF);
+  tuner::ATDriver AT;
+  auto Tuner = easy::options::tuner_kind(tuner::AT_Anneal);
+  auto Range = IntRange(ISORT_MIN_CUTOFF, ISORT_MAX_CUTOFF, ISORT_IDEAL_CUTOFF);
 
   for (auto _ : state) {
     for (int i = 0; i < ITERS; i++) {
@@ -194,9 +194,9 @@ BENCHMARK(BM_qsort_tuned_anneal)
     std::vector<int> vec(n);
     std::iota(vec.begin(), vec.end(), 0);
 
-    static tuner::ATDriver AT;
-    static auto Tuner = easy::options::tuner_kind(tuner::AT_Random);
-    static auto Range = IntRange(ISORT_MIN_CUTOFF, ISORT_MAX_CUTOFF, ISORT_IDEAL_CUTOFF);
+    tuner::ATDriver AT;
+    auto Tuner = easy::options::tuner_kind(tuner::AT_Random);
+    auto Range = IntRange(ISORT_MIN_CUTOFF, ISORT_MAX_CUTOFF, ISORT_IDEAL_CUTOFF);
 
     for (auto _ : state) {
       for (int i = 0; i < ITERS; i++) {

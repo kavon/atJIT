@@ -95,11 +95,11 @@ int main(int argc, char** argv)
    tuner::ATDriver AT;
    Result r;
 
-   const int ITERS = 5000;
+   const int ITERS = 50;
    for (int i = 0; i < ITERS; i++) {
 
      auto const& fannkuch_tuned =
-        AT.reoptimize(fannkuch, n, tuner_kind(tuner::AT_Random), pct_err(-1)
+        AT.reoptimize(fannkuch, n, tuner_kind(tuner::AT_Bayes), pct_err(-1)
 #ifdef BLOCKING_DRIVER
         , blocking(true)
 #endif
