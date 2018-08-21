@@ -16,7 +16,8 @@ if ((DEFINED LLVM_DIR) AND (NOT (IS_ABSOLUTE ${LLVM_DIR})))
     message(FATAL_ERROR "LLVM_DIR / LLVM_ROOT must be an absolute path. Tried dir: ${LLVM_DIR}")
 endif()
 
-find_package(LLVM 6.0 REQUIRED CONFIG)
+find_package(LLVM REQUIRED CONFIG
+              NO_CMAKE_PATH NO_CMAKE_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in ${LLVM_DIR}")
 message(STATUS "LLVM Root: ${LLVM_TOOLS_BINARY_DIR}")
