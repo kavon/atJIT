@@ -42,8 +42,8 @@ namespace tuner {
     uint32_t SinceLastTraining_ = 0;
     const uint32_t BatchSz_ = 5;
     const uint32_t SurrogateTestSz_ = 200;
+    const unsigned MaxLearnIters_ = 500;
     const double HeldoutRatio_ = 0.1; // training set vs validation set ratio.
-    const double AccuracyThresh_ = 0.85; //
     const double Tradeoff_ = 0.5; // [0,1] indicates how much to "explore", with
                             // the remaining percent used to "exploit".
 
@@ -78,6 +78,25 @@ namespace tuner {
     float *test = NULL;
     float *testResult = NULL;
     uint64_t validateRows = 0;
+
+    void initBooster(const DMatrixHandle dmats[],
+                      bst_ulong len,
+                      BoosterHandle *out) {
+
+      XGBoosterCreate(dmats, len, out);
+      // NOTE: all of these settings were picked arbitrarily
+#ifdef NDEBUG
+      XGBoosterSetParam(*out, "silent", "1");
+#endif
+      XGBoosterSetParam(*out, "booster", "gbtree");
+      XGBoosterSetParam(*out, "objective", "reg:linear");
+      XGBoosterSetParam(*out, "max_depth", "5");
+      XGBoosterSetParam(*out, "eta", "0.3");
+      XGBoosterSetParam(*out, "min_child_weight", "1");
+      XGBoosterSetParam(*out, "subsample", "0.5");
+      XGBoosterSetParam(*out, "colsample_bytree", "1");
+      XGBoosterSetParam(*out, "num_parallel_tree", "4");
+    }
 
     // updates the train, and result matrices with new observations
     void updateDataset() {
@@ -139,6 +158,9 @@ namespace tuner {
       assert(i == trainingRows && "bad generation of dataset");
     }
 
+
+
+
     // returns true iff we succeeded in creating more predictions
     bool createPredictions() {
       ////////
@@ -167,44 +189,94 @@ namespace tuner {
       if (XGDMatrixSetFloatInfo(train[0], "label", result, trainingRows))
         throw std::runtime_error("XGDMatrixSetFloatInfo failed.");
 
-      // make a booster
+
+      //////////////////////////
+      // make a boosted model
       BoosterHandle booster;
-      XGBoosterCreate(train, 1, &booster);
-      // FIXME: all of these settings were picked arbitrarily
-      XGBoosterSetParam(booster, "silent", "1");
-      XGBoosterSetParam(booster, "booster", "gbtree");
-      XGBoosterSetParam(booster, "objective", "reg:linear");
-      XGBoosterSetParam(booster, "max_depth", "5");
-      XGBoosterSetParam(booster, "eta", "0.3");
-      XGBoosterSetParam(booster, "min_child_weight", "1");
-      XGBoosterSetParam(booster, "subsample", "0.5");
-      XGBoosterSetParam(booster, "colsample_bytree", "1");
-      XGBoosterSetParam(booster, "num_parallel_tree", "4");
+      initBooster(train, 1, &booster);
 
       // setup validation dataset
       DMatrixHandle h_validate;
       XGDMatrixCreateFromMat((float *) test, validateRows, ncol, MISSING, &h_validate);
 
+      //////////////////////
       // learn
-      for (int i = 0; i < 500; i++) {
-        XGBoosterUpdateOneIter(booster, i, train[0]);
+      double bestErr = std::numeric_limits<double>::infinity();
+      bst_ulong bestLen;
+      char *bestModel = NULL;
+      for (unsigned i = 0; i < MaxLearnIters_; i++) {
+        int rv = XGBoosterUpdateOneIter(booster, i, train[0]);
+        assert(rv == 0 && "learn step failed");
 
+        /////////////
+        // evaluate this new model
         bst_ulong out_len;
         const float *predict;
-        XGBoosterPredict(booster, h_validate, 0, 0, &out_len, &predict);
+        rv = XGBoosterPredict(booster, h_validate, 0, 0, &out_len, &predict);
 
-        // calculate Mean Squared Error
+        assert(rv == 0 && "predict failed");
         assert(out_len == validateRows && "doesn't make sense!");
 
+        // calculate Mean Squared Error (MSE) of predicting our held-out set
         double err = 0.0;
+        const double scaling = (1.0 / validateRows);
         for (size_t i = 0; i < validateRows; i++) {
-          err += std::pow(test[i] - predict[i], 2);
+          double actual = testResult[i];
+          double guess = predict[i];
+#ifndef NDEBUG
+          std::cout << "actual = " << actual
+                    << ", guess = " << guess << "\n";
+#endif
+          err += scaling * std::pow(actual - guess, 2);
         }
 
-        err = err * (1.0 / validateRows);
+#ifndef NDEBUG
+        std::cout << "MSE = " << err << "\n\n";
+#endif
 
-        std::cout << "MSE = " << err << "\n";
+        // is this model better than we've seen before?
+        if (err < bestErr || bestModel == NULL) {
+          const char* ro_view;
+          bst_ulong ro_len;
+          rv = XGBoosterGetModelRaw(booster, &ro_len, &ro_view);
+          assert(rv == 0 && "can't view model");
+
+          // save this new best model
+          bestErr = err;
+          bestLen = ro_len;
+
+          std::free(bestModel); // drop the old model
+          bestModel = (char*) std::malloc(bestLen);
+          assert(bestModel != NULL);
+          std::memcpy(bestModel, ro_view, ro_len);
+
+        } else {
+          // stop training, since we're only going to end up
+          // overfitting.
+          break;
+        }
       }
+
+      ////////
+      // load the best model
+      assert(bestModel != NULL);
+
+#ifndef NDEBUG
+        std::cout << "Using model with error: " << bestErr << "\n";
+#endif
+
+      BoosterHandle bestBooster;
+      XGBoosterCreate(NULL, 0, &bestBooster);
+      int rv =
+        XGBoosterLoadModelFromBuffer(bestBooster, bestModel, bestLen);
+      assert(rv == 0);
+
+      // free our copy of the serialized model,
+      // and drop the worse model
+      std::free(bestModel);
+      XGBoosterFree(booster);
+
+
 
       ////////
       // Next, we use the model to predict the running time of configurations
@@ -213,7 +285,7 @@ namespace tuner {
 
       // build new configurations, aka test cases
       std::vector<KnobConfig> Test;
-      float* testMat = (float*) malloc(SurrogateTestSz_ * ncol * sizeof(float));
+      float* testMat = (float*) std::malloc(SurrogateTestSz_ * ncol * sizeof(float));
       uint32_t ExploreSz = std::round(SurrogateTestSz_ * Tradeoff_);
       uint32_t XPloitSz = SurrogateTestSz_ - ExploreSz;
       uint32_t rowNum = 0;
@@ -250,7 +322,7 @@ namespace tuner {
       XGDMatrixCreateFromMat((float *) testMat, SurrogateTestSz_, ncol, MISSING, &h_test);
       bst_ulong out_len;
       const float *out;
-      XGBoosterPredict(booster, h_test, 0, 0, &out_len, &out);
+      XGBoosterPredict(bestBooster, h_test, 0, 0, &out_len, &out);
 
 
       // pick best configs based on predictions ones
@@ -296,7 +368,7 @@ namespace tuner {
 
       // free memory related to the XGB objects.
       XGDMatrixFree(train[0]);
-      XGBoosterFree(booster);
+      XGBoosterFree(bestBooster);
       XGDMatrixFree(h_test);
       XGDMatrixFree(h_validate);
       free(testMat);
