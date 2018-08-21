@@ -43,6 +43,7 @@ namespace tuner {
     const uint32_t BatchSz_ = 5;
     const uint32_t SurrogateTestSz_ = 200;
     const unsigned MaxLearnIters_ = 500;
+    const unsigned MaxLearnPastBest_ = 0;
     const double HeldoutRatio_ = 0.1; // training set vs validation set ratio.
     const double Tradeoff_ = 0.5; // [0,1] indicates how much to "explore", with
                             // the remaining percent used to "exploit".
@@ -204,6 +205,7 @@ namespace tuner {
       double bestErr = std::numeric_limits<double>::infinity();
       bst_ulong bestLen;
       char *bestModel = NULL;
+      unsigned bestIter;
       for (unsigned i = 0; i < MaxLearnIters_; i++) {
         int rv = XGBoosterUpdateOneIter(booster, i, train[0]);
         assert(rv == 0 && "learn step failed");
@@ -217,9 +219,8 @@ namespace tuner {
         assert(rv == 0 && "predict failed");
         assert(out_len == validateRows && "doesn't make sense!");
 
-        // calculate Mean Squared Error (MSE) of predicting our held-out set
+        // calculate Root Mean Squared Error (RMSE) of predicting our held-out set
         double err = 0.0;
-        const double scaling = (1.0 / validateRows);
         for (size_t i = 0; i < validateRows; i++) {
           double actual = testResult[i];
           double guess = predict[i];
@@ -227,15 +228,16 @@ namespace tuner {
           std::cout << "actual = " << actual
                     << ", guess = " << guess << "\n";
 #endif
-          err += scaling * std::pow(actual - guess, 2);
+          err += std::pow(actual - guess, 2) / validateRows;
         }
+        err = std::sqrt(err);
 
 #ifndef NDEBUG
-        std::cout << "MSE = " << err << "\n\n";
+        std::cout << "RMSE = " << err << "\n\n";
 #endif
 
         // is this model better than we've seen before?
-        if (err < bestErr || bestModel == NULL) {
+        if (err <= bestErr || bestModel == NULL) {
           const char* ro_view;
           bst_ulong ro_len;
           rv = XGBoosterGetModelRaw(booster, &ro_len, &ro_view);
@@ -244,15 +246,20 @@ namespace tuner {
           // save this new best model
           bestErr = err;
           bestLen = ro_len;
+          bestIter = i;
 
           std::free(bestModel); // drop the old model
           bestModel = (char*) std::malloc(bestLen);
           assert(bestModel != NULL);
           std::memcpy(bestModel, ro_view, ro_len);
 
+        } else if (i - bestIter < MaxLearnPastBest_) {
+          // we're willing to go beyond the minima so-far.
+#ifndef NDEBUG
+          std::cout << "going beyond best-seen\n";
+#endif
         } else {
-          // stop training, since we're only going to end up
-          // overfitting.
+          // stop training, since it's not any getting better
           break;
         }
       }
