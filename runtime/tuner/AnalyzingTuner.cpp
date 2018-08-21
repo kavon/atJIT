@@ -25,18 +25,32 @@ namespace {
     LoopKnobCreator(KnobSet *KSet)
       : LoopPass(ID), KS(KSet) {};
 
-    bool runOnLoop(Loop *Loop, LPPassManager &LPM) override {
+    LoopKnob* buildTree(Loop *Loop) {
+      // build children knobs
+      std::vector<LoopKnob*> SubLoops;
+      for (auto Child : Loop->getSubLoops()) {
+        SubLoops.push_back(buildTree(Child));
+      }
+
+      // build self
       MDNode *LoopMD = Loop->getLoopID();
 
       if (!LoopMD) {
         // LoopNamer should have been run when embedding the bitcode.
         report_fatal_error("encountered an improperly named loop!");
-        return false;
       }
 
-      LoopKnob *LK = new LoopKnob(getLoopName(LoopMD));
+      LoopKnob *LK = new LoopKnob(getLoopName(LoopMD), std::move(SubLoops));
 
       KS->LoopKnobs[LK->getID()] = LK;
+
+      return LK;
+    }
+
+    bool runOnLoop(Loop *Loop, LPPassManager &LPM) override {
+      // we have to build top-down, so we only run on top-level loops
+      if (Loop->getLoopDepth() == 1)
+        buildTree(Loop);
 
       return false;
     }

@@ -99,18 +99,26 @@ namespace tuner {
   private:
     LoopSetting Opt;
     unsigned LoopID;
+    std::vector<LoopKnob*> kids;
 
     // NOTE could probably add some utilities to check the
     // sanity of a loop setting to this class?
 
 
   public:
-    LoopKnob (unsigned name) : LoopID(name) {}
+    LoopKnob (unsigned name, std::vector<LoopKnob*> children_)
+      : LoopID(name),
+        kids(std::move(children_)){}
 
     LoopSetting getDefault() const override {
       LoopSetting Empty;
       return Empty;
     }
+
+    // loop structure information
+    std::vector<LoopKnob*>& children() { return kids; }
+    auto begin() { return kids.begin(); }
+    auto end() { return kids.end(); }
 
     LoopSetting getVal() const override { return Opt; }
 
