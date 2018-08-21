@@ -188,7 +188,7 @@ public:
 
 void exportConfig(KnobConfig const& KC,
                   float* mat, const uint64_t row, const uint64_t ncol,
-                  uint64_t const* colToKnob) {
+                  uint64_t const* colToKnob, bool debug) {
   KnobID prev = 0, cur = 0;
   KnobConfigExporter Exporter;
 
@@ -205,13 +205,13 @@ void exportConfig(KnobConfig const& KC,
     // printf("exported knob %lu\n", cur);
   }
 
-  // DEBUGGING
-  // printf("---\nrow %lu:\n", row);
-  // for (uint64_t i = 0; i < ncol; ++i) {
-  //   printf("%f\n", mat[row * ncol + i]);
-  // }
-  // printf("---\n\n");
-
+  if (debug) {
+    printf("---\nrow %lu:\n", row);
+    for (uint64_t i = 0; i < ncol; ++i) {
+      printf("knob %lu -> %f\n", colToKnob[i], mat[row * ncol + i]);
+    }
+    printf("---\n\n");
+  }
 }
 
 KnobConfig genDefaultConfig(KnobSet const& KS) {

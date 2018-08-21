@@ -44,7 +44,8 @@ namespace tuner {
 
   void exportConfig(KnobConfig const& KC,
                     float* mat, const uint64_t row, const uint64_t ncol,
-                    uint64_t const* colToKnob);
+                    uint64_t const* colToKnob,
+                    bool debug=false);
 
   class KnobConfigAppFn {
   public:
