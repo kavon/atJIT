@@ -92,11 +92,16 @@ namespace tuner {
 
       const size_t rowSize = ncol * sizeof(float);
 
-      cfg = (float*) std::realloc(cfg, rowSize * trainingRows);
-      result = (float*) std::realloc(result, sizeof(float) * trainingRows);
+      std::free(cfg);
+      std::free(result);
+      std::free(test);
+      std::free(testResult);
 
-      test = (float*) std::realloc(test, rowSize * validateRows);
-      testResult = (float*) std::realloc(testResult, sizeof(float) * validateRows);
+      cfg = (float*) std::malloc(rowSize * trainingRows);
+      result = (float*) std::malloc(sizeof(float) * trainingRows);
+
+      test = (float*) std::malloc(rowSize * validateRows);
+      testResult = (float*) std::malloc(sizeof(float) * validateRows);
 
       if (cfg == NULL || result == NULL || test == NULL || testResult == NULL)
         throw std::bad_alloc();
