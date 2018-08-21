@@ -22,7 +22,7 @@ static constexpr int UNROLL_FULL = UNROLL_CNT_MAX+1;
 // since we don't want to have a high chance of turning unrolling off.
 static constexpr int UNROLL_MAX = UNROLL_FULL;
 static constexpr int UNROLL_MIN = UNROLL_MISSING; // NOTE see above.
-static constexpr int UNROLL_DFLT = 2; // 2 ^ 2 = 4
+static constexpr int UNROLL_DFLT = 3; // 2 ^ 3 = 8
 
 
 int unrollAsInt(LoopSetting const& LS) {
