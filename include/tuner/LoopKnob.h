@@ -25,6 +25,7 @@ namespace tuner {
     static char const* LICM_VER_DISABLE = "llvm.loop.licm_versioning.disable";
     static char const* INTERLEAVE_COUNT = "llvm.loop.interleave.count";
     static char const* DISTRIBUTE = "llvm.loop.distribute.enable";
+    static char const* SECTION = "llvm.loop.tile";
   }
 
 #pragma GCC diagnostic pop
@@ -35,8 +36,8 @@ namespace tuner {
   // 1. LoopKnob.cpp::addToLoopMD
   //    1a. You might need to update MDUtils.h while doing this.
   // 2. operator<<(stream, LoopSetting)
-  // 3. any tuners operating on a LoopSetting,
-  //    like RandomTuner::genRandomLoopSetting
+  // 3. any generators of a LoopSetting,
+  //    like genRandomLoopSetting or genNearbyLoopSetting
   //
   struct LoopSetting {
     // hints only
@@ -53,8 +54,12 @@ namespace tuner {
 
     std::optional<bool> Distribute{};
 
+    // loop sectioning, aka strip-mining or 1 dimensional tiling.
+    // we will use the term "sectioning" throughout the code.
+    std::optional <uint16_t> Section{};
+
     size_t size() const {
-      return 7;
+      return 8;
     }
 
     static void flatten(float* slice, LoopSetting LS) {
@@ -72,12 +77,12 @@ namespace tuner {
 
       LoopSetting::flatten(slice + i++, LS.Distribute);
 
+      LoopSetting::flatten(slice + i++, LS.Section);
+
 
       if (i != LS.size())
         throw std::logic_error("size does not match expectations");
     }
-
-    // TODO: is the use of MISSING here correct?
 
     static void flatten(float* slice, std::optional<bool> opt) {
       if (opt)

@@ -167,6 +167,37 @@ void setBoolOpt(std::optional<bool> &Opt, int v) {
 }
 
 
+
+
+static constexpr int SECTION_SIZE_MAX = 4096;
+static constexpr int SECTION_SIZE_MIN = 2;
+static constexpr int SECTION_MISSING = SECTION_SIZE_MIN-1;
+
+// [missing, ... sizes ...]
+static constexpr int SECTION_MIN = SECTION_MISSING;
+static constexpr int SECTION_MAX = SECTION_SIZE_MAX;
+
+int sectionAsInt(LoopSetting const& LS) {
+  if (LS.Section.has_value())
+    return LS.Section.value();
+
+  return SECTION_MISSING;
+}
+
+void setSection(LoopSetting &LS, int v) {
+  assert(v >= SECTION_MIN && v <= SECTION_MAX);
+
+  switch (v) {
+    case SECTION_MISSING: {
+      LS.Section = std::nullopt;
+    } break;
+
+    default: {
+      LS.Section = v;
+    } break;
+  };
+}
+
 // Roughly corresponds to flipping a coin with these properties:
 //
 // P(true) = trueBias / 100
@@ -200,6 +231,9 @@ LoopSetting genNearbyLoopSetting(RNE &Eng, LoopSetting LS, double energy) {
 
     setBoolOpt(LS.LICMVerDisable, nearbyInt(Eng,
       boolOptAsInt(LS.LICMVerDisable), FLAG_MIN, FLAG_MAX, energy));
+
+    setSection(LS, nearbyInt(Eng,
+      sectionAsInt(LS), SECTION_MIN, SECTION_MAX, energy));
 
   return LS;
 }
@@ -247,6 +281,11 @@ LoopSetting genRandomLoopSetting(RNE &Eng) {
   if (biasedFlip(50, Eng)) { // LICM VERSIONING
     std::uniform_int_distribution<int> dist(FLAG_MIN, FLAG_MAX);
     setBoolOpt(LS.LICMVerDisable, dist(Eng));
+  }
+
+  if (biasedFlip(50, Eng)) { // LOOP SECTIONING
+    std::uniform_int_distribution<int> dist(SECTION_MIN, SECTION_MAX);
+    setSection(LS, dist(Eng));
   }
 
   return LS;

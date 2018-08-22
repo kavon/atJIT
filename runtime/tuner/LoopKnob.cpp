@@ -137,6 +137,8 @@ std::ostream& operator<<(std::ostream &o, tuner::LoopSetting &LS) {
 
   PRINT_OPTION(LS.Distribute, DISTRIBUTE)
 
+  PRINT_OPTION(LS.Section, SECTION)
+
   o << ">";
   return o;
 }
