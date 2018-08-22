@@ -40,7 +40,7 @@ namespace {
         report_fatal_error("encountered an improperly named loop!");
       }
 
-      LoopKnob *LK = new LoopKnob(getLoopName(LoopMD), std::move(SubLoops));
+      LoopKnob *LK = new LoopKnob(getLoopName(LoopMD), std::move(SubLoops), Loop->getLoopDepth());
 
       KS->LoopKnobs[LK->getID()] = LK;
 

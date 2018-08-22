@@ -16,12 +16,11 @@ namespace tuner {
 
   // generic operations over KnobSet/KnobConfig components.
   namespace {
-    class KnobAdjustor : public KnobConfigAppFn {
+    class KnobSetter : public KnobConfigAppFn {
       KnobSet &KS;
-      llvm::Module &M;
 
     public:
-      KnobAdjustor(KnobSet &KSet, llvm::Module &Mod) : KS(KSet), M(Mod) {}
+      KnobSetter(KnobSet &KSet) : KS(KSet) {}
 
       #define HANDLE_CASE(ValTy, KnobMap)                                      \
         void operator()(std::pair<KnobID, ValTy> Entry) override {             \
@@ -30,11 +29,30 @@ namespace tuner {
           auto Knobs = KS.KnobMap;                                             \
           auto TheKnob = Knobs[ID];                                            \
           TheKnob->setVal(NewVal);                                             \
-          TheKnob->apply(M);                                                   \
         }
 
       HANDLE_CASE(int, IntKnobs)
       HANDLE_CASE(LoopSetting, LoopKnobs)
+
+      #undef HANDLE_CASE
+
+    }; // end class
+
+
+    class KnobApplier : public KnobSetAppFn {
+      llvm::Module &M;
+
+    public:
+      KnobApplier(llvm::Module &M_) : M(M_) {}
+
+      #define HANDLE_CASE(KnobKind)                                            \
+        void operator()(std::pair<KnobID, KnobKind> Entry) override {          \
+          auto TheKnob = Entry.second;                                         \
+          TheKnob->apply(M);                                                   \
+        }
+
+      HANDLE_CASE(knob_type::ScalarInt*)
+      HANDLE_CASE(knob_type::Loop*)
 
       #undef HANDLE_CASE
 
@@ -80,8 +98,16 @@ namespace tuner {
     // applies a configuration to the given LLVM module via the
     // knobs managed by this tuner.
     void applyConfig (KnobConfig const &Config, llvm::Module &M) {
-      KnobAdjustor F(KS_, M);
-      applyToConfig(F, Config);
+      KnobSetter ChangeKnobs(KS_);
+      KnobApplier ModifyModule(M);
+
+      // NOTE: we break this into two steps, making it
+      // safe to assume that all knobs have been set to the
+      // config when being applied. This is useful to know if
+      // knobs contain pointers to other knobs, like LoopKnobs do.
+
+      applyToConfig(ChangeKnobs, Config);
+      applyToKnobs(ModifyModule, KS_);
     }
 
     // NOTE: NOT THREAD SAFE

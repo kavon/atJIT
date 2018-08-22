@@ -6,6 +6,9 @@
 #include <llvm/Support/ErrorHandling.h>
 #include <llvm/IR/LegacyPassManager.h>
 
+#include <unordered_map>
+#include <iostream>
+
 namespace tuner {
 
   namespace {
@@ -52,15 +55,38 @@ if (LS.FieldName) \
 
     class LoopKnobAdjustor : public LoopPass {
     private:
-      knob_type::Loop *LK;
+      LoopKnob *MainLK;
+      std::unordered_map<unsigned, LoopKnob*> SubLoops;
+
+      void identifyLoops(LoopKnob *LK) {
+        // we intentially skip adding the given node.
+        // its parent should add it.
+        for (auto Sub : *LK) {
+          SubLoops[Sub->getLoopName()] = Sub;
+          identifyLoops(Sub);
+        }
+      }
+
+      bool addRegularMD(Loop *Loop, MDNode* LoopMD, LoopKnob *LK) {
+        MDNode *NewLoopMD = addToLoopMD(LoopMD, LK->getVal());
+
+        if (NewLoopMD == LoopMD) // then nothing changed.
+          return false;
+
+        Loop->setLoopID(NewLoopMD);
+        return true;
+      }
+
     public:
       static char ID;
 
       // required to have a default ctor
-      LoopKnobAdjustor() : LoopPass(ID), LK(nullptr) {}
+      LoopKnobAdjustor() : LoopPass(ID), MainLK(nullptr) {}
 
-      LoopKnobAdjustor(knob_type::Loop* LKnob)
-        : LoopPass(ID), LK(LKnob) {};
+      LoopKnobAdjustor(LoopKnob *LKnob)
+        : LoopPass(ID), MainLK(LKnob) {
+          identifyLoops(MainLK);
+        };
 
       bool runOnLoop(Loop *Loop, LPPassManager &LPM) override {
         MDNode* LoopMD = Loop->getLoopID();
@@ -70,41 +96,33 @@ if (LS.FieldName) \
           return false;
         }
 
-        unsigned LoopName = getLoopName(LoopMD);
+        unsigned CurrentLName = getLoopName(LoopMD);
 
-        // is this the right loop?
-        if (LoopName != LK->getLoopName())
-          return false;
+        auto result = SubLoops.find(CurrentLName);
+        if (result != SubLoops.end()) {
+          // then this is a subloop of the top-level loop
+          std::cerr << "adding MD to loop " << CurrentLName << "\n"; // TODO remove this
+          return addRegularMD(Loop, LoopMD, result->second);
+        }
 
-        MDNode *NewLoopMD = addToLoopMD(LoopMD, LK->getVal());
-
-        if (NewLoopMD == LoopMD) // then nothing changed.
-          return false;
-
-        Loop->setLoopID(NewLoopMD);
-
-        return true;
+        return false; // TODO check if it's the mainLoop, and if so, add MD!
       }
 
     }; // end class
 
     char LoopKnobAdjustor::ID = 0;
     static RegisterPass<LoopKnobAdjustor> Register("loop-knob-adjustor",
-      "Adjust the metadata of a single loop",
+      "Adjust the metadata of a loop and its sub-loops",
                             false /* only looks at CFG*/,
                             false /* analysis pass */);
 
   } // end anonymous namespace
 
 void LoopKnob::apply (llvm::Module &M) {
-  // NOTE: ideally, we wouldn't run a pass over every loop in
-  // the module for each call to this method.
-  //
-  // It would be better if (maybe)
-  // each LoopKnob held onto the reference to the Loop*
-  // we got from analysis, and simply mutated _that_ during
-  // an invocation of this method. I believe this would work
-  // if the Loop* is stable throughout the tuning process.
+  // We only run the adjustor pass on top-level loops in the module,
+  // since it will apply the setting to all nested loops too.
+  if (loopDepth() != 1)
+    return;
 
   // initialize dependencies
   initializeLoopInfoWrapperPassPass(*PassRegistry::getPassRegistry());

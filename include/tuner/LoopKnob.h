@@ -104,6 +104,7 @@ namespace tuner {
   private:
     LoopSetting Opt;
     unsigned LoopID;
+    unsigned nestingDepth;
     std::vector<LoopKnob*> kids;
 
     // NOTE could probably add some utilities to check the
@@ -111,9 +112,10 @@ namespace tuner {
 
 
   public:
-    LoopKnob (unsigned name, std::vector<LoopKnob*> children_)
+    LoopKnob (unsigned name, std::vector<LoopKnob*> children_, unsigned depth_)
       : LoopID(name),
-        kids(std::move(children_)){}
+        kids(std::move(children_)),
+        nestingDepth(depth_) {}
 
     LoopSetting getDefault() const override {
       LoopSetting Empty;
@@ -124,6 +126,7 @@ namespace tuner {
     std::vector<LoopKnob*>& children() { return kids; }
     auto begin() { return kids.begin(); }
     auto end() { return kids.end(); }
+    unsigned loopDepth() const { return nestingDepth; }
 
     LoopSetting getVal() const override { return Opt; }
 
