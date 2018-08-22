@@ -167,6 +167,18 @@ void setBoolOpt(std::optional<bool> &Opt, int v) {
 }
 
 
+// Roughly corresponds to flipping a coin with these properties:
+//
+// P(true) = trueBias / 100
+// P(false) = 1 - P(true)
+template < typename RNE >
+bool biasedFlip(int trueBias, RNE &Eng) {
+  assert(trueBias >= 0 && trueBias <= 100);
+  std::uniform_int_distribution<int> dist(1, 99);
+  return dist(Eng) <= trueBias;
+}
+
+
 //////////////////////////////////////////////
 //////////////////////////////////////////////
 
@@ -197,7 +209,7 @@ template < typename RNE >  // RandomNumberEngine
 LoopSetting genRandomLoopSetting(RNE &Eng) {
   LoopSetting LS;
 
-  { // UNROLLING
+  if (biasedFlip(50, Eng)) { // UNROLLING
 
     // NOTE: we use an exponential distribution whose mean is
     // at a reasonable unrolling factor, because it should be rare
@@ -217,22 +229,22 @@ LoopSetting genRandomLoopSetting(RNE &Eng) {
     setUnroll(LS, val);
   }
 
-  { // VECTORIZE WIDTH
+  if (biasedFlip(50, Eng)) { // VECTORIZE WIDTH
     std::uniform_int_distribution<int> dist(VEC_MIN, VEC_MAX);
     setVec(LS, dist(Eng));
   }
 
-  { // INTERLEAVE COUNT
+  if (biasedFlip(50, Eng)) { // INTERLEAVE COUNT
     std::uniform_int_distribution<int> dist(INTRLV_MIN, INTRLV_MAX);
     setInterleave(LS, dist(Eng));
   }
 
-  { // LOOP DISTRIBUTE
+  if (biasedFlip(50, Eng)) { // LOOP DISTRIBUTE
     std::uniform_int_distribution<int> dist(FLAG_MIN, FLAG_MAX);
     setBoolOpt(LS.Distribute, dist(Eng));
   }
 
-  { // LICM VERSIONING
+  if (biasedFlip(50, Eng)) { // LICM VERSIONING
     std::uniform_int_distribution<int> dist(FLAG_MIN, FLAG_MAX);
     setBoolOpt(LS.LICMVerDisable, dist(Eng));
   }
