@@ -18,6 +18,10 @@
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 #include <llvm/Transforms/IPO.h>
 
+#ifdef POLLY_KNOBS
+  #include <polly/RegisterPasses.h>
+#endif
+
 namespace {
   static std::unique_ptr<llvm::TargetMachine> GetHostTargetMachine() {
     std::unique_ptr<llvm::TargetMachine> TM(llvm::EngineBuilder().selectTarget());
@@ -67,6 +71,14 @@ namespace tuner {
         [=] (auto const& Builder, auto &PM) {
           PM.add(easy::createDevirtualizeConstantPass(Name));
         });
+
+#ifdef POLLY_KNOBS
+    // Before the main optimizations, we want to run Polly
+    Builder.addExtension(llvm::PassManagerBuilder::EP_ModuleOptimizerEarly,
+        [=] (auto const& Builder, auto &PM) {
+          polly::registerPollyPasses(PM);
+        });
+#endif
 
     // fill in the rest of the pass manager.
     Builder.populateModulePassManager(*MPM);

@@ -232,8 +232,12 @@ LoopSetting genNearbyLoopSetting(RNE &Eng, LoopSetting LS, double energy) {
     setBoolOpt(LS.LICMVerDisable, nearbyInt(Eng,
       boolOptAsInt(LS.LICMVerDisable), FLAG_MIN, FLAG_MAX, energy));
 
+#ifdef POLLY_KNOBS
+
     setSection(LS, nearbyInt(Eng,
       sectionAsInt(LS), SECTION_MIN, SECTION_MAX, energy));
+
+#endif
 
   return LS;
 }
@@ -283,10 +287,14 @@ LoopSetting genRandomLoopSetting(RNE &Eng) {
     setBoolOpt(LS.LICMVerDisable, dist(Eng));
   }
 
+#ifdef POLLY_KNOBS
+
   if (biasedFlip(75, Eng)) { // LOOP SECTIONING
     std::uniform_int_distribution<int> dist(SECTION_MIN, SECTION_MAX);
     setSection(LS, dist(Eng));
   }
+
+#endif
 
   return LS;
 }
