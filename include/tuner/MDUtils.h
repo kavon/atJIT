@@ -3,9 +3,11 @@
 
 #include <llvm/IR/Metadata.h>
 #include <llvm/IR/Constants.h>
+#include <llvm/IR/Function.h>
 #include <llvm/ADT/SetVector.h>
 
 #include <cassert>
+#include <list>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -23,10 +25,39 @@ namespace {
   // make sure to keep this in sync with LoopKnob.h
   char const* TAG = "llvm.loop.id";
 
+  char const* TRANSFORM_ATTR = "looptransform";
+
   Metadata* mkMDInt(IntegerType* Ty, uint64_t Val, bool isSigned = false) {
     auto ConstInt = ConstantInt::get(Ty, Val, isSigned);
     return ValueAsMetadata::get(ConstInt);
   }
+
+  // return val indicates whether the module was changed
+  // NOTE the transform metadata structure should follow
+  // the work in Kruse's pragma branches
+  bool addLoopTransformGroup(Function* F, std::list<MDNode*> newXForms) {
+    SmallVector<Metadata*, 8> AllTransforms;
+    auto &Ctx = F->getContext();
+
+    // collect the existing transforms, if any
+    auto FuncMD = F->getMetadata(TRANSFORM_ATTR);
+    if (FuncMD)
+      for (auto &X : FuncMD->operands())
+        AllTransforms.push_back(X.get());
+
+    // add new transforms to the group
+    for (auto X : newXForms)
+      AllTransforms.push_back(X);
+
+    if (!newXForms.empty()) {
+      auto AllTransformsMD = MDNode::get(Ctx, AllTransforms);
+      F->setMetadata(TRANSFORM_ATTR, AllTransformsMD);
+      return true;
+    }
+
+    return false;
+  }
+
 
   MDNode* createLoopName(LLVMContext& Context, unsigned &LoopIDs) {
     // build a Polly-compatible ID for the loop

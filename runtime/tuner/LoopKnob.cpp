@@ -55,6 +55,7 @@ if (LS.FieldName) \
 
     class LoopKnobAdjustor : public LoopPass {
     private:
+      // the group of loops we're modifying
       LoopKnob *MainLK;
       std::unordered_map<unsigned, LoopKnob*> SubLoops;
 
@@ -98,14 +99,27 @@ if (LS.FieldName) \
 
         unsigned CurrentLName = getLoopName(LoopMD);
 
+        // is it a subloop?
         auto result = SubLoops.find(CurrentLName);
         if (result != SubLoops.end()) {
-          // then this is a subloop of the top-level loop
-          std::cerr << "adding MD to loop " << CurrentLName << "\n"; // TODO remove this
+          // then just add regular metadata to this subloop
           return addRegularMD(Loop, LoopMD, result->second);
         }
 
-        return false; // TODO check if it's the mainLoop, and if so, add MD!
+        // if it's not the main loop, this loop will not be changed.
+        if (CurrentLName != MainLK->getLoopName())
+          return false;
+
+        // first, add regular metadata to the main loop
+        bool regularChanged = addRegularMD(Loop, LoopMD, MainLK);
+
+        // then, add n-dimensional sectioning metadata to all loops in this group.
+        Function* F = Loop->getHeader()->getParent();
+        std::list<MDNode*> Transforms; // TODO: populate this!
+
+        bool xformsChanged = addLoopTransformGroup(F, Transforms);
+
+        return regularChanged && xformsChanged;
       }
 
     }; // end class
