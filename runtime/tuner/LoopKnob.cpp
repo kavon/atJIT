@@ -78,6 +78,50 @@ if (LS.FieldName) \
         return true;
       }
 
+      // This simple loop nesting analysis builds n-dimensional loop
+      // sectioning metadata, where n >= 2.
+      //
+      // n = 1 would be strip-mining, but that is useless to do for
+      // two reasons:
+      //    1. LLVM already does partial unrolling & vectorization that involves
+      //       strip-mining.
+      //    2. We're not following up with any other transforms.
+      void analyzeSections(LLVMContext& Cxt, std::list<MDNode*>& XForms, LoopKnob* Root) {
+
+        // Build up a maximal n-dimensional loop sectioning group
+        // by walking down the spine of the tree until we reach
+        // either a fork or a leaf.
+        std::vector<std::pair<unsigned, uint16_t>> Dims;
+        LoopKnob *Cur = Root;
+        auto SectionSz = Cur->getVal().Section;
+
+        while (SectionSz) {
+          // consume the current sz
+          Dims.push_back({Cur->getLoopName(), SectionSz.value()});
+
+          // look for a nested sectioning sz
+          if (Cur->children().size() != 1) {
+            // stop here, hit a fork or leaf
+            SectionSz = std::nullopt;
+          } else {
+            // process the single child
+            Cur = Cur->children()[0];
+            SectionSz = Cur->getVal().Section;
+          }
+        } // end loop
+
+        if (Dims.size() >= 2) {
+          // create the 2+ dimensional sectioning group
+          XForms.push_back(createTilingMD(Cxt, loop_md::SECTION, Dims));
+        }
+
+        // recursively process the remaining children.
+        for (auto Child : *Cur)
+          analyzeSections(Cxt, XForms, Child);
+
+      } // end func
+
+
     public:
       static char ID;
 
@@ -106,7 +150,7 @@ if (LS.FieldName) \
           return addRegularMD(Loop, LoopMD, result->second);
         }
 
-        // if it's not the main loop, this loop will not be changed.
+        // if it's also not the main loop, this loop is not part of our group.
         if (CurrentLName != MainLK->getLoopName())
           return false;
 
@@ -115,11 +159,14 @@ if (LS.FieldName) \
 
         // then, add n-dimensional sectioning metadata to all loops in this group.
         Function* F = Loop->getHeader()->getParent();
-        std::list<MDNode*> Transforms; // TODO: populate this!
+        std::list<MDNode*> Transforms;
+        LLVMContext& Cxt = F->getContext();
+
+        analyzeSections(Cxt, Transforms, MainLK);
 
         bool xformsChanged = addLoopTransformGroup(F, Transforms);
 
-        return regularChanged && xformsChanged;
+        return regularChanged || xformsChanged;
       }
 
     }; // end class

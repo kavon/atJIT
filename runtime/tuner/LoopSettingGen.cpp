@@ -283,7 +283,7 @@ LoopSetting genRandomLoopSetting(RNE &Eng) {
     setBoolOpt(LS.LICMVerDisable, dist(Eng));
   }
 
-  if (biasedFlip(50, Eng)) { // LOOP SECTIONING
+  if (biasedFlip(75, Eng)) { // LOOP SECTIONING
     std::uniform_int_distribution<int> dist(SECTION_MIN, SECTION_MAX);
     setSection(LS, dist(Eng));
   }

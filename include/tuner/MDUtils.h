@@ -35,7 +35,10 @@ namespace {
   // return val indicates whether the module was changed
   // NOTE the transform metadata structure should follow
   // the work in Kruse's pragma branches
-  bool addLoopTransformGroup(Function* F, std::list<MDNode*> newXForms) {
+  bool addLoopTransformGroup(Function* F, std::list<MDNode*> &newXForms) {
+    if (newXForms.empty())
+      return false;
+
     SmallVector<Metadata*, 8> AllTransforms;
     auto &Ctx = F->getContext();
 
@@ -49,13 +52,31 @@ namespace {
     for (auto X : newXForms)
       AllTransforms.push_back(X);
 
-    if (!newXForms.empty()) {
-      auto AllTransformsMD = MDNode::get(Ctx, AllTransforms);
-      F->setMetadata(TRANSFORM_ATTR, AllTransformsMD);
-      return true;
+    auto AllTransformsMD = MDNode::get(Ctx, AllTransforms);
+    F->setMetadata(TRANSFORM_ATTR, AllTransformsMD);
+    return true;
+  }
+
+  MDNode* createTilingMD(LLVMContext& Cxt, const char* XFORM_NAME, std::vector<std::pair<unsigned, uint16_t>> Dims) {
+    IntegerType* i64 = IntegerType::get(Cxt, 64);
+
+    SmallVector<Metadata*, 8> Names;
+    SmallVector<Metadata*, 8> Sizes;
+
+    for (auto Dim : Dims) {
+      Names.push_back(MDString::get(Cxt, std::to_string(Dim.first)));
+      Sizes.push_back(mkMDInt(i64, Dim.second));
     }
 
-    return false;
+    // build the arguments to the transform
+    Metadata* NameList = MDNode::get(Cxt, Names);
+    Metadata* SizeList = MDNode::get(Cxt, Sizes);
+
+    // build the transform node itself
+    Metadata* XFormName = MDString::get(Cxt, XFORM_NAME);
+    MDNode* Transform = MDNode::get(Cxt, {XFormName, NameList, SizeList});
+
+    return Transform;
   }
 
 
