@@ -156,6 +156,11 @@ namespace tuner {
     std::cout << "initializing optimizer\n";
 #endif
 
+#ifdef POLLY_KNOBS
+  llvm::PassRegistry &Registry = *llvm::PassRegistry::getPassRegistry();
+  polly::initializePollyPasses(Registry);
+#endif
+
     /////////
     // initialize concurrency stuff
     optimizeQ_ = dispatch_queue_create("atJIT.optimizeQ", NULL);

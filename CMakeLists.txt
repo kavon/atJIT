@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.5)
 
+option(LLVM_ENABLE_PLUGINS "Generate build targets for LLVM plugins." ON)
+option (FORCE_COLORED_OUTPUT "Always produce ANSI-colored output (GNU/Clang only)." TRUE)
+
+option(POLLY_KNOBS "Enable the use of Polly knobs" ON)
+
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
@@ -8,11 +13,11 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 #### identify and configure LLVM
 
-if ((DEFINED LLVM_ROOT) AND (NOT (DEFINED LLVM_DIR)))
+if (DEFINED LLVM_ROOT)
   set(LLVM_DIR "${LLVM_ROOT}/lib/cmake/llvm")
 endif()
 
-if ((DEFINED LLVM_DIR) AND (NOT (IS_ABSOLUTE ${LLVM_DIR})))
+if (NOT (IS_ABSOLUTE ${LLVM_DIR}))
     message(FATAL_ERROR "LLVM_DIR / LLVM_ROOT must be an absolute path. Tried dir: ${LLVM_DIR}")
 endif()
 
@@ -38,10 +43,9 @@ include(Python)
 include(XGBoost)
 include(GCD)
 
-option(LLVM_ENABLE_PLUGINS "Generate build targets for LLVM plugins." ON)
-option (FORCE_COLORED_OUTPUT "Always produce ANSI-colored output (GNU/Clang only)." TRUE)
-
-option(POLLY_KNOBS "Enable the use of Polly knobs" ON)
+if (${POLLY_KNOBS})
+  add_definitions(-DPOLLY_KNOBS)
+endif()
 
 
 include_directories(SYSTEM
