@@ -26,14 +26,23 @@ set_target_properties(EasyJitRuntime PROPERTIES
                       INSTALL_RPATH ${XGB_LIB_DIR}
                       INSTALL_RPATH_USE_LINK_PATH TRUE)
 
+include_directories(${GCD_INCLUDE_DIR})
+
+# this is still somewhat broken.
+if (${POLLY_KNOBS})
+  llvm_map_components_to_libnames(llvm_libs Polly core codegen interpreter support mcjit native executionengine passes objcarcopts)
+else()
+  llvm_map_components_to_libnames(llvm_libs       core codegen interpreter support mcjit native executionengine passes objcarcopts)
+endif()
+
+target_link_libraries(EasyJitRuntime PUBLIC ${llvm_libs})
+
 target_link_libraries(EasyJitRuntime PUBLIC ${XGB_LIB})
 target_link_libraries(EasyJitRuntime PUBLIC ${GCD_LIB})
 
-include_directories(${GCD_INCLUDE_DIR})
 
 # target_link_libraries(EasyJitRuntime PUBLIC LLVM)
-
-llvm_config(EasyJitRuntime core codegen interpreter support mcjit native executionengine passes objcarcopts)
+# llvm_config(EasyJitRuntime core codegen interpreter support mcjit native executionengine passes objcarcopts)
 
 set(EASY_JIT_RUNTIME ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libEasyJitRuntime${CMAKE_SHARED_LIBRARY_SUFFIX} PARENT_SCOPE)
 

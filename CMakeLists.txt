@@ -15,6 +15,7 @@ endif()
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
+############################################
 #### identify and configure LLVM
 
 if (DEFINED LLVM_ROOT)
@@ -29,8 +30,6 @@ find_package(LLVM REQUIRED CONFIG
               NO_CMAKE_PATH NO_CMAKE_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in ${LLVM_DIR}")
-message(STATUS "LLVM Root: ${LLVM_TOOLS_BINARY_DIR}")
-message(STATUS "LLVM Include dirs: ${LLVM_INCLUDE_DIRS}")
 
 if (${LLVM_VERSION_MAJOR} LESS 6)
   message(FATAL_ERROR "atJIT is not known to support LLVM < 6")
@@ -40,8 +39,9 @@ if (${LLVM_ENABLE_RTTI} EQUAL "ON")
   message(FATAL_ERROR "atJIT currently requires LLVM with RTTI.")
 endif()
 
+
+
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
-include(AddLLVM)
 
 include(Python)
 include(XGBoost)
@@ -52,7 +52,6 @@ include_directories(SYSTEM
                     include
                    )
 
-link_directories(${LLVM_LIBRARY_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 add_definitions(-DLLVM_VERSION_MAJOR=${LLVM_VERSION_MAJOR})
 

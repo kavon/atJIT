@@ -1,3 +1,5 @@
+include(AddLLVM)
+
 add_llvm_loadable_module(EasyJitPass
   RegisterPasses.cpp
   Easy.cpp
