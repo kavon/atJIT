@@ -23,19 +23,22 @@ add_library(EasyJitRuntime SHARED
 # retain its rpath to the xgboost lib that we're linking in.
 # it will get stripped during install without this.
 set_target_properties(EasyJitRuntime PROPERTIES
-                      INSTALL_RPATH ${XGB_LIB_DIR}
+                      INSTALL_RPATH "${XGB_LIB_DIR};${LLVM_LIBRARY_DIR}"
                       INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 include_directories(${GCD_INCLUDE_DIR})
 
-# this is still somewhat broken.
 if (${POLLY_KNOBS})
-  llvm_map_components_to_libnames(llvm_libs Polly core codegen interpreter support mcjit native executionengine passes objcarcopts)
-else()
-  llvm_map_components_to_libnames(llvm_libs       core codegen interpreter support mcjit native executionengine passes objcarcopts)
-endif()
 
+  include(Polly)
+  target_link_libraries(EasyJitRuntime PUBLIC ${Polly_EXPORTED_TARGETS})
+
+else()
+
+llvm_map_components_to_libnames(llvm_libs core codegen interpreter support mcjit native executionengine passes objcarcopts)
 target_link_libraries(EasyJitRuntime PUBLIC ${llvm_libs})
+
+endif()
 
 target_link_libraries(EasyJitRuntime PUBLIC ${XGB_LIB})
 target_link_libraries(EasyJitRuntime PUBLIC ${GCD_LIB})

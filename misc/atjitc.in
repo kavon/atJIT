@@ -9,4 +9,5 @@ ${CLANGXX_BIN} -Xclang -disable-O0-optnone --std=c++${CMAKE_CXX_STANDARD} \
   -I${CMAKE_INSTALL_PREFIX}/include \
   -Wl,-rpath,'${CMAKE_INSTALL_PREFIX}/lib' \
   -L${CMAKE_INSTALL_PREFIX}/lib -lEasyJitRuntime \
+  ${LIBLLVM_LINK_FLAGS} \
   "$@"
