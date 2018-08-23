@@ -88,6 +88,9 @@ BitcodeTracker::ModuleContextPair BitcodeTracker::getModule(void* FPtr) {
   // silence the output as much as possible!
   Context->setDiagnosticHandler(std::make_unique<DiagnosticSilencer>());
   Context->setDiagnosticsHotnessThreshold(~0);
+#else
+  // preserve names in the IR for debugging.
+  Context->setDiscardValueNames(false);
 #endif
 
   auto Module = getModuleWithContext(FPtr, *Context);
