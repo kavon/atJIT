@@ -1,19 +1,23 @@
 cmake_minimum_required(VERSION 3.5)
 
 option(LLVM_ENABLE_PLUGINS "Generate build targets for LLVM plugins." ON)
-option (FORCE_COLORED_OUTPUT "Always produce ANSI-colored output (GNU/Clang only)." TRUE)
-
+option(FORCE_COLORED_OUTPUT "Always produce ANSI-colored output (GNU/Clang only)." TRUE)
 option(POLLY_KNOBS "Enable the use of Polly knobs" ON)
 
-if (${POLLY_KNOBS})
-  add_definitions(-DPOLLY_KNOBS)
-endif()
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+
+
+if (${POLLY_KNOBS})
+  message(STATUS "Polly Knobs: ON")
+  add_definitions(-DPOLLY_KNOBS)
+else()
+  message(STATUS "Polly Knobs: OFF")
+endif()
 
 ############################################
 #### identify and configure LLVM

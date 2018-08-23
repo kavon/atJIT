@@ -61,6 +61,8 @@ namespace opt_status {
 // feedback information, and context of the function.
 class Optimizer {
 private:
+  static bool haveInitPollyPasses_;
+
   std::shared_ptr<easy::Context> Cxt_;
   void* Addr_; // the function pointer
 

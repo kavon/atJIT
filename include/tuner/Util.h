@@ -10,6 +10,7 @@
 #define DEFAULT_STD_ERR_PCT 5.0
 #define DEFAULT_COMPILE_AHEAD 10
 #define EXPERIMENT_RATE 10
+#define COMPILE_JOB_BAILOUT_MS 60'000
 
 namespace tuner {
   // a "missing" value indicator

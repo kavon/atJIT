@@ -31,6 +31,8 @@ namespace {
 
 namespace tuner {
 
+  bool Optimizer::haveInitPollyPasses_ = false;
+
   // generates a fresh PassManager to optimize the module.
   // This MPM should be generated _after_ the Tuner has applied a configuration
   // to the KnobSet!
@@ -157,8 +159,11 @@ namespace tuner {
 #endif
 
 #ifdef POLLY_KNOBS
-  llvm::PassRegistry &Registry = *llvm::PassRegistry::getPassRegistry();
-  polly::initializePollyPasses(Registry);
+  if (!haveInitPollyPasses_) {
+    haveInitPollyPasses_ = true;
+    llvm::PassRegistry &Registry = *llvm::PassRegistry::getPassRegistry();
+    polly::initializePollyPasses(Registry);
+  }
 #endif
 
     /////////
@@ -347,8 +352,24 @@ namespace tuner {
       }
 
       // wait for the first job to finish.
+      const unsigned msDuration = 1;
+      uint64_t waitIters = 0;
       do {
-        sleep_for(1);
+        if (msDuration * waitIters >= COMPILE_JOB_BAILOUT_MS) {
+          std::cerr << "\n\nERROR: A compile job took too long, aborting!!\n"
+                    << std::flush;
+
+          // we can't cancel any threads or perform cleanup,
+          // so we must forcefully terminate the program.
+          // See here for discussion: https://github.com/kavon/atJIT/issues/4
+          std::abort();
+        }
+
+        // wait a bit
+        sleep_for(msDuration);
+        waitIters++;
+
+        // check for a result
         dispatch_sync_f(mutate_recompileDone_, &R, obtainResultTask);
       } while (!R.RetVal.has_value());
     }
