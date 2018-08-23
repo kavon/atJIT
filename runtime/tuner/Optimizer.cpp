@@ -20,6 +20,7 @@
 
 #ifdef POLLY_KNOBS
   #include <polly/RegisterPasses.h>
+  #include <polly/Canonicalization.h>
 #endif
 
 namespace {
@@ -78,6 +79,7 @@ namespace tuner {
     // Before the main optimizations, we want to run Polly
     Builder.addExtension(llvm::PassManagerBuilder::EP_ModuleOptimizerEarly,
         [=] (auto const& Builder, auto &PM) {
+          polly::registerCanonicalicationPasses(PM);
           polly::registerPollyPasses(PM);
         });
 #endif
