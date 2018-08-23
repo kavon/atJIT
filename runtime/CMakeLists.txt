@@ -1,3 +1,5 @@
+include(XGBoost)
+include(GCD)
 
 add_library(EasyJitRuntime SHARED
   BitcodeTracker.cpp
@@ -20,7 +22,7 @@ add_library(EasyJitRuntime SHARED
 )
 
 # the installed version of the library needs to
-# retain its rpath to the xgboost lib that we're linking in.
+# retain its rpath to the non-system-wide libs that we're linking in.
 # it will get stripped during install without this.
 set_target_properties(EasyJitRuntime PROPERTIES
                       INSTALL_RPATH "${XGB_LIB_DIR};${LLVM_LIBRARY_DIR}"
@@ -31,21 +33,25 @@ include_directories(${GCD_INCLUDE_DIR})
 if (${POLLY_KNOBS})
 
   include(Polly)
-  target_link_libraries(EasyJitRuntime PUBLIC ${Polly_EXPORTED_TARGETS})
+  # Polly's exported targets already includes libLLVM
+  target_link_libraries(EasyJitRuntime PUBLIC Polly)
 
 else()
 
-llvm_map_components_to_libnames(llvm_libs core codegen interpreter support mcjit native executionengine passes objcarcopts)
-target_link_libraries(EasyJitRuntime PUBLIC ${llvm_libs})
+find_library(LIBLLVM_LIB
+  NAMES LLVM
+  PATHS "${LLVM_LIBRARY_DIR}"
+  NO_DEFAULT_PATH
+)
+requireFound(LIBLLVM_LIB "Could not find libLLVM !")
+
+target_link_libraries(EasyJitRuntime PUBLIC ${LIBLLVM_LIB})
 
 endif()
 
 target_link_libraries(EasyJitRuntime PUBLIC ${XGB_LIB})
 target_link_libraries(EasyJitRuntime PUBLIC ${GCD_LIB})
 
-
-# target_link_libraries(EasyJitRuntime PUBLIC LLVM)
-# llvm_config(EasyJitRuntime core codegen interpreter support mcjit native executionengine passes objcarcopts)
 
 set(EASY_JIT_RUNTIME ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libEasyJitRuntime${CMAKE_SHARED_LIBRARY_SUFFIX} PARENT_SCOPE)
 

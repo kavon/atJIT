@@ -35,22 +35,20 @@ if (${LLVM_ENABLE_RTTI} EQUAL "ON")
   message(FATAL_ERROR "atJIT currently requires LLVM with RTTI.")
 endif()
 
+set(LIBLLVM_LINK_FLAGS "-Wl,-rpath,'${LLVM_LIBRARY_DIR}' -L${LLVM_LIBRARY_DIR} -lLLVM")
+
 ## configure compilation flag and atjitc script for polly
 if (${POLLY_KNOBS})
   message(STATUS "Polly Knobs: ON")
   add_definitions(-DPOLLY_KNOBS)
-  set(LIBLLVM_LINK_FLAGS "-Wl,-rpath,'${LLVM_LIBRARY_DIR}' -L${LLVM_LIBRARY_DIR} -lLLVM")
 else()
   message(STATUS "Polly Knobs: OFF")
-  set(LIBLLVM_LINK_FLAGS "")
 endif()
 
 
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 
 include(Python)
-include(XGBoost)
-include(GCD)
 
 include_directories(SYSTEM
                     ${LLVM_INCLUDE_DIRS}
