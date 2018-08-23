@@ -24,7 +24,7 @@ ld_flags = ""
 for ld_path in ld_paths:
   ld_flags = ld_flags + " -L'" + os.path.abspath(ld_path) + "' -rpath '" + os.path.abspath(ld_path) + "' "
 
-ld_flags = ld_flags + " -l" + runtime_lib
+ld_flags = ld_flags + " -l" + runtime_lib + " -lLLVM"
 
 # substitutions
 config.substitutions.append(('%bin', "@CMAKE_ARCHIVE_OUTPUT_DIRECTORY@"))

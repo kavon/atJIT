@@ -48,8 +48,6 @@ endif()
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 
 include(Python)
-include(XGBoost)
-include(GCD)
 
 include_directories(SYSTEM
                     ${LLVM_INCLUDE_DIRS}
