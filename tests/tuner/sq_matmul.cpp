@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
   // CHECK: [sq_matmul] bayes tuner works
   printf("[sq_matmul] bayes tuner works\n");
 
-  testWith(tuner::AT_Anneal, 150);
+  testWith(tuner::AT_Anneal, 5);
   // CHECK: [sq_matmul] annealing tuner works
   printf("[sq_matmul] annealing tuner works\n");
 

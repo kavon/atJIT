@@ -8,6 +8,5 @@ git clone --depth=1 https://github.com/google/googletest.git benchmark/googletes
 mkdir benchmark/build
 pushd benchmark/build
 cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=`pwd`/../install
-make
 make install -j 3
 popd

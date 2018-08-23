@@ -36,7 +36,5 @@ script:
   - ./xgboost/get.sh
   - mkdir _build && cd _build
   - ../benchmark/setup.sh
-  - cmake -DLLVM_DIR=/usr/lib/llvm-6.0/cmake -DCMAKE_BUILD_TYPE=${BUILD_KIND} -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DEASY_JIT_EXAMPLE=ON -DBENCHMARK=0 -DBENCHMARK_DIR=`pwd`/benchmark/install -DCMAKE_INSTALL_PREFIX=`pwd`/../install .. -G "Unix Makefiles"
-  - make -j 3
-  - make install
-  - make check
+  - cmake -DLLVM_DIR=/usr/lib/llvm-6.0/cmake -DPOLLY_KNOBS=OFF -DCMAKE_BUILD_TYPE=${BUILD_KIND} -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DEASY_JIT_EXAMPLE=ON -DBENCHMARK=0 -DBENCHMARK_DIR=`pwd`/benchmark/install -DCMAKE_INSTALL_PREFIX=`pwd`/../install .. -G "Unix Makefiles"
+  - make -j 3 && make install && make check

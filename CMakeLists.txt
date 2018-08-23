@@ -5,6 +5,10 @@ option (FORCE_COLORED_OUTPUT "Always produce ANSI-colored output (GNU/Clang only
 
 option(POLLY_KNOBS "Enable the use of Polly knobs" ON)
 
+if (${POLLY_KNOBS})
+  add_definitions(-DPOLLY_KNOBS)
+endif()
+
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
@@ -42,11 +46,6 @@ include(AddLLVM)
 include(Python)
 include(XGBoost)
 include(GCD)
-
-if (${POLLY_KNOBS})
-  add_definitions(-DPOLLY_KNOBS)
-endif()
-
 
 include_directories(SYSTEM
                     ${LLVM_INCLUDE_DIRS}
