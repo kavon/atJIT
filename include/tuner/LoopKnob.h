@@ -46,6 +46,7 @@ namespace tuner {
     // hint only
     std::optional<uint16_t> InterleaveCount{}; // 0 = off, 1 = automatic, >=2 is count.
 
+    // TODO: these 3 ought to be combined into 1 integer option
     std::optional<bool> UnrollDisable{};    // llvm.loop.unroll.disable
     std::optional<bool> UnrollFull{};       // llvm.loop.unroll.full
     std::optional<uint16_t> UnrollCount{};  // llvm.loop.unroll.count
@@ -54,12 +55,21 @@ namespace tuner {
 
     std::optional<bool> Distribute{};
 
+    ///////////////////
+    // NOTE: polly-required options follow
+
     // loop sectioning, aka strip-mining or 1 dimensional tiling.
     // we will use the term "sectioning" throughout the code.
     std::optional <uint16_t> Section{};
 
+    ///////////////////////
+
     size_t size() const {
-      return 8;
+      return 7
+#ifdef POLLY_KNOBS
+        + 1
+#endif
+      ;
     }
 
     static void flatten(float* slice, LoopSetting LS) {
@@ -77,8 +87,11 @@ namespace tuner {
 
       LoopSetting::flatten(slice + i++, LS.Distribute);
 
+#ifdef POLLY_KNOBS
+
       LoopSetting::flatten(slice + i++, LS.Section);
 
+#endif
 
       if (i != LS.size())
         throw std::logic_error("size does not match expectations");

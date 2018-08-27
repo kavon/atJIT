@@ -19,6 +19,7 @@ add_library(EasyJitRuntime SHARED
   tuner/Statics.cpp
   tuner/Knob.cpp
   tuner/Util.cpp
+  tuner/Driver.cpp
 )
 
 # the installed version of the library needs to

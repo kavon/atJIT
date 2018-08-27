@@ -32,15 +32,16 @@ class ATDriver {
   std::unordered_map<Key, Entry> DriverState_;
   int ticket = -1;
 
+  static std::atomic<bool> OneTimeInit;
+  void doOneTimeInit();
+
   public:
 
   ATDriver() {
-    // std::cerr << "Create ATDriver\n";
+    doOneTimeInit();
   }
 
-  ~ATDriver() {
-    // std::cerr << "Destroy ATDriver\n";
-  }
+  ~ATDriver() { }
 
   template<class T, class ... Args>
   auto const& EASY_JIT_COMPILER_INTERFACE reoptimize(T &&Fun, Args&& ... args) {
