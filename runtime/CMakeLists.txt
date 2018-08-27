@@ -19,7 +19,6 @@ add_library(EasyJitRuntime SHARED
   tuner/Statics.cpp
   tuner/Knob.cpp
   tuner/Util.cpp
-  tuner/Driver.cpp
 )
 
 # the installed version of the library needs to
@@ -31,13 +30,19 @@ set_target_properties(EasyJitRuntime PROPERTIES
 
 include_directories(${GCD_INCLUDE_DIR})
 
+
+
 if (${POLLY_KNOBS})
 
   include(Polly)
+
+  include_directories(${Polly_INCLUDE_DIRS})
+  add_definitions(${Polly_DEFINITIONS})
+
   # Polly's exported targets already includes libLLVM
   target_link_libraries(EasyJitRuntime PUBLIC Polly)
 
-else()
+else() #########
 
 find_library(LIBLLVM_LIB
   NAMES LLVM
@@ -46,9 +51,12 @@ find_library(LIBLLVM_LIB
 )
 requireFound(LIBLLVM_LIB "Could not find libLLVM !")
 
+include_directories(${LLVM_INCLUDE_DIRS})
+add_definitions(${LLVM_DEFINITIONS})
 target_link_libraries(EasyJitRuntime PUBLIC ${LIBLLVM_LIB})
 
 endif()
+#########################
 
 target_link_libraries(EasyJitRuntime PUBLIC ${XGB_LIB})
 target_link_libraries(EasyJitRuntime PUBLIC ${GCD_LIB})

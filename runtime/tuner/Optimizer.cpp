@@ -22,6 +22,7 @@
 #ifdef POLLY_KNOBS
   #include <polly/RegisterPasses.h>
   #include <polly/Canonicalization.h>
+  #include <polly/ScopDetection.h>
 #endif
 
 namespace {
@@ -33,7 +34,7 @@ namespace {
 
 namespace tuner {
 
-  bool Optimizer::haveInitPollyPasses_ = false;
+  std::once_flag Optimizer::haveInitPollyPasses_ = std::once_flag();
 
   // generates a fresh PassManager to optimize the module.
   // This MPM should be generated _after_ the Tuner has applied a configuration
@@ -163,6 +164,16 @@ namespace tuner {
 
 #ifndef NDEBUG
     std::cout << "initializing optimizer\n";
+#endif
+
+#ifdef POLLY_KNOBS
+  std::call_once(haveInitPollyPasses_, [] {
+    polly::PollyProcessUnprofitable = true;
+    // polly::PollyInvariantLoadHoisting = true; // TODO: should this be on?
+
+    llvm::PassRegistry &Registry = *llvm::PassRegistry::getPassRegistry();
+    polly::initializePollyPasses(Registry);
+  });
 #endif
 
     /////////

@@ -50,14 +50,8 @@ list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/c
 
 include(Python)
 
-include_directories(SYSTEM
-                    ${LLVM_INCLUDE_DIRS}
-                    include
-                   )
-
-add_definitions(${LLVM_DEFINITIONS})
 add_definitions(-DLLVM_VERSION_MAJOR=${LLVM_VERSION_MAJOR})
-
+include_directories(SYSTEM include)
 
 set(CLANGXX_BIN "${LLVM_TOOLS_BINARY_DIR}/clang++")
 set(CMAKE_CXX_STANDARD 17)

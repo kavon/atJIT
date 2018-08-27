@@ -32,14 +32,9 @@ class ATDriver {
   std::unordered_map<Key, Entry> DriverState_;
   int ticket = -1;
 
-  static std::atomic<bool> OneTimeInit;
-  void doOneTimeInit();
-
   public:
 
-  ATDriver() {
-    doOneTimeInit();
-  }
+  ATDriver() { }
 
   ~ATDriver() { }
 

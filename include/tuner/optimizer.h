@@ -2,6 +2,7 @@
 #define TUNER_OPTIMIZER
 
 #include <list>
+#include <mutex>
 
 #include <dispatch/dispatch.h>
 
@@ -61,7 +62,7 @@ namespace opt_status {
 // feedback information, and context of the function.
 class Optimizer {
 private:
-  static bool haveInitPollyPasses_;
+  static std::once_flag haveInitPollyPasses_;
 
   std::shared_ptr<easy::Context> Cxt_;
   void* Addr_; // the function pointer
