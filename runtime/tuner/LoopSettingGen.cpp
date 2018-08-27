@@ -169,7 +169,7 @@ void setBoolOpt(std::optional<bool> &Opt, int v) {
 
 
 
-static constexpr int SECTION_SIZE_MAX = 128;
+static constexpr int SECTION_SIZE_MAX = 2048;
 static constexpr int SECTION_SIZE_MIN = 2;
 static constexpr int SECTION_MISSING = SECTION_SIZE_MIN-1;
 
@@ -289,7 +289,7 @@ LoopSetting genRandomLoopSetting(RNE &Eng) {
 
 #ifdef POLLY_KNOBS
 
-  if (biasedFlip(75, Eng)) { // LOOP SECTIONING
+  if (biasedFlip(80, Eng)) { // LOOP SECTIONING
     std::uniform_int_distribution<int> dist(SECTION_MIN, SECTION_MAX);
     setSection(LS, dist(Eng));
   }
