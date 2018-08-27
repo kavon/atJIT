@@ -441,7 +441,7 @@ namespace tuner {
     auto MPM = genPassManager();
     MPM->run(*M);
 
-    easy::Function::WriteOptimizedToFile(*M, Cxt_->getDebugFile());
+    easy::Function::WriteOptimizedToFile(*M, Cxt_->getDebugFile(), true);
 
 #ifndef NDEBUG
     auto End = std::chrono::system_clock::now();

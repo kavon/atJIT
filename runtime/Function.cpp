@@ -59,11 +59,12 @@ static void MapGlobals(llvm::ExecutionEngine& EE, GlobalMapping* Globals) {
   }
 }
 
-void Function::WriteOptimizedToFile(llvm::Module const &M, std::string const& File) {
+void Function::WriteOptimizedToFile(llvm::Module const &M, std::string const& File, bool Append) {
   if(File.empty())
     return;
   std::error_code Error;
-  llvm::raw_fd_ostream Out(File, Error, llvm::sys::fs::F_None);
+  auto Mode = Append ? llvm::sys::fs::OF_Append : llvm::sys::fs::OF_None;
+  llvm::raw_fd_ostream Out(File, Error, Mode);
 
   if(Error)
     throw CouldNotOpenFile(Error.message());

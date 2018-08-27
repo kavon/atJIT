@@ -55,5 +55,8 @@ config.substitutions.append(('%FileCheck', os.path.join("@LLVM_TOOLS_BINARY_DIR@
 if "@BENCHMARK@" in ["1", "ON"] :
   config.available_features.add('benchmark')
 
+if "@POLLY_KNOBS@" in ["1", "ON"] :
+  config.available_features.add('pollyknobs')
+
 if "@CMAKE_INSTALL_PREFIX@" and os.path.exists(os.path.join("@CMAKE_INSTALL_PREFIX@", "include", "easy")):
   config.available_features.add('install')

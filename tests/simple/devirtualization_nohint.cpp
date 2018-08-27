@@ -1,5 +1,6 @@
+// RUN: rm -f %t.ll
 // RUN: %atjitc  -O2  %s -o %t
-// RUN: %t "%t.ll" > %t.out
+// RUN: %t %t.ll > %t.out
 // RUN: %FileCheck %s < %t.out
 // RUN: %FileCheck --check-prefix=CHECK-IR %s < %t.ll
 

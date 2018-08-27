@@ -68,7 +68,7 @@ class Function {
      bool UseFastISel
   );
 
-  static void WriteOptimizedToFile(llvm::Module const &M, std::string const& File);
+  static void WriteOptimizedToFile(llvm::Module const &M, std::string const& File, bool Append = false);
 
   friend
   std::hash<easy::Function>::result_type std::hash<easy::Function>::operator()(argument_type const& F) const noexcept;
