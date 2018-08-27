@@ -17,6 +17,7 @@
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 #include <llvm/Transforms/IPO.h>
+#include <llvm/IR/IRPrintingPasses.h>
 
 #ifdef POLLY_KNOBS
   #include <polly/RegisterPasses.h>
@@ -79,8 +80,12 @@ namespace tuner {
     // Before the main optimizations, we want to run Polly
     Builder.addExtension(llvm::PassManagerBuilder::EP_ModuleOptimizerEarly,
         [=] (auto const& Builder, auto &PM) {
+          // PM.add(llvm::createPrintModulePass(llvm::errs(), "\n;------------\n\n\n\n\n; Before Polly\n"));
+
           polly::registerCanonicalicationPasses(PM);
           polly::registerPollyPasses(PM);
+
+          // PM.add(llvm::createPrintModulePass(llvm::errs(), "\n\n\n\n\n; After Polly\n"));
         });
 #endif
 

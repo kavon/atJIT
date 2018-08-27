@@ -36,6 +36,7 @@ int main(int argc, char** argv) {
     auto F = easy::jit(dispatch, IntRange(0, 1, 1), easy::options::dump_ir(argv[1]));
 
     // CHECK-IR:      define i32 @_Z8dispatchi() local_unnamed_addr #0 {
+    // CHECK-IR-NEXT: .split:
     // CHECK-IR-NEXT:   ret i32 44444
     // CHECK-IR-NEXT: }
 
