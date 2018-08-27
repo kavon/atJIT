@@ -63,7 +63,7 @@ void Function::WriteOptimizedToFile(llvm::Module const &M, std::string const& Fi
   if(File.empty())
     return;
   std::error_code Error;
-  auto Mode = Append ? llvm::sys::fs::OF_Append : llvm::sys::fs::OF_None;
+  auto Mode = Append ? llvm::sys::fs::F_Append : llvm::sys::fs::F_None;
   llvm::raw_fd_ostream Out(File, Error, Mode);
 
   if(Error)
