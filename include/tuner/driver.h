@@ -74,7 +74,7 @@ class ATDriver {
     }
 
     // Check if the trial version is done.
-    if (!Trial.isEmpty() && Trial.getFeedback().avgMeasurement()) {
+    if (!Trial.isEmpty() && Trial.getFeedback().goodQuality()) {
       auto MaybeGood = std::move(Trial);
       Trial = easy::FunctionWrapperBase();
 

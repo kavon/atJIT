@@ -36,6 +36,8 @@ public:
     return mine.value_or(DBL_MAX) <= theirs.value_or(DBL_MAX);
   }
 
+  virtual bool goodQuality() { return false; }
+
   // "None" indicates that there is no accurate average available yet.
   virtual std::optional<double> avgMeasurement() {
     return std::nullopt;
@@ -159,14 +161,27 @@ public:
     return;
   }
 
+  bool goodQuality() override {
+    ////////////////////////////////////////////////////////////////////
+    // START the critical section
+    protecc.lock();
+
+    bool ans = (dataPoints > DEFAULT_MIN_TRIALS && stdErrorPct <= errBound)
+               || ((dataPoints >= 1) && errBound < 0) ;
+
+   ////////////////////////////////////////////////////////////////////
+   // END of critical section
+   protecc.unlock();
+   return ans;
+  }
+
   std::optional<double> avgMeasurement() override {
     ////////////////////////////////////////////////////////////////////
     // START the critical section
     protecc.lock();
 
     std::optional<double> retVal = std::nullopt;
-    if (   (dataPoints > DEFAULT_MIN_TRIALS && stdErrorPct <= errBound)
-        || ((dataPoints >= 1) && errBound < 0) ) {
+    if (dataPoints >= 1) {
       retVal = average;
     }
     ////////////////////////////////////////////////////////////////////

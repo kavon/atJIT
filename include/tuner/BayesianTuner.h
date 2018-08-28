@@ -149,16 +149,9 @@ namespace tuner {
         exportConfig(*KC, configOut, i, ncol, colToKnob);
 
         std::optional<double> measure = std::nullopt;
-        while( !(measure = FB->avgMeasurement()) ) {
-          // we're stuck until there's a measurement for this
 
-          // NOTE: I believe this does not deadlock, and it doesn't seem
-          // to in practice, but I am not sure why. :(
-#ifndef NDEBUG
-          std::cout << "WARNING: stuck waiting on feedback!\n";
-#endif
-          sleep_for(1);
-        }
+        if( !(measure = FB->avgMeasurement()) )
+          throw std::logic_error("Bayes Tuner -- missing running time value?");
 
         resultOut[i] = measure.value();
       }
