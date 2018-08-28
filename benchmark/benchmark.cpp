@@ -12,6 +12,8 @@
 
 // benchmark components go here
 
+#include "matmul.h"
+
 #include "qsort.h"
 
 
