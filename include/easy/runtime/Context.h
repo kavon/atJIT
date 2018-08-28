@@ -12,11 +12,13 @@
 
 namespace tuner {
   enum AutoTuner {
-    AT_None,
+    AT_None = 0,
     AT_Random,
     AT_Bayes,
     AT_Anneal
   };
+
+  static const std::vector<AutoTuner> AllTuners = {AT_None, AT_Random, AT_Bayes, AT_Anneal};
 }
 
 namespace easy {

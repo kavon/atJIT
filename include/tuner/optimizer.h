@@ -135,6 +135,8 @@ public:
 
   CompileResult recompile();
 
+  bool isNoopTuner() const { return isNoopTuner_; }
+
 }; // end class
 
 } // end namespace

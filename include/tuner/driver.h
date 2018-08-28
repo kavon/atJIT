@@ -88,9 +88,9 @@ class ATDriver {
 
     // are we still evaluating a trial version?
     if (Trial.isEmpty()) {
-      bool shouldReturnBest = false;
+      bool shouldReturnBest = OptFromEntry.isNoopTuner();
 
-      if (Impatient) {
+      if (!shouldReturnBest && Impatient) {
         if (OptFromEntry.status() == opt_status::Working) {
           shouldReturnBest = true; // we're not going to wait
         } else {

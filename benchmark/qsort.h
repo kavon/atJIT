@@ -1,7 +1,8 @@
 #ifndef BENCH_QSORT
 #define BENCH_QSORT
 
-/* To sort array elements */
+///////////////////////////
+// benchmark code
 
 int int_cmp(int a, int b)
 {
@@ -80,28 +81,29 @@ void __attribute__((noinline)) Qsort(int v[], int left, int right, int (*cmp)(in
 
 /////////////////////////////////////////////////////////////////
 
+
+/////////////////////
+// benchmark driver
+
 #define ISORT_MAX_CUTOFF 512
 #define ISORT_MIN_CUTOFF 4
 #define ISORT_IDEAL_CUTOFF 32
 
-#define QSORT_MIN 32768
-#define QSORT_MAX 32768
-#define ITER_MIN 128
-#define ITER_MAX 1024
-
 using namespace tuned_param;
+using namespace std::placeholders;
 
-static void BM_qsort_tuned_bayes(benchmark::State& state) {
-  using namespace std::placeholders;
-  int n = state.range(0);
+static void BM_qsort_tuned(benchmark::State& state) {
+  const int SZ = state.range(0);
   const int ITERS = state.range(1);
-  std::vector<int> vec(n);
+  tuner::AutoTuner TK = static_cast<tuner::AutoTuner>(state.range(2));
+
+  std::vector<int> vec(SZ);
   std::iota(vec.begin(), vec.end(), 0);
 
 
   for (auto _ : state) {
     tuner::ATDriver AT;
-    auto Tuner = easy::options::tuner_kind(tuner::AT_Bayes);
+    auto Tuner = easy::options::tuner_kind(TK);
     auto Range = IntRange(ISORT_MIN_CUTOFF, ISORT_MAX_CUTOFF, ISORT_IDEAL_CUTOFF);
 
     for (int i = 0; i < ITERS; i++) {
@@ -110,23 +112,21 @@ static void BM_qsort_tuned_bayes(benchmark::State& state) {
       std::random_shuffle(vec.begin(), vec.end());
       benchmark::ClobberMemory();
       state.ResumeTiming();
-      //
-      // state.PauseTiming();
+
+
       auto const& my_qsort = AT.reoptimize(Qsort, _1, _2, _3, int_cmp,
          Range, Tuner);
-      // state.ResumeTiming();
 
       my_qsort(vec.data(), 0, vec.size()-1);
     }
-
   }
-
 }
 
 static void BM_qsort(benchmark::State& state) {
-  int n = state.range(0);
+  int SZ = state.range(0);
   const int ITERS = state.range(1);
-  std::vector<int> vec(n);
+
+  std::vector<int> vec(SZ);
   std::iota(vec.begin(), vec.end(), 0);
 
   for (auto _ : state) {
@@ -143,7 +143,20 @@ static void BM_qsort(benchmark::State& state) {
 }
 
 
+/////////////////////////////
+// benchmark registration
 
+#define QSORT_MIN 32768
+#define QSORT_MAX 32768
+#define ITER_MIN 128
+#define ITER_MAX 1024
+
+static void QSortArgs(benchmark::internal::Benchmark* b) {
+  for (tuner::AutoTuner TK : tuner::AllTuners)
+    for (int i = ITER_MIN; i <= ITER_MAX; i *= 2)
+      for (int sz = QSORT_MIN; sz <= QSORT_MAX; sz *= 2)
+        b->Args({sz, i, TK});
+}
 
 BENCHMARK(BM_qsort)
   ->Unit(benchmark::kMillisecond)
@@ -152,10 +165,9 @@ BENCHMARK(BM_qsort)
   ->UseRealTime();
 
 
-BENCHMARK(BM_qsort_tuned_bayes)
+BENCHMARK(BM_qsort_tuned)
   ->Unit(benchmark::kMillisecond)
-  ->RangeMultiplier(2)
-  ->Ranges({{QSORT_MIN, QSORT_MAX}, {ITER_MIN, ITER_MAX}})
+  ->Apply(QSortArgs)
   ->UseRealTime();
 
 
