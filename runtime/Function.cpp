@@ -32,12 +32,13 @@ Function::Function(void* Addr, std::unique_ptr<LLVMHolder> H)
   : Address(Addr), Holder(std::move(H)) {
 }
 
-static std::unique_ptr<llvm::ExecutionEngine> GetEngine(std::unique_ptr<llvm::Module> M, const char *Name, llvm::CodeGenOpt::Level CGLevel, bool UseFastISel) {
+static std::unique_ptr<llvm::ExecutionEngine> GetEngine(std::unique_ptr<llvm::Module> M, const char *Name, llvm::CodeGenOpt::Level CGLevel, bool UseFastISel, bool UseIPRA) {
   llvm::EngineBuilder ebuilder(std::move(M));
   std::string eeError;
 
   llvm::TargetOptions TO;
   TO.EnableFastISel = UseFastISel;
+  TO.EnableIPRA = UseIPRA;
 
   std::unique_ptr<llvm::ExecutionEngine> EE(ebuilder.setErrorStr(&eeError)
           .setMCPU(llvm::sys::getHostCPUName())
@@ -85,10 +86,11 @@ Function::CompileAndWrap(const char*Name, GlobalMapping* Globals,
                std::unique_ptr<llvm::LLVMContext> LLVMCxt,
                std::unique_ptr<llvm::Module> M,
                llvm::CodeGenOpt::Level CGLevel,
-               bool UseFastISel) {
+               bool UseFastISel,
+               bool UseIPRA) {
 
   llvm::Module* MPtr = M.get();
-  std::unique_ptr<llvm::ExecutionEngine> EE = GetEngine(std::move(M), Name, CGLevel, UseFastISel);
+  std::unique_ptr<llvm::ExecutionEngine> EE = GetEngine(std::move(M), Name, CGLevel, UseFastISel, UseIPRA);
 
   if(Globals) {
     MapGlobals(*EE, Globals);
@@ -142,7 +144,8 @@ std::unique_ptr<easy::Function> easy::Function::deserialize(std::istream& is) {
   return
     CompileAndWrap(FunName.c_str(), Globals,
             std::move(Ctx), std::move(M), llvm::CodeGenOpt::Level::Aggressive,
-            /*UseFastISel=*/ false);
+            /*UseFastISel=*/ false,
+           /*UseIPRA=*/ false);
 }
 
 bool Function::operator==(easy::Function const& other) const {

@@ -25,6 +25,14 @@ public:
   }
 }; // end class
 
+class IPRAOption : public FlagKnob {
+public:
+  IPRAOption(bool dflt_ = false) : FlagKnob(dflt_) {}
+  std::string getName() const override {
+     return "use IPRA";
+  }
+}; // end class
+
   // NOTE: we turned off the O0 option for now since
   // it is an awful code generator.
 class CodeGenOptLvl : public SimpleRange {

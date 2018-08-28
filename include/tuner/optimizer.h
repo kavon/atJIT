@@ -43,6 +43,7 @@ namespace tuner {
     bool End;
     llvm::CodeGenOpt::Level CGLevel;
     bool FastISel;
+    bool IPRA;
   };
 
 namespace opt_status {
@@ -78,9 +79,11 @@ private:
   // knobs that control the compilation process
   CodeGenOptLvl CGOptLvl;
   FastISelOption FastISelOpt;
-  InlineThreshold InlineThresh;
+  IPRAOption IPRAOpt;
+
   OptimizerOptLvl OptLvl;
   OptimizerSizeLvl OptSz;
+  InlineThreshold InlineThresh;
 
   //////////
   // members related to concurrent JIT compilation

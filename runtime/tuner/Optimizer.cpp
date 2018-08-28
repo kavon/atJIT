@@ -195,6 +195,8 @@ namespace tuner {
     auto &BT = easy::BitcodeTracker::GetTracker();
     GMap_ = BT.getNameAndGlobalMapping(Addr_);
 
+    isNoopTuner_ = (Cxt_->getTunerKind() == tuner::AT_None);
+
     /////////
     // collect knobs
 
@@ -214,14 +216,13 @@ namespace tuner {
     OptLvl = OptimizerOptLvl(OptLevel);
     OptSz = OptimizerSizeLvl(OptSize);
 
-
+    // IR optimization knobs
     KS.IntKnobs[OptLvl.getID()] = &OptLvl;
     KS.IntKnobs[OptSz.getID()] = &OptSz;
     KS.IntKnobs[InlineThresh.getID()] = &InlineThresh;
 
     ////////////////////////////
 
-    // Codegen knobs
     if (!isNoopTuner_) {
       // if we're not servicing a plain non-tuning JIT request,
       // make codegen as fast as possible by default.
@@ -229,8 +230,10 @@ namespace tuner {
       FastISelOpt = FastISelOption(true);
     }
 
+    // asm codegen knobs
     KS.IntKnobs[CGOptLvl.getID()] = &CGOptLvl;
     KS.IntKnobs[FastISelOpt.getID()] = &FastISelOpt;
+    KS.IntKnobs[IPRAOpt.getID()] = &IPRAOpt;
 
 
     /////////
@@ -253,8 +256,7 @@ namespace tuner {
       case tuner::AT_None:
       default:
         Tuner_ = new NoOpTuner(std::move(KS));
-        isNoopTuner_ = true;
-    }
+    };
 
     InitializedSelf_ = true;
   }
@@ -434,6 +436,7 @@ namespace tuner {
     // along to the codegen thread.
     auto CGLevel = CGOptLvl.getLevel();
     auto FastISel = FastISelOpt.getFlag();
+    auto IPRA = IPRAOpt.getFlag();
 
     //////////////////////
 
@@ -466,6 +469,7 @@ namespace tuner {
     OR->End = !shouldCompile;
     OR->CGLevel = CGLevel;
     OR->FastISel = FastISel;
+    OR->IPRA = IPRA;
 
     // start an async codegen job
     dispatch_async_f(codegenQ_, OR, codegenTask);
@@ -486,7 +490,7 @@ namespace tuner {
     std::unique_ptr<easy::Function> Fun =
         easy::Function::CompileAndWrap(
             Name, Globals, std::move(OR->LLVMCxt), std::move(OR->M), OR->CGLevel,
-            OR->FastISel);
+            OR->FastISel, OR->IPRA);
 
     AddCompileResult ACR;
     ACR.Opt = this;

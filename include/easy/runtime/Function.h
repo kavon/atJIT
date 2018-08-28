@@ -65,7 +65,8 @@ class Function {
      std::unique_ptr<llvm::LLVMContext> LLVMCxt,
      std::unique_ptr<llvm::Module> M,
      llvm::CodeGenOpt::Level CGLevel,
-     bool UseFastISel
+     bool UseFastISel,
+     bool UseIPRA
   );
 
   static void WriteOptimizedToFile(llvm::Module const &M, std::string const& File, bool Append = false);
