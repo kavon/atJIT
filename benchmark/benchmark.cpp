@@ -9,6 +9,8 @@
 #include <cassert>
 #include <iostream>
 
+using namespace tuned_param;
+using namespace std::placeholders;
 
 // benchmark components go here
 

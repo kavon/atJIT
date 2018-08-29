@@ -89,9 +89,6 @@ void __attribute__((noinline)) Qsort(int v[], int left, int right, int (*cmp)(in
 #define ISORT_MIN_CUTOFF 4
 #define ISORT_IDEAL_CUTOFF 32
 
-using namespace tuned_param;
-using namespace std::placeholders;
-
 static void BM_qsort_tuned(benchmark::State& state) {
   const int SZ = state.range(0);
   const int ITERS = state.range(1);
