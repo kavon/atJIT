@@ -1,2 +1,2 @@
 REQUIRES: benchmark
-RUN: %bin/atjit-benchmark --benchmark_repetitions=1
+RUN: %bin/atjit-benchmark-O0 --benchmark_repetitions=1

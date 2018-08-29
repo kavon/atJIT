@@ -4,24 +4,51 @@ if(BENCHMARK)
     set(CMAKE_CXX_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang++)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -disable-O0-optnone -Xclang -load -Xclang ${EASY_JIT_PASS}")
 
-    # FIXME: produce multiple versions of the
-    # benchmark binary, each compiled with diff opt levels.
-    # my theory is that it's best to compare O3-compiled
-    # non-tuning versian agianst O1 or O0 tuned version.
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O1")
-
     include_directories(${LLVM_INCLUDE_DIRS})
     add_definitions(${LLVM_DEFINITIONS})
-
-    # NOTE: add sources here
-    add_executable(atjit-benchmark benchmark.cpp)
-
-    add_dependencies(atjit-benchmark easy-jit-core)
 
     find_package(Benchmark REQUIRED)
     include_directories(${Benchmark_INCLUDE_DIRS})
     link_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
-    target_link_libraries (atjit-benchmark ${Benchmark_LIBRARIES})
-    target_link_libraries (atjit-benchmark EasyJitRuntime pthread)
+    # clear the RELEASE optimization flag, we want variants.
+    set(CMAKE_CXX_FLAGS_RELEASE "")
+
+    #########
+    add_executable(atjit-benchmark-O0 benchmark.cpp)
+    add_dependencies(atjit-benchmark-O0 easy-jit-core)
+    set_target_properties(atjit-benchmark-O0 PROPERTIES COMPILE_FLAGS "-O0")
+    target_link_libraries (atjit-benchmark-O0 ${Benchmark_LIBRARIES} EasyJitRuntime pthread)
+    #########
+
+    #########
+    add_executable(atjit-benchmark-O1 benchmark.cpp)
+    add_dependencies(atjit-benchmark-O1 easy-jit-core)
+    set_target_properties(atjit-benchmark-O1 PROPERTIES COMPILE_FLAGS "-O1")
+    target_link_libraries (atjit-benchmark-O1 ${Benchmark_LIBRARIES} EasyJitRuntime pthread)
+    #########
+
+    #########
+    add_executable(atjit-benchmark-O2 benchmark.cpp)
+    add_dependencies(atjit-benchmark-O2 easy-jit-core)
+    set_target_properties(atjit-benchmark-O2 PROPERTIES COMPILE_FLAGS "-O2")
+    target_link_libraries (atjit-benchmark-O2 ${Benchmark_LIBRARIES} EasyJitRuntime pthread)
+    #########
+
+    #########
+    add_executable(atjit-benchmark-O3 benchmark.cpp)
+    add_dependencies(atjit-benchmark-O3 easy-jit-core)
+    set_target_properties(atjit-benchmark-O3 PROPERTIES COMPILE_FLAGS "-O3")
+    target_link_libraries (atjit-benchmark-O3 ${Benchmark_LIBRARIES} EasyJitRuntime pthread)
+    #########
+
+    if (${POLLY_KNOBS})
+      #########
+      add_executable(atjit-benchmark-O3p benchmark.cpp)
+      add_dependencies(atjit-benchmark-O3p easy-jit-core)
+      set_target_properties(atjit-benchmark-O3p PROPERTIES COMPILE_FLAGS "-O3 -mllvm -polly")
+      target_link_libraries (atjit-benchmark-O3p ${Benchmark_LIBRARIES} EasyJitRuntime pthread)
+      #########
+    endif()
+
 endif()
