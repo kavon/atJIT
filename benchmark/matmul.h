@@ -13,6 +13,10 @@
   #error "add your compiler here"
 #endif
 
+// indexing into flattened, dense 2D matrix
+#define IDX(Mat, ColWidth, Row, Col) \
+    Mat[(Row) * (ColWidth) + (Col)]
+
 // computes  C = AB  where
 // C is an MxN dense matrix
 // A is an MxK dense matrix
@@ -23,7 +27,7 @@ void matmul(int M, int N, int K, double * NOALIAS C, double * NOALIAS A, double 
   for (int m = 0; m < M; m += 1)
     for (int n = 0; n < N; n += 1)
       for (int k = 0; k < K; k += 1)
-        C[m * N + n] += A[m * K + k] * B[k * N + n];
+        IDX(C, N, m, n) += IDX(A, K, m, k) * IDX(B, N, k, n);
 }
 
 
@@ -33,12 +37,26 @@ void matmul(int M, int N, int K, double * NOALIAS C, double * NOALIAS A, double 
 /////////////////////
 // benchmark drivers
 
-void verifyInit(int N, int K, double *A, double *B) {
-  A[1 * K + 2] = 2;
-  A[1 * K + 3] = 3;
+void verifyInit(int M, int N, int K, double *A, double *B) {
+  const int ROW = 1;
+  const int COL = 4;
 
-  B[2 * N + 4] = 5;
-  B[3 * N + 4] = 7;
+  // clear a row of A
+  for (int i = 0; i < M; i++)
+    IDX(A, K, ROW, i) = 0;
+
+  // set two elms of that row
+  IDX(A, K, ROW, 2) = 2;
+  IDX(A, K, ROW, 3) = 3;
+
+
+  // clear a column of B
+  for (int i = 0; i < N; i++)
+    IDX(B, N, i, COL) = 0;
+
+  // set two elms of that col
+  IDX(B, N, 2, COL) = 5;
+  IDX(B, N, 3, COL) = 7;
 }
 
 bool verifyCheck(int N, double *C) {
@@ -46,11 +64,11 @@ bool verifyCheck(int N, double *C) {
   //         =    2    *    5    +    3    *    7
   //         =         10        +        21
   //         =                  31
-
-  double val = C[1 * N + 4];
-  std::cerr << val << std::endl;
-  return val == 31;
+  return IDX(C, N, 1, 4) == 31;
 }
+
+
+
 
 static void BM_matmul(benchmark::State& state) {
   // TODO: maybe we should work with non-square cases?
@@ -71,10 +89,10 @@ static void BM_matmul(benchmark::State& state) {
   std::iota(B.begin(), B.end(), 5);
 
   // init part of the mats with known vals
-  verifyInit(N, K, A.data(), B.data());
+  verifyInit(M, N, K, A.data(), B.data());
 
   // clear C
-  std::fill(C.begin(), C.end(), 0.0);
+  std::fill(C.begin(), C.end(), 0);
 
 
   for (auto _ : state) {
@@ -84,7 +102,7 @@ static void BM_matmul(benchmark::State& state) {
       state.PauseTiming();
 
       assert(verifyCheck(N, C.data()));
-      std::fill(C.begin(), C.end(), 0.0);
+      std::fill(C.begin(), C.end(), 0);
 
       benchmark::ClobberMemory();
       state.ResumeTiming();
@@ -109,9 +127,15 @@ static void BM_matmul_tuned(benchmark::State& state) {
   std::vector<double> B(K*N);
   std::vector<double> C(M*N);
 
-  // init
-  std::iota(A.begin(), A.end(), 0);
-  std::iota(B.begin(), B.end(), 0);
+  // init with some non-zero junk
+  std::iota(A.begin(), A.end(), 2);
+  std::iota(B.begin(), B.end(), 5);
+
+  // init part of the mats with known vals
+  verifyInit(M, N, K, A.data(), B.data());
+
+  // clear C
+  std::fill(C.begin(), C.end(), 0);
 
 
   for (auto _ : state) {
@@ -119,17 +143,21 @@ static void BM_matmul_tuned(benchmark::State& state) {
     auto Tuner = easy::options::tuner_kind(TK);
 
     for (int i = 0; i < ITERS; i++) {
+      auto const& my_matmul = AT.reoptimize(matmul,
+        M, N, K, _1, _2, _3,
+        Tuner
+      );
+
+      my_matmul(C.data(), A.data(), B.data());
+
+
       state.PauseTiming();
-      std::fill(C.begin(), C.end(), 0.0);
+
+      assert(verifyCheck(N, C.data()));
+      std::fill(C.begin(), C.end(), 0);
 
       benchmark::ClobberMemory();
       state.ResumeTiming();
-
-      auto const& my_matmul = AT.reoptimize(matmul,
-        M, N, K, _1, _2, _3,
-        Tuner);
-
-      my_matmul(C.data(), A.data(), B.data());
     }
   }
 }
@@ -141,26 +169,37 @@ namespace mm {
   static constexpr int DIM_MIN = 200;
   static constexpr int DIM_MAX = 200;
 
-  static constexpr int ITER_MIN = 32;
-  static constexpr int ITER_MAX = 128;
+  static constexpr int ITER_MIN = 50;
+  static constexpr int ITER_MAX = 100;
 
-  static void ArgGen(benchmark::internal::Benchmark* b) {
-    for (tuner::AutoTuner TK : tuner::AllTuners)
-      for (int i = ITER_MIN; i <= ITER_MAX; i *= 2)
-        for (int sz = DIM_MIN; sz <= DIM_MAX; sz *= 2)
-          b->Args({sz, i, TK});
+#define MAIN_LOOP \
+  for (int i = ITER_MIN; i <= ITER_MAX; i *= 2) \
+    for (int sz = DIM_MIN; sz <= DIM_MAX; sz *= 2)
+
+  void ArgGen(benchmark::internal::Benchmark* b) {
+    MAIN_LOOP
+      b->Args({sz, i});
   }
+
+  void TunedArgGen(benchmark::internal::Benchmark* b) {
+    for (tuner::AutoTuner TK : tuner::AllTuners)
+      MAIN_LOOP
+        b->Args({sz, i, TK});
+  }
+
+  #undef MAIN_LOOP
 }
 
 BENCHMARK(BM_matmul)
   ->Unit(benchmark::kMillisecond)
-  ->RangeMultiplier(2)
-  ->Ranges({{mm::DIM_MIN, mm::DIM_MAX}, {mm::ITER_MIN, mm::ITER_MAX}})
+  ->Apply(mm::ArgGen)
   ->UseRealTime();
 
   BENCHMARK(BM_matmul_tuned)
     ->Unit(benchmark::kMillisecond)
-    ->Apply(mm::ArgGen)
+    ->Apply(mm::TunedArgGen)
     ->UseRealTime();
+
+#undef IDX
 
 #endif // BENCH_MATMUL
