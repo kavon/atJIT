@@ -7,10 +7,10 @@
 #include <bitset>
 
 #define DEFAULT_MIN_TRIALS 2
-#define DEFAULT_STD_ERR_PCT 5.0
+#define DEFAULT_STD_ERR_PCT 10.0
 #define DEFAULT_COMPILE_AHEAD 10
-#define EXPERIMENT_RATE 10
-#define COMPILE_JOB_BAILOUT_MS 120'000
+#define EXPERIMENT_RATE 5
+#define COMPILE_JOB_BAILOUT_MS 90'000
 
 namespace tuner {
   // a "missing" value indicator

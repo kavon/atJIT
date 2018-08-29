@@ -14,9 +14,17 @@ namespace tuner {
   // Dimitris Bertsimas and John Tsitsiklis. "Simulated annealing."
   // Statistical Science 8, no. 1 (1993): 10-15.
   //
+  // EscapeDifficulty corresponds to d*
+  //
   class AnnealingTuner : public RandomTuner {
     uint64_t timeStep;
-    const double EscapeDifficulty = 50000;  // corresponds to d*
+    // FIXME: how should we determine this value?
+    // the costs related to it are in units of nanoseconds
+    // so perhaps 1ms is a good number for now?
+    // in the future this should probably be some percentage of the
+    // "default config" cost.
+    const double EscapeDifficulty = 1'000'000;
+
     const double MaxEnergy = 100.0;
     double MaxTemp; // determined by cooling schedule
 
