@@ -19,6 +19,7 @@ namespace tuner {
       std::unique_ptr<tuner::Optimizer> Opt;
       easy::FunctionWrapperBase Trial;
       easy::FunctionWrapperBase Best;
+      std::vector<easy::FunctionWrapperBase> Others;
     };
   }
 
@@ -58,6 +59,7 @@ class ATDriver {
     tuner::Optimizer &OptFromEntry = *(Info.Opt);
     easy::FunctionWrapperBase &Trial = Info.Trial;
     easy::FunctionWrapperBase &Best = Info.Best;
+    auto &Others = Info.Others;
 
     bool Impatient = !(OptFromEntry.getContext()->waitForCompile());
     bool WasNotInCache = EmplaceResult.second;
@@ -76,45 +78,92 @@ class ATDriver {
     // Check if the trial version is done.
     if (!Trial.isEmpty() && Trial.getFeedback().goodQuality()) {
       auto MaybeGood = std::move(Trial);
-      Trial = easy::FunctionWrapperBase();
+      Trial = easy::FunctionWrapperBase(); // erase the trial field
 
       // Check to see which is better
       if (Best.isEmpty() || MaybeGood.getFeedback()
                             .betterThan(
                             Best.getFeedback())) {
         Best = std::move(MaybeGood);
+      } else {
+        Others.push_back(std::move(MaybeGood));
       }
     }
 
-    // are we still evaluating a trial version?
-    if (Trial.isEmpty()) {
-      bool shouldReturnBest = OptFromEntry.isNoopTuner();
+    // if we are we still evaluating a trial version, return it.
+    if (!Trial.isEmpty())
+      return reinterpret_cast<wrapper_ty&>(Trial);
 
-      if (!shouldReturnBest && Impatient) {
-        if (OptFromEntry.status() == opt_status::Working) {
-          shouldReturnBest = true; // we're not going to wait
-        } else {
-          ticket = (ticket + 1) % EXPERIMENT_RATE; // take a ticket
-          shouldReturnBest = (ticket != 0); // 0 indicates doing an experiment
-        }
-      }
 
-      if (shouldReturnBest) {
-        assert(!Best.isEmpty() && "logic error!");
-        return reinterpret_cast<wrapper_ty&>(Best);
-      }
+    ///////////
+    // otherwise, we're free to make a decision on whether to
+    // experiment, or make use of the best version so far.
 
-      // Either the optimizer has nothing available and is inactive,
-      // or we have something ready to go. Either way, get a new version.
+    ticket = (ticket + 1) % EXPERIMENT_RATE; // advance the ticket counter
+
+    bool timeToExperiment = (ticket == 0); // 0 indicates doing an experiment
+    bool isNoopTuner = OptFromEntry.isNoopTuner();
+    bool shouldReturnBest = isNoopTuner;
+
+    // should we return the current best or not, based on our patience.
+    if (!shouldReturnBest && Impatient)
+      if (OptFromEntry.status() == opt_status::Working)
+        shouldReturnBest = true; // we're not going to wait
+      else
+        shouldReturnBest = !timeToExperiment; // no experiment => return best
+
+
+    if (!shouldReturnBest) {
+      // that means we should experiment by obtaining a totally new version!
       Trial = easy::jit_with_optimizer<T, Args...>(OptFromEntry, std::forward<T>(Fun));
       return reinterpret_cast<wrapper_ty&>(Trial);
     }
 
-    assert(!Trial.isEmpty() && "error");
+    ///////////
+    // otherwise, quickly return the best version since we don't want to wait.
 
-    // trial version is not done, return it
-    return reinterpret_cast<wrapper_ty&>(Trial);
-  }
+    assert(!Best.isEmpty() && "logic error!");
+
+    if (timeToExperiment && Others.size() > 0) {
+      // We would have experimented, but we were impatient.
+      // Next best thing to do is quickly recheck whether the current
+      // "best" version is still actually the best, since extensive usage
+      // which gives us more accurate measurements.
+
+      double currentBest = Best.getFeedback().avgMeasurement().value();
+      const double INF = std::numeric_limits<double>::infinity();
+      double othersBest = INF;
+      size_t othersBestIdx;
+
+      for (size_t i = 0; i < Others.size(); i++) {
+        auto &Old = Others[i];
+        double oldTime = Old.getFeedback().avgMeasurement().value();
+        if (oldTime < othersBest) {
+          othersBest = oldTime;
+          othersBestIdx = i;
+        }
+      }
+
+      if (othersBest != INF) {
+        double diff = currentBest - othersBest;
+        if (diff >= (currentBest * BEST_SWAP_MARGIN_HUNK)) {
+#ifndef NDEBUG  ///////////////
+          std::cout << "best = " << currentBest
+                    << ", othersBest[" << othersBestIdx << "] = " << othersBest
+                    << ". swapping" << std::endl;
+#endif ////////////////////////
+          auto OldBest = std::move(Best);
+          Best = std::move(Others[othersBestIdx]);
+          Others[othersBestIdx] = std::move(OldBest);
+        }
+      }
+    } // end of check others for best
+
+    /////
+    // finally, return the best version!
+    return reinterpret_cast<wrapper_ty&>(Best);
+
+  } // end of reoptimize
 
 }; // end class
 
