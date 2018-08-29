@@ -89,7 +89,7 @@ void __attribute__((noinline)) Qsort(int v[], int left, int right, int (*cmp)(in
 #define ISORT_MIN_CUTOFF 4
 #define ISORT_IDEAL_CUTOFF 32
 
-static void BM_qsort_tuned(benchmark::State& state) {
+static void JIT_qsort(benchmark::State& state) {
   const int SZ = state.range(0);
   const int ITERS = state.range(1);
   tuner::AutoTuner TK = static_cast<tuner::AutoTuner>(state.range(2));
@@ -119,7 +119,7 @@ static void BM_qsort_tuned(benchmark::State& state) {
   }
 }
 
-static void BM_qsort(benchmark::State& state) {
+static void AOT_qsort(benchmark::State& state) {
   int SZ = state.range(0);
   const int ITERS = state.range(1);
 
@@ -155,14 +155,14 @@ static void QSortArgs(benchmark::internal::Benchmark* b) {
         b->Args({sz, i, TK});
 }
 
-BENCHMARK(BM_qsort)
+BENCHMARK(AOT_qsort)
   ->Unit(benchmark::kMillisecond)
   ->RangeMultiplier(2)
   ->Ranges({{QSORT_MIN, QSORT_MAX}, {ITER_MIN, ITER_MAX}})
   ->UseRealTime();
 
 
-BENCHMARK(BM_qsort_tuned)
+BENCHMARK(JIT_qsort)
   ->Unit(benchmark::kMillisecond)
   ->Apply(QSortArgs)
   ->UseRealTime();

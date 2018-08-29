@@ -70,7 +70,7 @@ bool verifyCheck(int N, double *C) {
 
 
 
-static void BM_matmul(benchmark::State& state) {
+static void AOT_matmul(benchmark::State& state) {
   // TODO: maybe we should work with non-square cases?
   const int DIM = state.range(0);
   const int ITERS = state.range(1);
@@ -112,7 +112,7 @@ static void BM_matmul(benchmark::State& state) {
 
 
 
-static void BM_matmul_tuned(benchmark::State& state) {
+static void JIT_matmul(benchmark::State& state) {
   // TODO: maybe we should work with non-square cases?
   const int DIM = state.range(0);
   const int ITERS = state.range(1);
@@ -190,12 +190,12 @@ namespace mm {
   #undef MAIN_LOOP
 }
 
-BENCHMARK(BM_matmul)
+BENCHMARK(AOT_matmul)
   ->Unit(benchmark::kMillisecond)
   ->Apply(mm::ArgGen)
   ->UseRealTime();
 
-  BENCHMARK(BM_matmul_tuned)
+  BENCHMARK(JIT_matmul)
     ->Unit(benchmark::kMillisecond)
     ->Apply(mm::TunedArgGen)
     ->UseRealTime();
