@@ -169,7 +169,7 @@ void setBoolOpt(std::optional<bool> &Opt, int v) {
 
 
 
-static constexpr int SECTION_SIZE_MAX = 2048;
+static constexpr int SECTION_SIZE_MAX = 128;
 static constexpr int SECTION_SIZE_MIN = 2;
 static constexpr int SECTION_MISSING = SECTION_SIZE_MIN-1;
 
