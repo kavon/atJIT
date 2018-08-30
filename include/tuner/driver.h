@@ -106,12 +106,12 @@ class ATDriver {
     bool shouldReturnBest = isNoopTuner;
 
     // should we return the current best or not, based on our patience.
-    if (!shouldReturnBest && Impatient)
+    if (!shouldReturnBest && Impatient) {
       if (OptFromEntry.status() == opt_status::Working)
         shouldReturnBest = true; // we're not going to wait
       else
         shouldReturnBest = !timeToExperiment; // no experiment => return best
-
+    }
 
     if (!shouldReturnBest) {
       // that means we should experiment by obtaining a totally new version!
