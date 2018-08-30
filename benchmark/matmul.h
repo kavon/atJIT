@@ -162,6 +162,59 @@ static void JIT_matmul(benchmark::State& state) {
   }
 }
 
+
+static void TUNED_matmul(benchmark::State& state) {
+  // TODO: maybe we should work with non-square cases?
+  const int DIM = state.range(0);
+  const int ITERS = state.range(1);
+  tuner::AutoTuner TK = static_cast<tuner::AutoTuner>(state.range(2));
+
+  const int M = DIM;
+  const int N = DIM;
+  const int K = DIM;
+
+  // alloc
+  std::vector<double> A(M*K);
+  std::vector<double> B(K*N);
+  std::vector<double> C(M*N);
+
+  // init with some non-zero junk
+  std::iota(A.begin(), A.end(), 2);
+  std::iota(B.begin(), B.end(), 5);
+
+  // init part of the mats with known vals
+  verifyInit(M, N, K, A.data(), B.data());
+
+  // clear C
+  std::fill(C.begin(), C.end(), 0);
+
+
+  for (auto _ : state) {
+    tuner::ATDriver AT;
+    auto Tuner = easy::options::tuner_kind(TK);
+
+    for (int i = 0; i < ITERS; i++) {
+      state.PauseTiming();
+      auto const& my_matmul = AT.reoptimize(matmul,
+        M, N, K, _1, _2, _3,
+        Tuner
+      );
+      state.ResumeTiming();
+
+      my_matmul(C.data(), A.data(), B.data());
+
+
+      state.PauseTiming();
+
+      assert(verifyCheck(N, C.data()));
+      std::fill(C.begin(), C.end(), 0);
+
+      benchmark::ClobberMemory();
+      state.ResumeTiming();
+    }
+  }
+}
+
 /////////////////////////////
 // benchmark registration
 
@@ -195,10 +248,15 @@ BENCHMARK(AOT_matmul)
   ->Apply(mm::ArgGen)
   ->UseRealTime();
 
-  BENCHMARK(JIT_matmul)
-    ->Unit(benchmark::kMillisecond)
-    ->Apply(mm::TunedArgGen)
-    ->UseRealTime();
+BENCHMARK(TUNED_matmul)
+  ->Unit(benchmark::kMillisecond)
+  ->Apply(mm::TunedArgGen)
+  ->UseRealTime();
+
+BENCHMARK(JIT_matmul)
+  ->Unit(benchmark::kMillisecond)
+  ->Apply(mm::TunedArgGen)
+  ->UseRealTime();
 
 #undef IDX
 

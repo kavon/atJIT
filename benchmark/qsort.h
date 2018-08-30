@@ -89,6 +89,7 @@ void __attribute__((noinline)) Qsort(int v[], int left, int right, int (*cmp)(in
 #define ISORT_MIN_CUTOFF 4
 #define ISORT_IDEAL_CUTOFF 32
 
+// TUNED, with all JIT overheads included.
 static void JIT_qsort(benchmark::State& state) {
   const int SZ = state.range(0);
   const int ITERS = state.range(1);
@@ -113,6 +114,37 @@ static void JIT_qsort(benchmark::State& state) {
 
       auto const& my_qsort = AT.reoptimize(Qsort, _1, _2, _3, int_cmp,
          Range, Tuner);
+
+      my_qsort(vec.data(), 0, vec.size()-1);
+    }
+  }
+}
+
+// just measuring the tuned function.
+static void TUNED_qsort(benchmark::State& state) {
+  const int SZ = state.range(0);
+  const int ITERS = state.range(1);
+  tuner::AutoTuner TK = static_cast<tuner::AutoTuner>(state.range(2));
+
+  std::vector<int> vec(SZ);
+  std::iota(vec.begin(), vec.end(), 0);
+
+
+  for (auto _ : state) {
+    tuner::ATDriver AT;
+    auto Tuner = easy::options::tuner_kind(TK);
+    auto Range = IntRange(ISORT_MIN_CUTOFF, ISORT_MAX_CUTOFF, ISORT_IDEAL_CUTOFF);
+
+    for (int i = 0; i < ITERS; i++) {
+      state.PauseTiming();
+      assert( isSorted(vec.data(), 0, vec.size()-1, int_cmp) );
+      std::random_shuffle(vec.begin(), vec.end());
+      benchmark::ClobberMemory();
+
+      auto const& my_qsort = AT.reoptimize(Qsort, _1, _2, _3, int_cmp,
+         Range, Tuner);
+
+      state.ResumeTiming();
 
       my_qsort(vec.data(), 0, vec.size()-1);
     }
@@ -161,11 +193,17 @@ BENCHMARK(AOT_qsort)
   ->Ranges({{QSORT_MIN, QSORT_MAX}, {ITER_MIN, ITER_MAX}})
   ->UseRealTime();
 
+BENCHMARK(TUNED_qsort)
+  ->Unit(benchmark::kMillisecond)
+  ->Apply(QSortArgs)
+  ->UseRealTime();
 
 BENCHMARK(JIT_qsort)
   ->Unit(benchmark::kMillisecond)
   ->Apply(QSortArgs)
   ->UseRealTime();
+
+
 
 
 #endif // BENCH_QSORT

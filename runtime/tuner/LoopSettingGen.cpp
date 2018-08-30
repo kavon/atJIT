@@ -247,7 +247,7 @@ template < typename RNE >  // RandomNumberEngine
 LoopSetting genRandomLoopSetting(RNE &Eng) {
   LoopSetting LS;
 
-  if (biasedFlip(50, Eng)) { // UNROLLING
+  if (biasedFlip(80, Eng)) { // UNROLLING
 
     // NOTE: we use an exponential distribution whose mean is
     // at a reasonable unrolling factor, because it should be rare
@@ -267,22 +267,22 @@ LoopSetting genRandomLoopSetting(RNE &Eng) {
     setUnroll(LS, val);
   }
 
-  if (biasedFlip(50, Eng)) { // VECTORIZE WIDTH
+  if (biasedFlip(80, Eng)) { // VECTORIZE WIDTH
     std::uniform_int_distribution<int> dist(VEC_MIN, VEC_MAX);
     setVec(LS, dist(Eng));
   }
 
-  if (biasedFlip(50, Eng)) { // INTERLEAVE COUNT
+  if (biasedFlip(70, Eng)) { // INTERLEAVE COUNT
     std::uniform_int_distribution<int> dist(INTRLV_MIN, INTRLV_MAX);
     setInterleave(LS, dist(Eng));
   }
 
-  if (biasedFlip(50, Eng)) { // LOOP DISTRIBUTE
+  if (biasedFlip(70, Eng)) { // LOOP DISTRIBUTE
     std::uniform_int_distribution<int> dist(FLAG_MIN, FLAG_MAX);
     setBoolOpt(LS.Distribute, dist(Eng));
   }
 
-  if (biasedFlip(50, Eng)) { // LICM VERSIONING
+  if (biasedFlip(70, Eng)) { // LICM VERSIONING
     std::uniform_int_distribution<int> dist(FLAG_MIN, FLAG_MAX);
     setBoolOpt(LS.LICMVerDisable, dist(Eng));
   }
