@@ -212,6 +212,8 @@ static void TUNED_matmul(benchmark::State& state) {
       benchmark::ClobberMemory();
       state.ResumeTiming();
     }
+    // NOTE: we don't want to time the driver's destructor
+    state.PauseTiming();
   }
 }
 
@@ -223,7 +225,7 @@ namespace mm {
   static constexpr int DIM_MAX = 200;
 
   static constexpr int ITER_MIN = 50;
-  static constexpr int ITER_MAX = 100;
+  static constexpr int ITER_MAX = 400;
 
 #define MAIN_LOOP \
   for (int i = ITER_MIN; i <= ITER_MAX; i *= 2) \

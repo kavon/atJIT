@@ -223,16 +223,20 @@ namespace tuner {
 
     ////////////////////////////
 
-    if (!isNoopTuner_) {
-      // if we're not servicing a plain non-tuning JIT request,
-      // make codegen as fast as possible by default.
-      CGOptLvl = CodeGenOptLvl(1);
-      FastISelOpt = FastISelOption(true);
-    }
+    // // NOTE: this first-JIT request wait-time seems to not actually
+    // // matter that much.
+    //
+    // if (!isNoopTuner_) {
+    //   // if we're not servicing a plain non-tuning JIT request,
+    //   // make codegen as fast as possible by default.
+    //   // and then let the tuner adjust it
+    //   CGOptLvl = CodeGenOptLvl(1);
+    //   FastISelOpt = FastISelOption(true);
+    //   KS.IntKnobs[CGOptLvl.getID()] = &CGOptLvl;
+    //   KS.IntKnobs[FastISelOpt.getID()] = &FastISelOpt;
+    // }
 
     // asm codegen knobs
-    KS.IntKnobs[CGOptLvl.getID()] = &CGOptLvl;
-    KS.IntKnobs[FastISelOpt.getID()] = &FastISelOpt;
     KS.IntKnobs[IPRAOpt.getID()] = &IPRAOpt;
 
 

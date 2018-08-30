@@ -148,6 +148,8 @@ static void TUNED_qsort(benchmark::State& state) {
 
       my_qsort(vec.data(), 0, vec.size()-1);
     }
+    // NOTE: we don't want to time the driver's destructor
+    state.PauseTiming();
   }
 }
 
@@ -177,8 +179,8 @@ static void AOT_qsort(benchmark::State& state) {
 
 #define QSORT_MIN 32768
 #define QSORT_MAX 32768
-#define ITER_MIN 128
-#define ITER_MAX 1024
+#define ITER_MIN 50
+#define ITER_MAX 400
 
 static void QSortArgs(benchmark::internal::Benchmark* b) {
   for (tuner::AutoTuner TK : tuner::AllTuners)
