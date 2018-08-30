@@ -11,9 +11,6 @@ if(BENCHMARK)
     include_directories(${Benchmark_INCLUDE_DIRS})
     link_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
-    # clear the RELEASE optimization flag, we want variants.
-    set(CMAKE_CXX_FLAGS_RELEASE "")
-
     #########
     add_executable(atjit-benchmark-O0 benchmark.cpp)
     add_dependencies(atjit-benchmark-O0 easy-jit-core)
