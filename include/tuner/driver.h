@@ -3,6 +3,7 @@
 
 #include <ctime>
 #include <cstdlib>
+#include <fstream>
 
 #include <easy/jit.h>
 #include <unordered_map>
@@ -14,12 +15,17 @@ namespace tuner {
   namespace {
     struct OptimizationInfo {
       OptimizationInfo(std::unique_ptr<tuner::Optimizer> Opt_)
-          : Opt(std::move(Opt_)), Trial(easy::FunctionWrapperBase()), Best(easy::FunctionWrapperBase()) {}
+          : Opt(std::move(Opt_)),
+            Trial(easy::FunctionWrapperBase()),
+            Best(easy::FunctionWrapperBase()) {}
 
       std::unique_ptr<tuner::Optimizer> Opt;
       easy::FunctionWrapperBase Trial;
       easy::FunctionWrapperBase Best;
       std::vector<easy::FunctionWrapperBase> Others;
+
+      // statistics
+      uint64_t Requests = 0; // total requests to reoptimize this function
     };
   }
 
@@ -32,12 +38,43 @@ class ATDriver {
   protected:
   std::unordered_map<Key, Entry> DriverState_;
   int ticket = -1;
+  std::optional<std::string> dumpStats; // std::filesystem not available in GCC 7
+
+  // TODO: we need a Driver.cpp, this is getting too big.
+  void output(std::ofstream &file, std::string key, std::string val) {
+    file << "\"" << key << "\" : \"" << val << "\",\n";
+  }
+
+  template < typename ValTy >
+  void output(std::ofstream &file, std::string key, ValTy val) {
+    file << "\"" << key << "\" : " << std::to_string(val) << ",\n";
+  }
+
+  void exportStats(std::string out) {
+    std::ofstream file;
+    file.open(out, std::ios::app);
+
+    for (auto const &State : DriverState_) {
+      const Key &K = State.first;
+      const Entry &E = State.second;
+
+      output(file, "requests", E.Requests);
+
+      E.Opt->dumpStats(file);
+    }
+
+    file.close();
+  }
 
   public:
 
-  ATDriver() { }
+  ATDriver() : dumpStats(std::nullopt) { }
+  ATDriver(std::string outFile) : dumpStats(outFile) { }
 
-  ~ATDriver() { }
+  ~ATDriver() {
+    if (dumpStats)
+      exportStats(dumpStats.value());
+  }
 
   template<class T, class ... Args>
   auto const& EASY_JIT_COMPILER_INTERFACE reoptimize(T &&Fun, Args&& ... args) {
@@ -56,6 +93,7 @@ class ATDriver {
     // pull out data from the emplace
     Key const &KeyVals = EmplaceResult.first->first;
     Entry &Info = EmplaceResult.first->second;
+
     tuner::Optimizer &OptFromEntry = *(Info.Opt);
     easy::FunctionWrapperBase &Trial = Info.Trial;
     easy::FunctionWrapperBase &Best = Info.Best;
@@ -63,6 +101,8 @@ class ATDriver {
 
     bool Impatient = !(OptFromEntry.getContext()->waitForCompile());
     bool WasNotInCache = EmplaceResult.second;
+
+    Info.Requests += 1;
 
     ////////
     // decide whether to recompile or not.

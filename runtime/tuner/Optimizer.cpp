@@ -513,4 +513,10 @@ namespace tuner {
       recompileActive_ = false;
   }
 
+
+  void Optimizer::dumpStats(std::ofstream &file) const {
+    // no stats to report
+    file << "{}";
+  }
+
 } // namespace tuner

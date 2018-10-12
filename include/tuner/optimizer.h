@@ -3,6 +3,7 @@
 
 #include <list>
 #include <mutex>
+#include <fstream>
 
 #include <dispatch/dispatch.h>
 
@@ -139,6 +140,8 @@ public:
   CompileResult recompile();
 
   bool isNoopTuner() const { return isNoopTuner_; }
+
+  void dumpStats(std::ofstream &) const;
 
 }; // end class
 
