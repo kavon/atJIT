@@ -55,5 +55,68 @@ namespace tuner {
 
 }
 
+#include <fstream>
+#include <string>
+
+// quick and dirty JSON dumper
+class JSON {
+public:
+
+  static void beginObject(std::ostream &file) {
+    file << "{";
+  }
+
+  static void endObject(std::ostream &file) {
+    file << "}";
+  }
+
+  static void beginArray(std::ostream &file) {
+    file << "[";
+  }
+
+  static void endArray(std::ostream &file) {
+    file << "]";
+  }
+
+  static void beginBind(std::ostream &file, std::string key) {
+    fmt(file, key);
+    file << " : ";
+  }
+
+  static void comma(std::ostream &file) {
+    file << ",\n";
+  }
+
+  static void endBind(std::ostream &file) {
+    comma(file);
+  }
+
+  static void fmt(std::ostream &file, std::string val) {
+    file << "\"" << val << "\"";
+  }
+
+  static void fmt(std::ostream &file, const char *val) {
+    file << "\"" << val << "\"";
+  }
+
+  template < typename ValTy >
+  static void fmt(std::ostream &file, ValTy val) {
+    file << std::to_string(val);
+  }
+
+
+
+  //////////////////////
+  // common operations
+
+  template < typename ValTy >
+  static void output(std::ostream &file, std::string key, ValTy val) {
+    beginBind(file, key);
+    fmt(file, val);
+    endBind(file);
+  }
+
+};
+
 
 #endif // TUNER_UTIL

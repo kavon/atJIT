@@ -9,6 +9,7 @@
 #include <unordered_map>
 
 #include <tuner/optimizer.h>
+#include <tuner/Util.h>
 
 namespace tuner {
 
@@ -40,27 +41,23 @@ class ATDriver {
   int ticket = -1;
   std::optional<std::string> dumpStats; // std::filesystem not available in GCC 7
 
-  // TODO: we need a Driver.cpp, this is getting too big.
-  void output(std::ofstream &file, std::string key, std::string val) {
-    file << "\"" << key << "\" : \"" << val << "\",\n";
-  }
 
-  template < typename ValTy >
-  void output(std::ofstream &file, std::string key, ValTy val) {
-    file << "\"" << key << "\" : " << std::to_string(val) << ",\n";
-  }
 
   void exportStats(std::string out) {
     std::ofstream file;
-    file.open(out, std::ios::app);
+    file.open(out, std::ios::out | std::ios::ate);
 
     for (auto const &State : DriverState_) {
       const Key &K = State.first;
       const Entry &E = State.second;
 
-      output(file, "requests", E.Requests);
+      JSON::beginObject(file);
+
+      JSON::output(file, "requests", E.Requests);
 
       E.Opt->dumpStats(file);
+
+      JSON::endObject(file);
     }
 
     file.close();

@@ -18,6 +18,16 @@ namespace tuner {
     AT_Anneal
   };
 
+  static std::string TunerName(AutoTuner AT) {
+    switch (AT) {
+      case AT_None   : return "none";
+      case AT_Random : return "random";
+      case AT_Bayes  : return "bayes";
+      case AT_Anneal : return "anneal";
+      default: throw std::runtime_error("unknown tuner name");
+    }
+  }
+
   static const std::vector<AutoTuner> AllTuners = {AT_None, AT_Random, AT_Bayes, AT_Anneal};
 }
 

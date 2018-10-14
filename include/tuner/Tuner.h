@@ -131,9 +131,22 @@ namespace tuner {
       std::cout << "\n---------- best config ----------\n";
 
       if (best.has_value())
-        dumpConfigInstance(KS_, best.value());
+        dumpConfigInstance(std::cout, KS_, best.value());
       else
         std::cout << "<no configs generated yet>\n\n";
+    }
+
+    void dumpStats(std::ostream &file) const {
+      JSON::beginBind(file, "versions");
+      JSON::beginArray(file);
+
+      for (auto Entry : Configs_) {
+        dumpConfigInstance(file, KS_, Entry);
+        JSON::comma(file);
+      }
+
+      JSON::endArray(file);
+      JSON::endBind(file);
     }
 
   }; // end class Tuner

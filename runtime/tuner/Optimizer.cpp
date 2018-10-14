@@ -515,8 +515,10 @@ namespace tuner {
 
 
   void Optimizer::dumpStats(std::ofstream &file) const {
-    // no stats to report
-    file << "{}";
+
+    JSON::output(file, "tuner_kind", TunerName(Cxt_->getTunerKind()));
+
+    Tuner_->dumpStats(file);
   }
 
 } // namespace tuner

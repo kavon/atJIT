@@ -327,12 +327,20 @@ namespace {
   using T = std::pair<std::shared_ptr<KnobConfig>, std::shared_ptr<Feedback>>;
 }
 
- void dumpConfigInstance (KnobSet const& KS, T const &Entry) {
+// into a JSON object
+ void dumpConfigInstance (std::ostream &os, KnobSet const& KS, T const &Entry) {
    auto Conf = Entry.first;
    auto FB = Entry.second;
-   FB->dump();
-   dumpConfig(KS, *Conf);
-   std::cout << "\n";
+
+   JSON::beginObject(os);
+
+   JSON::beginBind(os, "feedback");
+   FB->dump(os);
+   JSON::endBind(os);
+
+   // dumpConfig(KS, *Conf);
+
+   JSON::endObject(os);
  }
 
 } // end namespace

@@ -43,7 +43,7 @@ public:
     return std::nullopt;
   }
 
-  virtual void dump() = 0;
+  virtual void dump(std::ostream &os) = 0;
 };
 
 
@@ -56,9 +56,7 @@ public:
   Token startMeasurement() override { return dummy; }
   void endMeasurement(Token t) override { }
 
-  virtual void dump() override {
-    std::cout << "NoOpFeedback did not measure anything.\n";
-  }
+  virtual void dump(std::ostream &os) override {}
 }; // end class
 
 
@@ -75,9 +73,7 @@ class DebuggingFB : public Feedback {
     std::cout << "== elapsed time: " << elapsed.count() << " ns ==\n";
   }
 
-  void dump() override {
-    std::cout << "DebuggingFB does not save measurements\n";
-  }
+  void dump(std::ostream &os) override { }
 
 }; // end class
 
@@ -190,50 +186,25 @@ public:
     return retVal;
   }
 
-  void dump () override {
+  void dump (std::ostream &os) override {
     ////////////////////////////////////////////////////////////////////
     // START the critical section
     protecc.lock();
 
-    std::cout << "avg time: ";
-    if (dataPoints)
-      std::cout << average << " ns";
-    else
-      std::cout << "< none >";
-    std::cout << ", ";
+    JSON::beginObject(os);
 
-    std::cout << "error: ";
-    if (dataPoints)
-      std::cout << stdErrorPct << "%";
-    else
-      std::cout << "< none >";
-    std::cout << ", ";
+    JSON::output(os, "measurements", dataPoints);
 
+    if (dataPoints != 0) {
+      JSON::output(os, "unit", "nano");
+      JSON::output(os, "time", average);
+      JSON::output(os, "std_error_pct", stdErrorPct);
+      JSON::output(os, "variance", sampleVariance);
+      JSON::output(os, "std_dev", stdDev);
+      JSON::output(os, "std_error_mean", stdError);
+    }
 
-    // Other less interesting stats in a compressed output
-    std::cout << "(s^2: ";
-    if (dataPoints)
-      std::cout << sampleVariance;
-    else
-      std::cout << "X";
-    std::cout << ", ";
-
-    std::cout << "s: ";
-    if (dataPoints)
-      std::cout << stdDev;
-    else
-      std::cout << "X";
-    std::cout << ", ";
-
-    std::cout << "SEM: ";
-    if (dataPoints)
-      std::cout << stdError;
-    else
-      std::cout << "X";
-
-    std::cout << ") ";
-
-    std::cout << "from " << dataPoints << " measurements\n";
+    JSON::endObject(os);
 
     ////////////////////////////////////////////////////////////////////
     // END of critical section

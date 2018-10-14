@@ -76,7 +76,7 @@ namespace tuner {
     using T = std::pair<std::shared_ptr<KnobConfig>, std::shared_ptr<Feedback>>;
   }
 
-  void dumpConfigInstance (KnobSet const& KS, T const &Entry);
+  void dumpConfigInstance (std::ostream &os, KnobSet const& KS, T const &Entry);
   void dumpConfig (KnobSet const& KS, KnobConfig const &Config);
 
 } // end namespace

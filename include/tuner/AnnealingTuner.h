@@ -163,14 +163,14 @@ namespace tuner {
 
       if (auto best = bestSeen()) {
         std::cout << "------- best config ----------\n";
-        dumpConfigInstance(KS_, best.value());
+        dumpConfigInstance(std::cout, KS_, best.value());
       }
 
       std::cout << "------- current config --------\n";
-      dumpConfigInstance(KS_, currentState);
+      dumpConfigInstance(std::cout, KS_, currentState);
 
       std::cout << "------- trial config --------\n";
-      dumpConfigInstance(KS_, trialState);
+      dumpConfigInstance(std::cout, KS_, trialState);
     }
 
   }; // end class AnnealingTuner
