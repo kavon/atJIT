@@ -154,7 +154,7 @@ class StructArgument
 class Context {
 
   std::vector<std::shared_ptr<ArgumentBase>> ArgumentMapping_;
-  unsigned OptLevel_ = 1, OptSize_ = 0;
+  unsigned OptLevel_ = 3, OptSize_ = 0;
   std::string DebugFile_;
   std::string DebugBeforeFile_;
 
