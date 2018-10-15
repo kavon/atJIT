@@ -50,9 +50,15 @@ class ATDriver {
     // formatting preferences
     file << std::setprecision(10);
 
+    bool pastFirst = false;
     for (auto const &State : DriverState_) {
       const Key &K = State.first;
       const Entry &E = State.second;
+
+      if (pastFirst)
+        JSON::comma(file);
+
+      pastFirst |= true;
 
       JSON::beginObject(file);
 

@@ -197,12 +197,17 @@ void LoopKnob::apply (llvm::Module &M) {
 
 
 #define PRINT_OPTION(X, Y) \
-  if ((X)) \
-    JSON::output(o, tuner::loop_md::Y, (X).value());
+  if ((X)) { \
+    if (pastFirst) JSON::comma(o); \
+    pastFirst |= true; \
+    JSON::output(o, tuner::loop_md::Y, (X).value(), false); }
+
 
 // this file seemed fitting to define this function. can't put in header.
 std::ostream& operator<<(std::ostream &o, tuner::LoopSetting &LS) {
   JSON::beginObject(o);
+
+  bool pastFirst = false;
 
   PRINT_OPTION(LS.UnrollDisable, UNROLL_DISABLE)
   PRINT_OPTION(LS.UnrollFull, UNROLL_FULL)

@@ -193,7 +193,7 @@ public:
 
     JSON::beginObject(os);
 
-    JSON::output(os, "measurements", dataPoints);
+    JSON::output(os, "measurements", dataPoints, dataPoints != 0);
 
     if (dataPoints != 0) {
       JSON::output(os, "unit", "nano");
@@ -201,7 +201,7 @@ public:
       JSON::output(os, "std_error_pct", stdErrorPct);
       JSON::output(os, "variance", sampleVariance);
       JSON::output(os, "std_dev", stdDev);
-      JSON::output(os, "std_error_mean", stdError);
+      JSON::output(os, "std_error_mean", stdError, false);
     }
 
     JSON::endObject(os);

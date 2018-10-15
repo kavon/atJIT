@@ -140,13 +140,16 @@ namespace tuner {
       JSON::beginBind(file, "versions");
       JSON::beginArray(file);
 
+      bool pastFirst = false;
       for (auto Entry : Configs_) {
+        if (pastFirst)
+          JSON::comma(file);
+        pastFirst |= true;
+
         dumpConfigInstance(file, KS_, Entry);
-        JSON::comma(file);
       }
 
       JSON::endArray(file);
-      JSON::endBind(file);
     }
 
   }; // end class Tuner

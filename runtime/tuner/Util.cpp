@@ -24,3 +24,5 @@ void sleep_for(unsigned ms) {
 }
 
 } // end namespace
+
+int JSON::depth = 0;

@@ -326,7 +326,7 @@ void applyToConfig(KnobConfigAppFn &F, KnobConfig const &Settings) {
    JSON::beginObject(os);
    ConfigDumper F(os, KS);
    applyToConfig(F, Config);
-   JSON::output(os, "default", F.isDefault());
+   JSON::output(os, "default", F.isDefault(), false);
    JSON::endObject(os);
  }
 
@@ -343,12 +343,11 @@ namespace {
 
    JSON::beginBind(os, "config");
    dumpConfig(os, KS, *Conf);
-   JSON::endBind(os);
 
+   JSON::comma(os);
 
    JSON::beginBind(os, "feedback");
    FB->dump(os);
-   JSON::endBind(os);
 
    JSON::endObject(os);
  }
