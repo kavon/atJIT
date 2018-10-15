@@ -77,7 +77,7 @@ namespace tuner {
   }
 
   void dumpConfigInstance (std::ostream &os, KnobSet const& KS, T const &Entry);
-  void dumpConfig (KnobSet const& KS, KnobConfig const &Config);
+  void dumpConfig (std::ostream &os, KnobSet const& KS, KnobConfig const &Config);
 
 } // end namespace
 

@@ -431,7 +431,7 @@ namespace tuner {
 
 #ifndef NDEBUG
     std::cout << "@@ optimize job starting using this config:\n";
-    dumpConfig(Tuner_->getKnobSet(), *TunerConf);
+    dumpConfig(std::cout, Tuner_->getKnobSet(), *TunerConf);
 
     Tuner_->dump();
 #endif
@@ -516,6 +516,7 @@ namespace tuner {
 
   void Optimizer::dumpStats(std::ofstream &file) const {
 
+    JSON::output(file, "name", std::get<0>(GMap_));
     JSON::output(file, "tuner_kind", TunerName(Cxt_->getTunerKind()));
 
     Tuner_->dumpStats(file);

@@ -286,8 +286,11 @@ void applyToConfig(KnobConfigAppFn &F, KnobConfig const &Settings) {
 
  class ConfigDumper : public KnobConfigAppFn {
    KnobSet const &KS;
+   std::ostream &os;
+   bool looksDefault = true;
  public:
-   ConfigDumper(KnobSet const &KSet) : KS(KSet) {}
+   ConfigDumper(std::ostream &outs, KnobSet const &KSet) : KS(KSet), os(outs) {}
+   bool isDefault() const { return looksDefault; }
 
    #define HANDLE_CASE(ValTy, KnobMap)                                      \
    void operator()(std::pair<KnobID, ValTy> Entry) override {               \
@@ -303,7 +306,10 @@ void applyToConfig(KnobConfigAppFn &F, KnobConfig const &Settings) {
      }                                                                      \
                                                                             \
      auto Knob = search->second;                                            \
-     std::cout << Knob->getName() << " := " << Val << "\n";                 \
+     JSON::output(os, Knob->getName(), Val);                                \
+                                                                            \
+     if (looksDefault && Val != Knob->getDefault())                         \
+       looksDefault = false;                                                \
    }
 
    HANDLE_CASE(int, IntKnobs)
@@ -316,11 +322,12 @@ void applyToConfig(KnobConfigAppFn &F, KnobConfig const &Settings) {
  /////////
  // utilites
 
- void dumpConfig (KnobSet const& KS, KnobConfig const &Config) {
-   std::cout << "{\n";
-   ConfigDumper F(KS);
+ void dumpConfig (std::ostream &os, KnobSet const& KS, KnobConfig const &Config) {
+   JSON::beginObject(os);
+   ConfigDumper F(os, KS);
    applyToConfig(F, Config);
-   std::cout << "}\n";
+   JSON::output(os, "default", F.isDefault());
+   JSON::endObject(os);
  }
 
 namespace {
@@ -334,11 +341,14 @@ namespace {
 
    JSON::beginObject(os);
 
+   JSON::beginBind(os, "config");
+   dumpConfig(os, KS, *Conf);
+   JSON::endBind(os);
+
+
    JSON::beginBind(os, "feedback");
    FB->dump(os);
    JSON::endBind(os);
-
-   // dumpConfig(KS, *Conf);
 
    JSON::endObject(os);
  }

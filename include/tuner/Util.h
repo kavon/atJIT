@@ -5,6 +5,7 @@
 #include <cmath>
 #include <random>
 #include <bitset>
+#include <iomanip>
 
 #define DEFAULT_MIN_TRIALS 2
 #define DEFAULT_STD_ERR_PCT 10.0
@@ -101,7 +102,7 @@ public:
 
   template < typename ValTy >
   static void fmt(std::ostream &file, ValTy val) {
-    file << std::to_string(val);
+    file << val;
   }
 
 

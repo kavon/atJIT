@@ -47,6 +47,9 @@ class ATDriver {
     std::ofstream file;
     file.open(out, std::ios::out | std::ios::ate);
 
+    // formatting preferences
+    file << std::setprecision(10);
+
     for (auto const &State : DriverState_) {
       const Key &K = State.first;
       const Entry &E = State.second;

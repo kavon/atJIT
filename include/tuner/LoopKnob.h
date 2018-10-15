@@ -35,7 +35,7 @@ namespace tuner {
   // NOTE if you add a new option here, make sure to update:
   // 1. LoopKnob.cpp::addToLoopMD
   //    1a. You might need to update MDUtils.h while doing this.
-  // 2. operator<<(stream, LoopSetting)
+  // 2. operator<<(stream, LoopSetting) and operator== in LoopKnob.cpp
   // 3. any generators of a LoopSetting,
   //    like genRandomLoopSetting or genNearbyLoopSetting
   //
@@ -186,5 +186,7 @@ namespace knob_type {
 } // namespace tuner
 
 std::ostream& operator<<(std::ostream &o, tuner::LoopSetting &LS);
+bool operator==(tuner::LoopSetting const& A, tuner::LoopSetting const& B);
+bool operator!=(tuner::LoopSetting const& A, tuner::LoopSetting const& B);
 
 #endif // TUNER_LOOP_KNOBS

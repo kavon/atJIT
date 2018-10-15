@@ -198,11 +198,11 @@ void LoopKnob::apply (llvm::Module &M) {
 
 #define PRINT_OPTION(X, Y) \
   if ((X)) \
-    o << tuner::loop_md::Y << ": " << (X).value() << ", ";
+    JSON::output(o, tuner::loop_md::Y, (X).value());
 
 // this file seemed fitting to define this function. can't put in header.
 std::ostream& operator<<(std::ostream &o, tuner::LoopSetting &LS) {
-  o << "<";
+  JSON::beginObject(o);
 
   PRINT_OPTION(LS.UnrollDisable, UNROLL_DISABLE)
   PRINT_OPTION(LS.UnrollFull, UNROLL_FULL)
@@ -218,6 +218,29 @@ std::ostream& operator<<(std::ostream &o, tuner::LoopSetting &LS) {
 
   PRINT_OPTION(LS.Section, SECTION)
 
-  o << ">";
+  JSON::endObject(o);
   return o;
+}
+
+bool operator==(const tuner::LoopSetting& A, const tuner::LoopSetting& B) {
+  return
+    (A.UnrollDisable == B.UnrollDisable) &&
+    (A.UnrollFull == B.UnrollFull) &&
+    (A.UnrollCount == B.UnrollCount) &&
+
+    (A.VectorizeWidth == B.VectorizeWidth) &&
+
+    (A.LICMVerDisable == B.LICMVerDisable) &&
+
+    (A.InterleaveCount == B.InterleaveCount) &&
+
+    (A.Distribute == B.Distribute) &&
+
+    (A.Section == B.Section)
+
+    ;
+}
+
+bool operator!=(const tuner::LoopSetting& A, const tuner::LoopSetting& B) {
+  return !(A == B);
 }
