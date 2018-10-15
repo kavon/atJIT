@@ -46,11 +46,13 @@ class ATDriver {
 
   void exportStats(std::string out) {
     std::ofstream file;
-    file.open(out, std::ios::out | std::ios::ate);
+    // open in append mode
+    file.open(out, std::ios::out | std::ios::ate | std::ios::app);
 
     // formatting preferences
     file << std::setprecision(10);
 
+    JSON::beginArray(file);
     bool pastFirst = false;
     for (auto const &State : DriverState_) {
       const Key &K = State.first;
@@ -69,6 +71,10 @@ class ATDriver {
 
       JSON::endObject(file);
     }
+    JSON::endArray(file);
+
+    // optimistically assume more arrays will be appended:
+    JSON::comma(file);
 
     file.close();
   }
