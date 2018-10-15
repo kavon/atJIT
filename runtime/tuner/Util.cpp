@@ -1,5 +1,6 @@
 
 #include <tuner/Util.h>
+#include <tuner/JSON.h>
 
 #include <chrono>
 #include <thread>

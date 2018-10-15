@@ -11,6 +11,7 @@
 #include <cfloat>
 
 #include <tuner/Util.h>
+#include <tuner/JSON.h>
 
 /////
 // collects data and other information about the quality of configurations.

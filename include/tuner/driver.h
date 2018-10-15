@@ -10,6 +10,7 @@
 
 #include <tuner/optimizer.h>
 #include <tuner/Util.h>
+#include <tuner/JSON.h>
 
 namespace tuner {
 

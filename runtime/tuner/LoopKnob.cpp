@@ -1,6 +1,7 @@
 
 #include <tuner/LoopKnob.h>
 #include <tuner/MDUtils.h>
+#include <tuner/JSON.h>
 
 #include <llvm/Analysis/LoopPass.h>
 #include <llvm/Support/ErrorHandling.h>

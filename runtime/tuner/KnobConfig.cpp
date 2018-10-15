@@ -1,6 +1,7 @@
 
 #include <tuner/KnobConfig.h>
 #include <tuner/Util.h>
+#include <tuner/JSON.h>
 
 #include <random>
 #include <algorithm>
