@@ -117,6 +117,8 @@ static void TUNING_qsort(benchmark::State& state) {
 
       my_qsort(vec.data(), 0, vec.size()-1);
     }
+    // NOTE: we don't want to time the driver's destructor
+    state.PauseTiming();
   }
 }
 

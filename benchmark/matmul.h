@@ -159,6 +159,8 @@ static void TUNING_matmul(benchmark::State& state) {
       benchmark::ClobberMemory();
       state.ResumeTiming();
     }
+    // NOTE: we don't want to time the driver's destructor
+    state.PauseTiming();
   }
 }
 
