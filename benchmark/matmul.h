@@ -112,7 +112,7 @@ static void AOT_matmul(benchmark::State& state) {
 
 
 
-static void JIT_matmul(benchmark::State& state) {
+static void TUNING_matmul(benchmark::State& state) {
   // TODO: maybe we should work with non-square cases?
   const int DIM = state.range(0);
   const int ITERS = state.range(1);
@@ -163,7 +163,7 @@ static void JIT_matmul(benchmark::State& state) {
 }
 
 
-static void TUNED_matmul(benchmark::State& state) {
+static void EXCLUDEDRIVER_matmul(benchmark::State& state) {
   // TODO: maybe we should work with non-square cases?
   const int DIM = state.range(0);
   const int ITERS = state.range(1);
@@ -250,12 +250,12 @@ BENCHMARK(AOT_matmul)
   ->Apply(mm::ArgGen)
   ->UseRealTime();
 
-BENCHMARK(TUNED_matmul)
+BENCHMARK(EXCLUDEDRIVER_matmul)
   ->Unit(benchmark::kMillisecond)
   ->Apply(mm::TunedArgGen)
   ->UseRealTime();
 
-BENCHMARK(JIT_matmul)
+BENCHMARK(TUNING_matmul)
   ->Unit(benchmark::kMillisecond)
   ->Apply(mm::TunedArgGen)
   ->UseRealTime();
