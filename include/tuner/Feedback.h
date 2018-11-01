@@ -45,6 +45,12 @@ public:
   }
 
   virtual void dump(std::ostream &os) = 0;
+
+  // default handlers for the event that the underlying object we're collecting
+  // feedback for has seen a "new deployment" underwhich feedback
+  // will be recorded, and accessing that value.
+  virtual void newDeployment() {};
+  virtual uint64_t getDeployedTime() { return ~0ULL; }
 };
 
 
@@ -94,6 +100,8 @@ class ExecutionTime : public Feedback {
   double errBound = 0; // a precentage
   uint64_t dataPoints = 0;
 
+  uint64_t deployedTime = 0; // total execution time keeper since the last newDeployment.
+
 public:
   //////////////////////////
   // a value < 0 says:   ignore the stdErr and always return the average, if
@@ -102,6 +110,35 @@ public:
   //                     the precent std err of the mean is <= the value.
   ExecutionTime(double errPctBound = DEFAULT_STD_ERR_PCT)
       : errBound(errPctBound) {}
+
+  void newDeployment() override {
+    ////////////////////////////////////////////////////////////////////
+    // START the critical section
+    protecc.lock();
+
+    deployedTime = 0;
+
+    ////////////////////////////////////////////////////////////////////
+    // END of critical section
+    protecc.unlock();
+  }
+
+  // TODO(kavon): is a critical section really needed here on the read?
+  uint64_t getDeployedTime() override {
+    ////////////////////////////////////////////////////////////////////
+    // START the critical section
+    uint64_t retVal;
+
+    protecc.lock();
+
+    retVal = deployedTime;
+
+    ////////////////////////////////////////////////////////////////////
+    // END of critical section
+    protecc.unlock();
+
+    return retVal;
+  }
 
   Token startMeasurement() override {
     return std::chrono::system_clock::now();
@@ -113,9 +150,18 @@ public:
 
     int64_t elapsedTime = elapsedDur.count();
 
+    assert(elapsedTime > 0 && "encountered a negative time?");
+
     ////////////////////////////////////////////////////////////////////
     // START the critical section
     protecc.lock();
+
+    // calculate new deployed time with overflow check.
+    uint64_t newDeployedTime = deployedTime + elapsedTime;
+    if (newDeployedTime < deployedTime)
+      newDeployedTime = ~0ULL;
+
+    deployedTime = newDeployedTime;
 
     dataPoints++;
 
@@ -126,7 +172,7 @@ public:
       // END of critical section
       protecc.unlock();
       return;
-    }
+    } // end if
 
     /////////////
     // sources for these forumlas:
@@ -156,7 +202,7 @@ public:
     // END of critical section
     protecc.unlock();
     return;
-  }
+  } // end of endMeasurement
 
   bool goodQuality() override {
     ////////////////////////////////////////////////////////////////////
