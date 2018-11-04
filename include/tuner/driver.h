@@ -177,7 +177,7 @@ class ATDriver {
 
     assert(!Best.isEmpty() && "logic error!");
 
-    if (timeToExperiment && Others.size() > 0) {
+    if (BEST_SWAP_ENABLE && timeToExperiment && Others.size() > 0) {
       // We would have experimented, but we were impatient.
       // Next best thing to do is quickly recheck whether the current
       // "best" version is still actually the best, since extensive usage

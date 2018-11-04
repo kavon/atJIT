@@ -6,13 +6,14 @@
 #include <random>
 #include <bitset>
 
-#define DEFAULT_MIN_TRIALS 2
-#define DEFAULT_STD_ERR_PCT 10.0
+#define DEFAULT_MIN_TRIALS      2
+#define DEFAULT_STD_ERR_PCT     10.0
 // "HUNK" * 100 = percent
-#define BEST_SWAP_MARGIN_HUNK 0.01
-#define DEFAULT_COMPILE_AHEAD 10
-#define EXPERIMENT_RATE 5
-#define COMPILE_JOB_BAILOUT_MS 90'000
+#define BEST_SWAP_MARGIN_HUNK   0.01
+#define BEST_SWAP_ENABLE        false
+#define DEFAULT_COMPILE_AHEAD   10
+#define EXPERIMENT_RATE         5
+#define COMPILE_JOB_BAILOUT_MS  90'000
 
 namespace tuner {
   // a "missing" value indicator
