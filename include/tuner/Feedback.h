@@ -49,7 +49,7 @@ public:
   // default handlers for the event that the underlying object we're collecting
   // feedback for has seen a "new deployment" underwhich feedback
   // will be recorded, and accessing that value.
-  virtual void newDeployment() {};
+  virtual void resetDeployedTime() {};
   virtual uint64_t getDeployedTime() { return ~0ULL; }
 };
 
@@ -100,7 +100,7 @@ class ExecutionTime : public Feedback {
   double errBound = 0; // a precentage
   uint64_t dataPoints = 0;
 
-  uint64_t deployedTime = 0; // total execution time keeper since the last newDeployment.
+  uint64_t deployedTime = 0; // total execution time keeper since the last reset.
 
 public:
   //////////////////////////
@@ -111,7 +111,7 @@ public:
   ExecutionTime(double errPctBound = DEFAULT_STD_ERR_PCT)
       : errBound(errPctBound) {}
 
-  void newDeployment() override {
+  void resetDeployedTime() override {
     ////////////////////////////////////////////////////////////////////
     // START the critical section
     protecc.lock();

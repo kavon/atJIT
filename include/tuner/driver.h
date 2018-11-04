@@ -28,6 +28,7 @@ namespace tuner {
 
       // statistics
       uint64_t Requests = 0; // total requests to reoptimize this function
+      uint64_t FullExperiments = 0; // total experiments performed
     };
   }
 
@@ -39,7 +40,8 @@ class ATDriver {
 
   protected:
   std::unordered_map<Key, Entry> DriverState_;
-  int ticket = -1;
+  double DeploymentDecay_ = 1.0; // 1 * b * b * b .... where b is 1.0 + decay rate.
+  double DeploymentThresh_ = EXPERIMENT_MIN_DEPLOY_NS;
   std::optional<std::string> dumpStats; // std::filesystem not available in GCC 7
 
 
@@ -66,6 +68,7 @@ class ATDriver {
       JSON::beginObject(file);
 
       JSON::output(file, "requests", E.Requests);
+      JSON::output(file, "experiments", E.FullExperiments);
 
       E.Opt->dumpStats(file);
 
@@ -147,14 +150,13 @@ class ATDriver {
     if (!Trial.isEmpty())
       return reinterpret_cast<wrapper_ty&>(Trial);
 
+    assert(!Best.isEmpty() && "logic error!");
 
     ///////////
     // otherwise, we're free to make a decision on whether to
-    // experiment, or make use of the best version so far.
+    // experiment again, or make use of the best version so far.
 
-    ticket = (ticket + 1) % EXPERIMENT_RATE; // advance the ticket counter
-
-    bool timeToExperiment = (ticket == 0); // 0 indicates doing an experiment
+    bool deployedLongEnough = Best.getFeedback().getDeployedTime() >= DeploymentThresh_;
     bool isNoopTuner = OptFromEntry.isNoopTuner();
     bool shouldReturnBest = isNoopTuner;
 
@@ -163,11 +165,22 @@ class ATDriver {
       if (OptFromEntry.status() == opt_status::Working)
         shouldReturnBest = true; // we're not going to wait
       else
-        shouldReturnBest = !timeToExperiment; // no experiment => return best
+        shouldReturnBest = !deployedLongEnough; // no experiment => return best
     }
 
     if (!shouldReturnBest) {
+      ////////////
       // that means we should experiment by obtaining a totally new version!
+
+      // reset Best's deployment time, since we crossed the limit here.
+      Best.getFeedback().resetDeployedTime();
+
+      // raise the deployment threshold
+      Info.FullExperiments += 1;
+      DeploymentDecay_ *= 1.0 + EXPERIMENT_DECAY_RATE;
+      DeploymentThresh_ =   // min + (1.0 + decayRate) ^ FullExperiments
+          EXPERIMENT_MIN_DEPLOY_NS + DeploymentDecay_;
+
       Trial = easy::jit_with_optimizer<T, Args...>(OptFromEntry, std::forward<T>(Fun));
       return reinterpret_cast<wrapper_ty&>(Trial);
     }
@@ -175,9 +188,7 @@ class ATDriver {
     ///////////
     // otherwise, quickly return the best version since we don't want to wait.
 
-    assert(!Best.isEmpty() && "logic error!");
-
-    if (BEST_SWAP_ENABLE && timeToExperiment && Others.size() > 0) {
+    if (BEST_SWAP_ENABLE && deployedLongEnough && Others.size() > 0) {
       // We would have experimented, but we were impatient.
       // Next best thing to do is quickly recheck whether the current
       // "best" version is still actually the best, since extensive usage
@@ -200,6 +211,7 @@ class ATDriver {
       if (othersBest != INF) {
         double diff = currentBest - othersBest;
         if (diff >= (currentBest * BEST_SWAP_MARGIN_HUNK)) {
+          // Swap out the current best for one of the others.
 #ifndef NDEBUG  ///////////////
           std::cout << "best = " << currentBest
                     << ", othersBest[" << othersBestIdx << "] = " << othersBest
@@ -207,6 +219,7 @@ class ATDriver {
 #endif ////////////////////////
           auto OldBest = std::move(Best);
           Best = std::move(Others[othersBestIdx]);
+          Best.getFeedback().resetDeployedTime();
           Others[othersBestIdx] = std::move(OldBest);
         }
       }
