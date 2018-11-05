@@ -26,6 +26,11 @@ namespace tuner {
       easy::FunctionWrapperBase Best;
       std::vector<easy::FunctionWrapperBase> Others;
 
+      // Recurrence where n corresponds to the value of FullExperiments.
+      // Thresh(0) = MinDeploy
+      // Thresh(n) = Thresh(n-1) + GrowthFactor * Thresh(n-1)
+      double DeploymentThresh = EXPERIMENT_MIN_DEPLOY_NS;
+
       // statistics
       uint64_t Requests = 0; // total requests to reoptimize this function
       uint64_t FullExperiments = 0; // total experiments performed
@@ -40,8 +45,6 @@ class ATDriver {
 
   protected:
   std::unordered_map<Key, Entry> DriverState_;
-  double DeploymentDecay_ = 1.0; // 1 * b * b * b .... where b is 1.0 + decay rate.
-  double DeploymentThresh_ = EXPERIMENT_MIN_DEPLOY_NS;
   std::optional<std::string> dumpStats; // std::filesystem not available in GCC 7
 
 
@@ -69,6 +72,7 @@ class ATDriver {
 
       JSON::output(file, "requests", E.Requests);
       JSON::output(file, "experiments", E.FullExperiments);
+      JSON::output(file, "deploy_thresh", E.DeploymentThresh);
 
       E.Opt->dumpStats(file);
 
@@ -156,7 +160,7 @@ class ATDriver {
     // otherwise, we're free to make a decision on whether to
     // experiment again, or make use of the best version so far.
 
-    bool deployedLongEnough = Best.getFeedback().getDeployedTime() >= DeploymentThresh_;
+    bool deployedLongEnough = Best.getFeedback().getDeployedTime() >= Info.DeploymentThresh;
     bool isNoopTuner = OptFromEntry.isNoopTuner();
     bool shouldReturnBest = isNoopTuner;
 
@@ -177,9 +181,7 @@ class ATDriver {
 
       // raise the deployment threshold
       Info.FullExperiments += 1;
-      DeploymentDecay_ *= 1.0 + EXPERIMENT_DECAY_RATE;
-      DeploymentThresh_ =   // min + (1.0 + decayRate) ^ FullExperiments
-          EXPERIMENT_MIN_DEPLOY_NS + DeploymentDecay_;
+      Info.DeploymentThresh += Info.DeploymentThresh * EXPERIMENT_DEPLOY_GROWTH_RATE;
 
       Trial = easy::jit_with_optimizer<T, Args...>(OptFromEntry, std::forward<T>(Fun));
       return reinterpret_cast<wrapper_ty&>(Trial);

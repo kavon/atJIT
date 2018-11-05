@@ -7,7 +7,7 @@
 #include <bitset>
 
 #define DEFAULT_MIN_TRIALS      2
-#define DEFAULT_COMPILE_AHEAD   10
+#define DEFAULT_COMPILE_AHEAD   2
 #define DEFAULT_STD_ERR_PCT     10.0
 #define COMPILE_JOB_BAILOUT_MS  90'000
 
@@ -15,9 +15,9 @@
 #define BEST_SWAP_MARGIN_HUNK   0.01
 #define BEST_SWAP_ENABLE        false
 
-// DECAY_RATE * 100 = percent
-#define EXPERIMENT_DECAY_RATE     0.1
-#define EXPERIMENT_MIN_DEPLOY_NS  1'000'000
+// GROWTH_RATE * 100 = percent
+#define EXPERIMENT_DEPLOY_GROWTH_RATE     2.5
+#define EXPERIMENT_MIN_DEPLOY_NS          5'000'000
 
 namespace tuner {
   // a "missing" value indicator
