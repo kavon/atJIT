@@ -48,6 +48,8 @@ namespace tuner {
     const double Tradeoff_ = 0.5; // [0,1] indicates how much to "explore", with
                             // the remaining percent used to "exploit".
 
+    int aheadOfTimeCount = 0;
+
     std::list<KnobConfig> Predictions_; // current top predictions
 
     /////// members related to the dataset
@@ -426,11 +428,22 @@ namespace tuner {
       }
     }
 
-    // either we're still establishing a random prior,
-    // or we have a bounded set of predictions still sitting around.
+    // we often can produce another config, so we
+    // need to bound the number of yes's given to avoid runaway
+    // AOT compilation. Otherwise, we must say "no" when all predictions
+    // are used up so that a training phase can occur.
+    //
+    // TODO(kavon): I'm not a fan of how the JIT pipeline has to be flushed
+    // to retrain the surrogate model. It should occur in the pipeline.
     bool shouldCompileNext () override {
-      size_t numConfg = Configs_.size();
-      return numConfg < BatchSz_  ||  Predictions_.size() > 0;
+      const uint32_t BOUND = std::min(BatchSz_, (uint32_t) DEFAULT_COMPILE_AHEAD);
+      bool aotLimiter = aheadOfTimeCount < BOUND;
+      if (!aotLimiter)
+        aheadOfTimeCount = 0;
+      else
+        aheadOfTimeCount++;
+
+      return aotLimiter && Predictions_.size() > 0;
     }
 
     GenResult& getNextConfig() override {
