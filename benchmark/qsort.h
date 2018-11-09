@@ -208,6 +208,14 @@ BENCHMARK(TUNING_qsort)
   ->UseRealTime();
 
 
+// cleanup after ourselves
+#undef ISORT_MAX_CUTOFF
+#undef ISORT_MIN_CUTOFF
+#undef ISORT_IDEAL_CUTOFF
+#undef QSORT_MIN
+#undef QSORT_MAX
+#undef ITER_MIN
+#undef ITER_MAX
 
 
 #endif // BENCH_QSORT

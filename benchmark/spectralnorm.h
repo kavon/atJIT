@@ -69,4 +69,56 @@ double __attribute__((noinline)) spectralnorm (const int N) {
 /////////////////////////////////////////////////////////////////
 
 
+/////////////////////
+// benchmark driver
+
+// TUNED, with all JIT overheads included.
+static void TUNING_spectralnorm(benchmark::State& state) {
+  const int N = state.range(0);
+  const int ITERS = state.range(1);
+  tuner::AutoTuner TK = static_cast<tuner::AutoTuner>(state.range(2));
+
+  for (auto _ : state) {
+    tuner::ATDriver AT("./TUNING_spectralnorm.json");
+    auto Tuner = easy::options::tuner_kind(TK);
+
+    for (int i = 0; i < ITERS; i++) {
+      auto const& my_specnorm = AT.reoptimize(spectralnorm, _1, Tuner);
+
+      my_specnorm(N);
+    }
+    // NOTE: we don't want to time the driver's destructor
+    state.PauseTiming();
+  }
+}
+
+
+/////////////////////////////
+// benchmark registration
+
+#define SPECNORM_MIN 150
+#define SPECNORM_MAX 300
+#define ITER_MIN 40
+#define ITER_MAX 80
+
+static void SpecnormArgs(benchmark::internal::Benchmark* b) {
+  for (tuner::AutoTuner TK : tuner::AllTuners)
+    for (int i = ITER_MIN; i <= ITER_MAX; i *= 2)
+      for (int sz = SPECNORM_MIN; sz <= SPECNORM_MAX; sz *= 2)
+        b->Args({sz, i, TK});
+}
+
+BENCHMARK(TUNING_spectralnorm)
+  ->Unit(benchmark::kMillisecond)
+  ->Apply(SpecnormArgs)
+  ->UseRealTime();
+
+
+// cleanup
+#undef SPECNORM_MIN
+#undef SPECNORM_MAX
+#undef ITER_MIN
+#undef ITER_MAX
+
+
 #endif // BENCH_SPECNORM
