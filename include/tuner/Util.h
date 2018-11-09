@@ -16,8 +16,8 @@
 #define BEST_SWAP_ENABLE        false
 
 // GROWTH_RATE * 100 = percent
-#define EXPERIMENT_DEPLOY_GROWTH_RATE     2.5
-#define EXPERIMENT_MIN_DEPLOY_NS          5'000'000
+#define EXPERIMENT_DEPLOY_GROWTH_RATE     0.2
+#define EXPERIMENT_MIN_DEPLOY_NS          50'000
 
 namespace tuner {
   // a "missing" value indicator

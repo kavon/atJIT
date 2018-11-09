@@ -98,8 +98,8 @@ static void TUNING_spectralnorm(benchmark::State& state) {
 
 #define SPECNORM_MIN 150
 #define SPECNORM_MAX 300
-#define ITER_MIN 40
-#define ITER_MAX 80
+#define ITER_MIN 256
+#define ITER_MAX 2048
 
 static void SpecnormArgs(benchmark::internal::Benchmark* b) {
   for (tuner::AutoTuner TK : tuner::AllTuners)

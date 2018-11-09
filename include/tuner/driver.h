@@ -33,7 +33,9 @@ namespace tuner {
 
       // statistics
       uint64_t Requests = 0; // total requests to reoptimize this function
-      uint64_t FullExperiments = 0; // total experiments performed
+      uint64_t FullExperiments = 0; // total full (jit) experiments performed
+      uint64_t FastExperiments = 0; // total quick swap experiments performed.
+      uint64_t BestSwaps = 0; // total number of actual swaps in Fast experiment
     };
   }
 
@@ -72,6 +74,8 @@ class ATDriver {
 
       JSON::output(file, "requests", E.Requests);
       JSON::output(file, "experiments", E.FullExperiments);
+      JSON::output(file, "fast_experiments", E.FastExperiments);
+      JSON::output(file, "best_swaps", E.BestSwaps);
       JSON::output(file, "deploy_thresh", E.DeploymentThresh);
 
       E.Opt->dumpStats(file);
@@ -196,6 +200,8 @@ class ATDriver {
       // "best" version is still actually the best, since extensive usage
       // which gives us more accurate measurements.
 
+      Info.FastExperiments += 1;
+
       double currentBest = Best.getFeedback().avgMeasurement().value();
       const double INF = std::numeric_limits<double>::infinity();
       double othersBest = INF;
@@ -214,6 +220,7 @@ class ATDriver {
         double diff = currentBest - othersBest;
         if (diff >= (currentBest * BEST_SWAP_MARGIN_HUNK)) {
           // Swap out the current best for one of the others.
+          Info.BestSwaps += 1;
 #ifndef NDEBUG  ///////////////
           std::cout << "best = " << currentBest
                     << ", othersBest[" << othersBestIdx << "] = " << othersBest
