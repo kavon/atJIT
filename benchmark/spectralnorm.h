@@ -36,10 +36,12 @@ void eval_At_times_u(int N, const double u[], double Au[])
 void eval_AtA_times_u(int N, const double u[], double AtAu[])
 { double v[N]; eval_A_times_u(N,u,v); eval_At_times_u(N,v,AtAu); }
 
-int main(int argc, char *argv[])
-{
+
+// start of benchmark. default N is 2000
+//
+// for N = 100, output should be 1.274219991
+int spectralnorm (const int N) {
   int i;
-  const int N = ((argc == 2) ? atoi(argv[1]) : 2000);
   double u[N],v[N],vBv,vv;
   for(i=0;i<N;i++) u[i]=1;
   for(i=0;i<10;i++)
