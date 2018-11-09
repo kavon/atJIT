@@ -36,8 +36,12 @@ void eval_At_times_u(int N, const double u[], double Au[])
     }
 }
 
-void eval_AtA_times_u(int N, const double u[], double AtAu[])
-{ double v[N]; eval_A_times_u(N,u,v); eval_At_times_u(N,v,AtAu); }
+void eval_AtA_times_u(int N, const double u[], double AtAu[]) {
+  double* v = (double*) malloc(sizeof(double) * N);
+  eval_A_times_u(N,u,v);
+  eval_At_times_u(N,v,AtAu);
+  free(v);
+}
 
 
 /////////////////////////////////////////////////
@@ -46,7 +50,9 @@ void eval_AtA_times_u(int N, const double u[], double AtAu[])
 // for N = 100, output should be 1.274219991
 double __attribute__((noinline)) spectralnorm (const int N) {
   int i;
-  double u[N],v[N],vBv,vv;
+  double* u = (double*) malloc(sizeof(double) * N);
+  double* v = (double*) malloc(sizeof(double) * N);
+  double vBv,vv;
   for(i=0;i<N;i++) u[i]=1;
   for(i=0;i<10;i++)
     {
@@ -55,6 +61,8 @@ double __attribute__((noinline)) spectralnorm (const int N) {
     }
   vBv=vv=0;
   for(i=0;i<N;i++) { vBv+=u[i]*v[i]; vv+=v[i]*v[i]; }
+  free(u);
+  free(v);
   return sqrt(vBv/vv);
 }
 

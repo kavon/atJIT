@@ -18,5 +18,7 @@ using namespace std::placeholders;
 
 #include "qsort.h"
 
+#include "spectralnorm.h"
+
 
 BENCHMARK_MAIN();
