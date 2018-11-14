@@ -34,7 +34,8 @@ namespace tuner {
   template < typename RNE >
   int nearbyInt (RNE &Eng, int cur, int min, int max, double energy) {
     // 68% of values drawn will be within this distance from the old value.
-    int scaledRange = (max - min) * (energy / 100.0);
+    int range = std::abs(max - min);
+    int scaledRange = range * (energy / 100.0);
     int stdDev = scaledRange / 2.0;
 
     // sample from a normal distribution, where the mean is
