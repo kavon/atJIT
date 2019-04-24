@@ -21,11 +21,11 @@ namespace tuner {
 
 class Feedback {
 public:
-  using Token = std::chrono::time_point<std::chrono::system_clock>;
+  using TimePoint = std::chrono::time_point<std::chrono::steady_clock>;
 
   virtual ~Feedback() = default;
-  virtual Token startMeasurement() = 0;
-  virtual void endMeasurement(Token) = 0;
+  virtual TimePoint startMeasurement() = 0;
+  virtual void endMeasurement(TimePoint) = 0;
 
   bool betterThan(Feedback& Other) {
     // lower times are better, where `this` is selfish
@@ -57,11 +57,11 @@ public:
 
 class NoOpFeedback : public Feedback {
 private:
-  Token dummy;
+  TimePoint dummy;
 public:
-  NoOpFeedback() : dummy(std::chrono::system_clock::now()) { }
-  Token startMeasurement() override { return dummy; }
-  void endMeasurement(Token t) override { }
+  NoOpFeedback() : dummy(std::chrono::steady_clock::now()) { }
+  TimePoint startMeasurement() override { return dummy; }
+  void endMeasurement(TimePoint t) override { }
 
   virtual void dump(std::ostream &os) override {}
 }; // end class
@@ -70,12 +70,12 @@ public:
 
 // does not compute an average, etc. nice for debugging.
 class DebuggingFB : public Feedback {
-  Token startMeasurement() override {
-    return std::chrono::system_clock::now();
+  TimePoint startMeasurement() override {
+    return std::chrono::steady_clock::now();
   }
 
-  void endMeasurement(Token Start) override {
-    auto End = std::chrono::system_clock::now();
+  void endMeasurement(TimePoint Start) override {
+    auto End = std::chrono::steady_clock::now();
     std::chrono::duration<int64_t, std::nano> elapsed = (End - Start);
     std::cout << "== elapsed time: " << elapsed.count() << " ns ==\n";
   }
@@ -83,6 +83,58 @@ class DebuggingFB : public Feedback {
   void dump(std::ostream &os) override { }
 
 }; // end class
+
+
+class RecentFeedbackBuffer : public Feedback {
+private:
+  // circular buffer of samples.
+  // cur is the index of the oldest sample.
+  std::mutex protecc;
+  size_t bufSz;
+  size_t cur = 0;
+
+protected:
+  size_t observations = 0; // total. only most recent are tracked in detail.
+  TimePoint* startBuf;
+  TimePoint* endBuf;
+
+public:
+  RecentFeedbackBuffer(size_t n = 10) : bufSz(n) {
+    // initialize buffers
+    startBuf = new TimePoint[bufSz];
+    endBuf = new TimePoint[bufSz];
+  }
+
+  ~RecentFeedbackBuffer() {
+    delete[] startBuf;
+    delete[] endBuf;
+  }
+
+  TimePoint startMeasurement() override {
+    return std::chrono::steady_clock::now();
+  }
+
+  void endMeasurement(TimePoint Start) override {
+    auto End = std::chrono::steady_clock::now();
+
+    /////// update the circular buffer
+
+    // TODO: make thread-specific buffers to avoid the need for a lock.
+    protecc.lock();
+    startBuf[cur] = Start;
+    endBuf[cur] = End;
+    cur = (cur + 1) % bufSz;
+    observations += 1;
+    protecc.unlock();
+  }
+
+  virtual void dump(std::ostream &os) override {
+    // TODO
+  }
+
+  #undef EMPTY_SLOT
+};
+
 
 
 class ExecutionTime : public Feedback {
@@ -140,12 +192,12 @@ public:
     return retVal;
   }
 
-  Token startMeasurement() override {
-    return std::chrono::system_clock::now();
+  TimePoint startMeasurement() override {
+    return std::chrono::steady_clock::now();
   }
 
-  void endMeasurement(Token Start) override {
-    auto End = std::chrono::system_clock::now();
+  void endMeasurement(TimePoint Start) override {
+    auto End = std::chrono::steady_clock::now();
     std::chrono::duration<int64_t, std::nano> elapsedDur = (End - Start);
 
     int64_t elapsedTime = elapsedDur.count();
