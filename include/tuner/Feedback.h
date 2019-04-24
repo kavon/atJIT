@@ -128,11 +128,8 @@ public:
     protecc.unlock();
   }
 
-  virtual void dump(std::ostream &os) override {
-    // TODO
-  }
+  virtual void dump(std::ostream &os) = 0;
 
-  #undef EMPTY_SLOT
 };
 
 
