@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
           IntRange(minVal, maxVal, dflt),
           dummy,
           tuner_kind(TunerKind),
-          pct_err(50),
+          feedback_kind(tuner::FB_Total_IgnoreError),
           blocking(true)
           );
 

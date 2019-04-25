@@ -36,7 +36,7 @@ namespace tuner {
         KC = genRandomConfig(KS_, Gen_);
 
       auto Conf = std::make_shared<KnobConfig>(KC);
-      auto FB = std::make_shared<TotalExecutionTime>(Cxt_->getFeedbackStdErr());
+      auto FB = createFeedback(Cxt_->getFeedbackKind(), PREFERRED_FEEDBACK);
 
       // keep track of this config.
       Configs_.push_back({Conf, FB});

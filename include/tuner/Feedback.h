@@ -13,6 +13,8 @@
 #include <tuner/Util.h>
 #include <tuner/JSON.h>
 
+#include <easy/runtime/Context.h>
+
 /////
 // collects data and other information about the quality of configurations.
 // for subsequent feedback-directed reoptimization.
@@ -335,6 +337,14 @@ public:
     protecc.unlock();
   }
 }; // end class
+
+
+// create a feedback object based on the user's request.
+// if the user requested "None", then the caller's preference is used
+// instead (which may also be None).
+std::shared_ptr<Feedback> createFeedback(FeedbackKind requested, std::optional<FeedbackKind> preferred);
+
+
 
 } // end namespace
 

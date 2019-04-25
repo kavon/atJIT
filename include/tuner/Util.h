@@ -19,6 +19,8 @@
 #define EXPERIMENT_DEPLOY_GROWTH_RATE     0.2
 #define EXPERIMENT_MIN_DEPLOY_NS          50'000
 
+#define PREFERRED_FEEDBACK  FB_Total
+
 namespace tuner {
   // a "missing" value indicator
   static constexpr float MISSING = std::numeric_limits<float>::quiet_NaN();

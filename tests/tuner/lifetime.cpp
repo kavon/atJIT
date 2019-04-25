@@ -52,10 +52,14 @@ int main(int argc, char** argv) {
   for (int i = 0; i < ITERS; i++) {
     tuner::ATDriver AT;
     auto const& Func1 = AT.reoptimize(doNothing, IntRange(minVal, maxVal, dflt),
-                                        tuner_kind(TunerKind), pct_err(-1), blocking(true));
+                                        tuner_kind(TunerKind),
+                                        feedback_kind(tuner::FB_Total_IgnoreError),
+                                        blocking(true));
 
     auto const& Func2 = AT.reoptimize(doNothing, IntRange(minVal, maxVal, dflt),
-                                        tuner_kind(TunerKind), pct_err(-1), blocking(true));
+                                        tuner_kind(TunerKind),
+                                        feedback_kind(tuner::FB_Total_IgnoreError),
+                                        blocking(true));
 
 
     Func1();

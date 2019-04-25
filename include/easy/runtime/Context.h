@@ -8,7 +8,6 @@
 
 #include <easy/runtime/Function.h>
 #include <tuner/param.h>
-#include <tuner/Feedback.h>
 
 namespace tuner {
   enum AutoTuner {
@@ -29,6 +28,14 @@ namespace tuner {
   }
 
   static const std::vector<AutoTuner> AllTuners = {AT_None, AT_Random, AT_Bayes, AT_Anneal};
+
+  enum FeedbackKind {
+    FB_None,
+    FB_Total,
+    FB_Total_IgnoreError,
+    FB_Recent,
+    FB_Recent_NP
+  };
 }
 
 namespace easy {
@@ -162,7 +169,7 @@ class Context {
 
   // NOTE: these values do not factor into the equality of two contexts,
   // they are blind to these options.
-  double FeedbackStdErr_ = DEFAULT_STD_ERR_PCT;
+  tuner::FeedbackKind FeedbackKind_ = tuner::FB_None;
   bool WaitForCompile_ = false;
 
 
@@ -202,13 +209,13 @@ class Context {
     return *this;
   }
 
-  Context& setFeedbackStdErr(double val) {
-    FeedbackStdErr_ = val;
+  Context& setFeedbackKind(tuner::FeedbackKind FBK) {
+    FeedbackKind_ = FBK;
     return *this;
   }
 
-  double getFeedbackStdErr() const {
-    return FeedbackStdErr_;
+  tuner::FeedbackKind getFeedbackKind() const {
+    return FeedbackKind_;
   }
 
   Context& setWaitForCompile(bool val) {

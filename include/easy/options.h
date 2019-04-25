@@ -46,18 +46,18 @@ namespace options{
       tuner::AutoTuner kind_;
   };
 
-  // tuner's willingness to accept noise
-  EASY_NEW_OPTION_STRUCT(pct_err) {
+  // the feedback module used to analyze perf
+  EASY_NEW_OPTION_STRUCT(feedback_kind) {
 
-    pct_err(double val)
+    feedback_kind(tuner::FeedbackKind val)
                : val_(val) {}
 
     EASY_HANDLE_OPTION_STRUCT(IGNORED, C) {
-      C.setFeedbackStdErr(val_);
+      C.setFeedbackKind(val_);
     }
 
     private:
-      double val_;
+      tuner::FeedbackKind val_;
   };
 
   // if true, the driver will be more willing to

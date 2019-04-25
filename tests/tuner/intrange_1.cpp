@@ -40,6 +40,7 @@ void show(int i, int k) {
 int main(int argc, char** argv) {
 
   tuner::AutoTuner TunerKind = tuner::AT_Random;
+  tuner::FeedbackKind FBK = tuner::FB_Total_IgnoreError;
   const int ITERS = 5;
 
   tuner::ATDriver AT;
@@ -47,7 +48,7 @@ int main(int argc, char** argv) {
   for (int i = 0; i < ITERS; i++) {
     auto const &OptimizedFun = AT.reoptimize(show,
           IntRange(-8, 9, 9), _1,
-          tuner_kind(TunerKind), pct_err(-1), blocking(true));
+          tuner_kind(TunerKind), feedback_kind(FBK), blocking(true));
 
     OptimizedFun(i);
   }
