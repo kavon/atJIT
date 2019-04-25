@@ -1,10 +1,17 @@
-
-
-
-
 #include <tuner/Feedback.h>
 
 namespace tuner {
+
+
+void calculate_parametric_statistics(
+                                std::vector<Feedback::TimePoint>& startBuf,
+                                std::vector<Feedback::TimePoint>& endBuf,
+                                size_t sampleSz,
+                                double& average,
+                                double& sampleVariance) {
+
+  throw std::runtime_error("implement calculate_parametric_statistics");
+}
 
 
 std::shared_ptr<Feedback> createFeedback(FeedbackKind requested, std::optional<FeedbackKind> preferred) {
@@ -22,7 +29,7 @@ std::shared_ptr<Feedback> createFeedback(FeedbackKind requested, std::optional<F
       return std::make_shared<TotalExecutionTime>(-1);
 
     case FB_Recent:
-      // return std::make_shared<RecentExecutionTime>();
+      return std::make_shared<RecentExecutionTime>();
 
     case FB_Recent_NP:
     default:

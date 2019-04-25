@@ -20,6 +20,8 @@
 
 namespace tuner {
 
+/////////////// BASE CLASS ///////////////
+
 class Feedback {
 public:
   using TimePoint = std::chrono::time_point<std::chrono::steady_clock>;
@@ -56,6 +58,20 @@ public:
 
 
 
+/////////////// UTILITY FUNCTIONS ///////////////
+
+void calculate_parametric_statistics(
+                                std::vector<Feedback::TimePoint>& startBuf,
+                                std::vector<Feedback::TimePoint>& endBuf,
+                                size_t sampleSz,
+                                double& average,
+                                double& sampleVariance
+                              );
+
+
+
+/////////////// DERIVED CLASSES ///////////////
+
 class NoOpFeedback : public Feedback {
 private:
   TimePoint dummy;
@@ -90,28 +106,21 @@ class RecentFeedbackBuffer : public Feedback {
 private:
   // circular buffer of samples.
   // cur is the index of the oldest sample.
-  std::mutex protecc;
   size_t cur = 0;
 
 protected:
-  size_t observations = 0; // total. only most recent are tracked in detail.
-  uint64_t deployedTime = 0; // total.
+  std::atomic<size_t> observations = 0; // total. only most recent are tracked in detail.
+  std::atomic<uint64_t> deployedTime = 0; // total.
 
-  TimePoint* startBuf;
-  TimePoint* endBuf;
+  std::mutex bufLock;
+  std::vector<TimePoint> startBuf;
+  std::vector<TimePoint> endBuf;
   size_t bufSz;
 
 public:
-  RecentFeedbackBuffer(size_t n = 10) : bufSz(n) {
-    // initialize buffers
-    startBuf = new TimePoint[bufSz];
-    endBuf = new TimePoint[bufSz];
-  }
+  RecentFeedbackBuffer(size_t n = 10) : bufSz(n), startBuf(n), endBuf(n) { }
 
-  ~RecentFeedbackBuffer() {
-    delete[] startBuf;
-    delete[] endBuf;
-  }
+  ~RecentFeedbackBuffer() { }
 
   TimePoint startMeasurement() override {
     return std::chrono::steady_clock::now();
@@ -126,7 +135,7 @@ public:
 
     //////////////////////////////////////
     // START the critical section
-    protecc.lock();
+    bufLock.lock();
     // TODO: I don't really think we need to be tracking total deployed time.
     // we can cut overhead out by not tracking it.
     std::chrono::duration<int64_t, std::nano> elapsedDur = (End - Start);
@@ -136,41 +145,20 @@ public:
     startBuf[cur] = Start;
     endBuf[cur] = End;
     cur = (cur + 1) % bufSz;
-    observations += 1;
+    observations++;
     deployedTime += elapsedTime;
 
     //////////////////////////////////////
     // END of critical section
-    protecc.unlock();
+    bufLock.unlock();
   }
 
   void resetDeployedTime() override {
-    //////////////////////////////////////
-    // START the critical section
-    protecc.lock();
-
     deployedTime = 0;
-
-    //////////////////////////////////////
-    // END of critical section
-    protecc.unlock();
   }
 
-  // TODO(kavon): is a critical section needed here on the read?
   uint64_t getDeployedTime() override {
-    //////////////////////////////////////
-    // START the critical section
-    uint64_t retVal;
-
-    // protecc.lock();
-
-    retVal = deployedTime;
-
-    //////////////////////////////////////
-    // END of critical section
-    // protecc.unlock();
-
-    return retVal;
+    return deployedTime;
   }
 
   virtual void dump(std::ostream &os) = 0;
@@ -180,14 +168,53 @@ public:
 
 
 class RecentExecutionTime : public RecentFeedbackBuffer {
+private:
+  size_t lastCalc = 0;
 
-  RecentExecutionTime() : RecentFeedbackBuffer(100) {}
+  size_t sampleSize;
+  double average;
+  double sampleVariance;
+
+  // TODO: this might need to become a public member of the base class.
+  void updateStats() {
+    // new observations have come in since this method
+    // was last called, so we recalulate things.
+
+    bufLock.lock();
+    lastCalc = observations;
+    sampleSize = std::min(bufSz, lastCalc);
+
+    std::vector<TimePoint> startBufCopy(startBuf);
+    std::vector<TimePoint> endBufCopy(endBuf);
+    bufLock.unlock();
+
+    // perform calculations without lock held
+    calculate_parametric_statistics(startBufCopy, endBufCopy, sampleSize, average, sampleVariance);
+  }
+
+public:
+
+  RecentExecutionTime() : RecentFeedbackBuffer(64) {}
 
   virtual bool goodQuality() override { return false; }
 
-  virtual double avgMeasurement() override { return 0; }
+  virtual double avgMeasurement() override {
+    if (lastCalc == observations)
+      return average;
+
+    updateStats();
+    return average;
+  }
 
   virtual bool betterThan(Feedback& Other) override { return false; }
+
+  virtual void dump(std::ostream &os) {
+    JSON::beginObject(os);
+
+    JSON::output(os, "feedback_kind", "recent_execution");
+
+    JSON::endObject(os);
+  }
 
 };
 
