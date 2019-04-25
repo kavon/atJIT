@@ -43,11 +43,11 @@ namespace tuner {
     }
 
     bool missingCost(GenResult const& R) const {
-      return R.second->avgMeasurement().has_value() == false;
+      return R.second->goodQuality() == false;
     }
 
     double getCost(GenResult const& R) const {
-      return R.second->avgMeasurement().value();
+      return R.second->avgMeasurement();
     }
 
     // corresponds to T(t)

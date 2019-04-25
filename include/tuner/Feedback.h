@@ -31,17 +31,17 @@ public:
     // lower times are better, where `this` is selfish
     // and says its better with an equivalent measure.
 
-    std::optional<double> mine = this->avgMeasurement();
-    std::optional<double> theirs = Other.avgMeasurement();
+    double mine = this->avgMeasurement();
+    double theirs = Other.avgMeasurement();
 
-    return mine.value_or(DBL_MAX) <= theirs.value_or(DBL_MAX);
+    return mine <= theirs;
   }
 
   virtual bool goodQuality() { return false; }
 
-  // "None" indicates that there is no accurate average available yet.
-  virtual std::optional<double> avgMeasurement() {
-    return std::nullopt;
+  // Consult goodQuality to determine if this value is useful.
+  virtual double avgMeasurement() {
+    return DBL_MAX;
   }
 
   virtual void dump(std::ostream &os) = 0;
@@ -95,6 +95,8 @@ private:
 
 protected:
   size_t observations = 0; // total. only most recent are tracked in detail.
+  uint64_t deployedTime = 0; // total.
+
   TimePoint* startBuf;
   TimePoint* endBuf;
 
@@ -120,12 +122,54 @@ public:
     /////// update the circular buffer
 
     // TODO: make thread-specific buffers to avoid the need for a lock.
+
+    //////////////////////////////////////
+    // START the critical section
     protecc.lock();
+    // TODO: I don't really think we need to be tracking total deployed time.
+    // we can cut overhead out by not tracking it.
+    std::chrono::duration<int64_t, std::nano> elapsedDur = (End - Start);
+    int64_t elapsedTime = elapsedDur.count();
+    assert(elapsedTime > 0 && "encountered a negative time?");
+
     startBuf[cur] = Start;
     endBuf[cur] = End;
     cur = (cur + 1) % bufSz;
     observations += 1;
+    deployedTime += elapsedTime;
+
+    //////////////////////////////////////
+    // END of critical section
     protecc.unlock();
+  }
+
+  void resetDeployedTime() override {
+    //////////////////////////////////////
+    // START the critical section
+    protecc.lock();
+
+    deployedTime = 0;
+
+    //////////////////////////////////////
+    // END of critical section
+    protecc.unlock();
+  }
+
+  // TODO(kavon): is a critical section needed here on the read?
+  uint64_t getDeployedTime() override {
+    //////////////////////////////////////
+    // START the critical section
+    uint64_t retVal;
+
+    // protecc.lock();
+
+    retVal = deployedTime;
+
+    //////////////////////////////////////
+    // END of critical section
+    // protecc.unlock();
+
+    return retVal;
   }
 
   virtual void dump(std::ostream &os) = 0;
@@ -134,8 +178,8 @@ public:
 
 
 
-class ExecutionTime : public Feedback {
-
+class ExecutionTime : public RecentFeedbackBuffer {
+private:
   //////////////
   // this lock protects all fields of this object.
   std::mutex protecc;
@@ -149,8 +193,6 @@ class ExecutionTime : public Feedback {
   double errBound = 0; // a precentage
   uint64_t dataPoints = 0;
 
-  uint64_t deployedTime = 0; // total execution time keeper since the last reset.
-
 public:
   //////////////////////////
   // a value < 0 says:   ignore the stdErr and always return the average, if
@@ -160,34 +202,6 @@ public:
   ExecutionTime(double errPctBound = DEFAULT_STD_ERR_PCT)
       : errBound(errPctBound) {}
 
-  void resetDeployedTime() override {
-    ////////////////////////////////////////////////////////////////////
-    // START the critical section
-    protecc.lock();
-
-    deployedTime = 0;
-
-    ////////////////////////////////////////////////////////////////////
-    // END of critical section
-    protecc.unlock();
-  }
-
-  // TODO(kavon): is a critical section really needed here on the read?
-  uint64_t getDeployedTime() override {
-    ////////////////////////////////////////////////////////////////////
-    // START the critical section
-    uint64_t retVal;
-
-    protecc.lock();
-
-    retVal = deployedTime;
-
-    ////////////////////////////////////////////////////////////////////
-    // END of critical section
-    protecc.unlock();
-
-    return retVal;
-  }
 
   TimePoint startMeasurement() override {
     return std::chrono::steady_clock::now();
@@ -267,12 +281,12 @@ public:
    return ans;
   }
 
-  std::optional<double> avgMeasurement() override {
+  double avgMeasurement() override {
     ////////////////////////////////////////////////////////////////////
     // START the critical section
     protecc.lock();
 
-    std::optional<double> retVal = std::nullopt;
+    double retVal = DBL_MAX;
     if (dataPoints >= 1) {
       retVal = average;
     }

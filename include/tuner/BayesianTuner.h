@@ -150,12 +150,10 @@ namespace tuner {
 
         exportConfig(*KC, configOut, i, ncol, colToKnob);
 
-        std::optional<double> measure = std::nullopt;
-
-        if( !(measure = FB->avgMeasurement()) )
+        if( !FB->goodQuality() )
           throw std::logic_error("Bayes Tuner -- missing running time value?");
 
-        resultOut[i] = measure.value();
+        resultOut[i] = FB->avgMeasurement();
       }
 
       assert(i == trainingRows && "bad generation of dataset");
