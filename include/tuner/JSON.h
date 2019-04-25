@@ -5,8 +5,6 @@
 #include <string>
 #include <iomanip>
 
-#include <tuner/LoopKnob.h>
-
 // quick and dirty JSON dumper
 class JSON {
   static int depth;

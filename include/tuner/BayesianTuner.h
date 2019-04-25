@@ -4,6 +4,8 @@
 #include <tuner/AnalyzingTuner.h>
 #include <tuner/Util.h>
 
+#include <loguru.hpp>
+
 #include <cstdlib>
 #include <cassert>
 #include <set>
@@ -150,10 +152,12 @@ namespace tuner {
 
         exportConfig(*KC, configOut, i, ncol, colToKnob);
 
-        if( !FB->goodQuality() )
-          throw std::logic_error("Bayes Tuner -- missing running time value?");
+        double time = FB->avgMeasurement();
 
-        resultOut[i] = FB->avgMeasurement();
+        if (time == std::numeric_limits<double>::max())
+          ABORT_F("Bayes Tuner -- training on unevaluated code fragment!");
+
+        resultOut[i] = time;
       }
 
       assert(i == trainingRows && "bad generation of dataset");
@@ -202,7 +206,7 @@ namespace tuner {
 
       //////////////////////
       // learn
-      double bestErr = std::numeric_limits<double>::infinity();
+      double bestErr = std::numeric_limits<double>::max();
       bst_ulong bestLen;
       char *bestModel = NULL;
       unsigned bestIter;

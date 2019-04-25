@@ -203,7 +203,7 @@ class ATDriver {
       Info.FastExperiments += 1;
 
       double currentBest = Best.getFeedback().avgMeasurement();
-      const double INF = std::numeric_limits<double>::infinity();
+      const double INF = std::numeric_limits<double>::max();
       double othersBest = INF;
       size_t othersBestIdx;
 

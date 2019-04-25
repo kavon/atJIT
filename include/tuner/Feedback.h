@@ -41,7 +41,7 @@ public:
 
   // Consult goodQuality to determine if this value is useful.
   virtual double avgMeasurement() {
-    return DBL_MAX;
+    return std::numeric_limits<double>::max();
   }
 
   virtual void dump(std::ostream &os) = 0;
@@ -286,7 +286,7 @@ public:
     // START the critical section
     protecc.lock();
 
-    double retVal = DBL_MAX;
+    double retVal = std::numeric_limits<double>::max();
     if (dataPoints >= 1) {
       retVal = average;
     }
