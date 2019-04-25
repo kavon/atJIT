@@ -7,6 +7,7 @@ add_library(EasyJitRuntime SHARED
   Function.cpp
   InitNativeTarget.cpp
   Utils.cpp
+  loguru.cpp
   pass/ContextAnalysis.cpp
   pass/DevirtualizeConstant.cpp
   pass/InlineParameters.cpp
