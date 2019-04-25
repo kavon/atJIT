@@ -27,7 +27,7 @@ public:
   virtual TimePoint startMeasurement() = 0;
   virtual void endMeasurement(TimePoint) = 0;
 
-  bool betterThan(Feedback& Other) {
+  virtual bool betterThan(Feedback& Other) {
     // lower times are better, where `this` is selfish
     // and says its better with an equivalent measure.
 
@@ -90,7 +90,6 @@ private:
   // circular buffer of samples.
   // cur is the index of the oldest sample.
   std::mutex protecc;
-  size_t bufSz;
   size_t cur = 0;
 
 protected:
@@ -99,6 +98,7 @@ protected:
 
   TimePoint* startBuf;
   TimePoint* endBuf;
+  size_t bufSz;
 
 public:
   RecentFeedbackBuffer(size_t n = 10) : bufSz(n) {
@@ -178,7 +178,21 @@ public:
 
 
 
-class ExecutionTime : public RecentFeedbackBuffer {
+class RecentExecutionTime : public RecentFeedbackBuffer {
+
+  RecentExecutionTime() : RecentFeedbackBuffer(100) {}
+
+  virtual bool goodQuality() override { return false; }
+
+  virtual double avgMeasurement() override { return 0; }
+
+  virtual bool betterThan(Feedback& Other) override { return false; }
+
+};
+
+
+
+class TotalExecutionTime : public RecentFeedbackBuffer {
 private:
   //////////////
   // this lock protects all fields of this object.
@@ -199,7 +213,7 @@ public:
   //                     it exists
   // a value >= 0 says:  return if you have at least 2 observations, where
   //                     the precent std err of the mean is <= the value.
-  ExecutionTime(double errPctBound = DEFAULT_STD_ERR_PCT)
+  TotalExecutionTime(double errPctBound = DEFAULT_STD_ERR_PCT)
       : errBound(errPctBound) {}
 
 
