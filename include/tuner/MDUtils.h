@@ -1,5 +1,4 @@
-#ifndef TUNER_MDUTILS
-#define TUNER_MDUTILS
+#pragma once
 
 #include <llvm/IR/Metadata.h>
 #include <llvm/IR/Constants.h>
@@ -186,5 +185,3 @@ namespace {
 } // end namespace
 
 #pragma GCC diagnostic pop
-
-#endif // TUNER_MDUTILS

@@ -1,10 +1,7 @@
-#ifndef LLVMHOLDER
-#define LLVMHOLDER
+#pragma once
 namespace easy {
 class LLVMHolder {
   public:
   virtual ~LLVMHolder() = default;
 };
 }
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef TUNER_JSON
-#define TUNER_JSON
+#pragma once
 
 #include <fstream>
 #include <string>
@@ -76,5 +75,3 @@ public:
   }
 
 };
-
-#endif  // TUNER_JSON

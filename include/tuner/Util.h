@@ -1,5 +1,4 @@
-#ifndef TUNER_UTIL
-#define TUNER_UTIL
+#pragma once
 
 #include <limits>
 #include <cmath>
@@ -62,6 +61,3 @@ namespace tuner {
   void sleep_for(unsigned ms);
 
 } // end namespace tuner
-
-
-#endif // TUNER_UTIL

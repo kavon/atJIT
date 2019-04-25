@@ -1,5 +1,4 @@
-#ifndef LLVMHOLDER_IMPL
-#define LLVMHOLDER_IMPL
+#pragma once
 
 #include <easy/runtime/LLVMHolder.h>
 
@@ -21,5 +20,3 @@ class LLVMHolderImpl : public easy::LLVMHolder {
   virtual ~LLVMHolderImpl() = default;
 };
 }
-
-#endif

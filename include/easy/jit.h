@@ -1,5 +1,4 @@
-#ifndef EASY
-#define EASY
+#pragma once
 
 #include <easy/runtime/Context.h>
 #include <easy/attributes.h>
@@ -88,5 +87,3 @@ auto EASY_JIT_COMPILER_INTERFACE jit(T &&Fun, Args&& ... args) {
 }
 
 }
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef PARAM
-#define PARAM
+#pragma once
 
 #include <easy/runtime/Context.h>
 #include <easy/function_wrapper.h>
@@ -142,5 +141,3 @@ set_parameters(ParameterList,
 }
 
 }
-
-#endif // PARAM

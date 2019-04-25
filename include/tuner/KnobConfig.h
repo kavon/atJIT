@@ -1,5 +1,4 @@
-#ifndef TUNER_KNOBCONFIG
-#define TUNER_KNOBCONFIG
+#pragma once
 
 #include <tuner/Knob.h>
 #include <tuner/LoopKnob.h>
@@ -80,5 +79,3 @@ namespace tuner {
   void dumpConfig (std::ostream &os, KnobSet const& KS, KnobConfig const &Config);
 
 } // end namespace
-
-#endif // TUNER_KNOBCONFIG

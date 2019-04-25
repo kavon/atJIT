@@ -1,5 +1,4 @@
-#ifndef TUNER_PARAM
-#define TUNER_PARAM
+#pragma once
 
 #include <tuner/Knob.h>
 
@@ -65,5 +64,3 @@ namespace std {
     }
   };
 } // end namespace std
-
-#endif // TUNER_PARAM

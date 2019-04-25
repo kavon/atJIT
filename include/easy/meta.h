@@ -1,5 +1,4 @@
-#ifndef META
-#define META
+#pragma once
 
 #include <functional>
 #include <type_traits>
@@ -206,7 +205,3 @@ struct new_function_traits {
 
 }
 }
-
-
-
-#endif

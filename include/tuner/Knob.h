@@ -1,5 +1,4 @@
-#ifndef TUNER_KNOBS
-#define TUNER_KNOBS
+#pragma once
 
 #include <cinttypes>
 #include <climits>
@@ -126,5 +125,3 @@ struct is_knob {
 
 
 } // namespace tuner
-
-#endif // TUNER_KNOBS

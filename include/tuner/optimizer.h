@@ -1,5 +1,4 @@
-#ifndef TUNER_OPTIMIZER
-#define TUNER_OPTIMIZER
+#pragma once
 
 #include <list>
 #include <mutex>
@@ -146,5 +145,3 @@ public:
 }; // end class
 
 } // end namespace
-
-#endif // TUNER_OPTIMIZER

@@ -1,5 +1,4 @@
-#ifndef FUNCTION
-#define FUNCTION
+#pragma once
 
 #include <memory>
 
@@ -76,5 +75,3 @@ class Function {
 };
 
 }
-
-#endif

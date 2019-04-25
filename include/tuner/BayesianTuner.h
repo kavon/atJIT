@@ -1,5 +1,4 @@
-#ifndef TUNER_BAYES_TUNER
-#define TUNER_BAYES_TUNER
+#pragma once
 
 #include <tuner/AnalyzingTuner.h>
 #include <tuner/Util.h>
@@ -477,5 +476,3 @@ namespace tuner {
   }; // end class BayesianTuner
 
 } // namespace tuner
-
-#endif // TUNER_BAYES_TUNER

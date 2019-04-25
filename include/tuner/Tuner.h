@@ -1,5 +1,4 @@
-#ifndef TUNER_TUNER
-#define TUNER_TUNER
+#pragma once
 
 #include <tuner/Feedback.h>
 #include <tuner/KnobConfig.h>
@@ -180,5 +179,3 @@ namespace tuner {
   };
 
 } // namespace tuner
-
-#endif // TUNER_TUNER

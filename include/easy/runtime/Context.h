@@ -1,5 +1,4 @@
-#ifndef CONTEXT
-#define CONTEXT
+#pragma once
 
 #include <vector>
 #include <memory>
@@ -340,6 +339,3 @@ namespace std
   };
 
 } // end namespace std
-
-
-#endif

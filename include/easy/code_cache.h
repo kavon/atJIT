@@ -1,5 +1,4 @@
-#ifndef CACHE
-#define CACHE
+#pragma once
 
 #include <easy/jit.h>
 #include <unordered_map>
@@ -84,5 +83,3 @@ class Cache<AutoKey> : public CacheBase<AutoKey> {
 };
 
 }
-
-#endif // CACHE

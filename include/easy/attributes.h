@@ -1,5 +1,4 @@
-#ifndef NOINLINE
-#define NOINLINE
+#pragma once
 
 #define CI_SECTION "compiler-interface"
 #define JIT_SECTION "easy-jit"
@@ -11,5 +10,3 @@
 
 #define EASY_JIT_EXPOSE \
   __attribute__((section(JIT_SECTION)))
-
-#endif // NOINLINE

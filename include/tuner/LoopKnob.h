@@ -1,5 +1,4 @@
-#ifndef TUNER_LOOP_KNOBS
-#define TUNER_LOOP_KNOBS
+#pragma once
 
 #include <tuner/Knob.h>
 #include <tuner/Util.h>
@@ -188,5 +187,3 @@ namespace knob_type {
 std::ostream& operator<<(std::ostream &o, tuner::LoopSetting &LS);
 bool operator==(tuner::LoopSetting const& A, tuner::LoopSetting const& B);
 bool operator!=(tuner::LoopSetting const& A, tuner::LoopSetting const& B);
-
-#endif // TUNER_LOOP_KNOBS

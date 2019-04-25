@@ -1,5 +1,4 @@
-#ifndef TUNER_RANDOM_TUNER
-#define TUNER_RANDOM_TUNER
+#pragma once
 
 #include <tuner/AnalyzingTuner.h>
 #include <tuner/LoopKnob.h>
@@ -57,5 +56,3 @@ namespace tuner {
   }; // end class RandomTuner
 
 } // namespace tuner
-
-#endif // TUNER_RANDOM_TUNER

@@ -1,5 +1,4 @@
-#ifndef TUNER_KNOBSET
-#define TUNER_KNOBSET
+#pragma once
 
 #include <tuner/Knob.h>
 #include <tuner/LoopKnob.h>
@@ -60,5 +59,3 @@ namespace tuner {
  void applyToKnobs(KnobIDAppFn &F, KnobSet const &KS);
 
 }
-
-#endif // TUNER_KNOBSET

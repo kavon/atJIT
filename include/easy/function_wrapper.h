@@ -1,5 +1,4 @@
-#ifndef FUNCTION_WRAPPER
-#define FUNCTION_WRAPPER
+#pragma once
 
 #include <iostream>
 #include <memory>
@@ -155,5 +154,3 @@ struct is_function_wrapper<FunctionWrapper<Ret(Params...)>> {
 
 
 }
-
-#endif

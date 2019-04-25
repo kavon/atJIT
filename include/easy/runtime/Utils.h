@@ -1,5 +1,4 @@
-#ifndef UTILS
-#define UTILS
+#pragma once
 
 #include <string>
 #include <memory>
@@ -20,5 +19,3 @@ std::unique_ptr<llvm::Module>
 CloneModuleWithContext(llvm::Module const &LM, llvm::LLVMContext &C);
 
 }
-
-#endif

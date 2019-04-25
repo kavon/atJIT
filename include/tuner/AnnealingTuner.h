@@ -1,5 +1,4 @@
-#ifndef TUNER_ANNEALING_TUNER
-#define TUNER_ANNEALING_TUNER
+#pragma once
 
 #include <tuner/RandomTuner.h>
 
@@ -176,5 +175,3 @@ namespace tuner {
   }; // end class AnnealingTuner
 
 } // namespace tuner
-
-#endif // TUNER_ANNEALING_TUNER

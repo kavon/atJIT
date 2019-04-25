@@ -1,5 +1,4 @@
-#ifndef RUNTIME_PASSES
-#define RUNTIME_PASSES
+#pragma once
 
 #include<llvm/Pass.h>
 #include<llvm/ADT/StringRef.h>
@@ -69,5 +68,3 @@ namespace easy {
   llvm::Pass* createInlineParametersPass(llvm::StringRef Name);
   llvm::Pass* createDevirtualizeConstantPass(llvm::StringRef Name);
 }
-
-#endif

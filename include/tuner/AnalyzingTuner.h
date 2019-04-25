@@ -1,5 +1,4 @@
-#ifndef TUNER_ANALYZING_TUNER
-#define TUNER_ANALYZING_TUNER
+#pragma once
 
 #include <tuner/Tuner.h>
 #include <easy/runtime/Context.h>
@@ -24,5 +23,3 @@ namespace tuner {
 };
 
 } // namespace tuner
-
-#endif // TUNER_ANALYZING_TUNER

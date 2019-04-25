@@ -1,5 +1,4 @@
-#ifndef OPTIONS
-#define OPTIONS
+#pragma once
 
 #include <easy/runtime/Context.h>
 
@@ -91,5 +90,3 @@ namespace options{
   };
 }
 }
-
-#endif // OPTIONS

@@ -1,5 +1,4 @@
-#ifndef API_COMPAT
-#define API_COMPAT
+#pragma once
 
 // handle some minor API differences
 #if LLVM_VERSION_MAJOR == 6
@@ -16,10 +15,3 @@
 #warning "Compatibility with this version of LLVM is unknown!"
 
 #endif
-
-
-
-
-
-
-#endif // API_COMPAT

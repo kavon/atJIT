@@ -1,3 +1,5 @@
+#pragma once
+
 #include <tuner/Knob.h>
 
 #include <llvm/Analysis/InlineCost.h>

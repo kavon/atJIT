@@ -1,5 +1,4 @@
-#ifndef AT_DRIVER
-#define AT_DRIVER
+#pragma once
 
 #include <ctime>
 #include <cstdlib>
@@ -243,5 +242,3 @@ class ATDriver {
 }; // end class
 
 } // end namespace
-
-#endif // AT_DRIVER

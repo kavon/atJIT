@@ -1,5 +1,4 @@
-#ifndef TUNER_FEEDBACK
-#define TUNER_FEEDBACK
+#pragma once
 
 #include <optional>
 #include <cinttypes>
@@ -347,6 +346,3 @@ std::shared_ptr<Feedback> createFeedback(FeedbackKind requested, std::optional<F
 
 
 } // end namespace
-
-
-#endif // TUNER_FEEDBACK

@@ -1,5 +1,4 @@
-#ifndef EXCEPTIONS
-#define EXCEPTIONS
+#pragma once
 
 #include <stdexcept>
 #include <string>
@@ -20,5 +19,3 @@ namespace easy {
     Exception(std::string const &Reason) : easy::exception(Message, Reason) {} \
     virtual ~Exception() = default; \
   }
-
-#endif

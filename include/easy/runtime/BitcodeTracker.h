@@ -1,5 +1,4 @@
-#ifndef BITCODETRACKER
-#define BITCODETRACKER
+#pragma once
 
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
@@ -66,5 +65,3 @@ class BitcodeTracker {
 };
 
 }
-
-#endif
