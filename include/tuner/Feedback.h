@@ -177,10 +177,10 @@ private:
   size_t lastCalc = 0;
   double errPctThreshold; // set once.
 
-  size_t sampleSize;
-  double average;
-  double variance;
-  double stdErr;
+  size_t sampleSize = 0;
+  double average = std::numeric_limits<double>::max();
+  double variance = 0;
+  double stdErr = 0;
 
   // TODO: this might need to become a public member of the base class.
   void updateStats() {
@@ -216,15 +216,16 @@ public:
   }
 
   virtual double expectedValue() override {
-    if (lastCalc == observations)
-      return average;
+    if (lastCalc != observations)
+      updateStats();
 
-    updateStats();
     return average;
   }
 
   virtual void dump(std::ostream &os) override {
-    double currentAvg = expectedValue();
+    if (lastCalc != observations)
+      updateStats();
+
     uint64_t dataPoints = observations;
 
     JSON::beginObject(os);
@@ -235,9 +236,9 @@ public:
 
     if (dataPoints != 0) {
       JSON::output(os, "unit", "nano");
-      JSON::output(os, "time", currentAvg);
+      JSON::output(os, "time", average);
       JSON::output(os, "variance", variance);
-      JSON::output(os, "std_error_pct", 100.0 * (stdErr / currentAvg));
+      JSON::output(os, "std_error_pct", 100.0 * (stdErr / average));
       JSON::output(os, "std_error", stdErr, false);
     }
 

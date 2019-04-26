@@ -136,11 +136,31 @@ namespace tuner {
     }
 
     void dumpStats(std::ostream &file) const {
+      // sort configs by least expected value first.
+      // since we cannot mutate the Configs_ vector,
+      // we sort a vector of indexes into that vector instead.
+
+      // comparator function object with const ref to configs.
+      struct S {
+        const std::vector<GenResult>& MyConfigs;
+        S(const std::vector<GenResult>& C) : MyConfigs(C) {}
+        bool operator()(size_t a, size_t b) const
+        {
+            return !resultGEQ(MyConfigs[a], MyConfigs[b]);
+        }
+      } configLessThan(Configs_);
+
+      std::vector<size_t> configIDs(Configs_.size());
+      std::iota(configIDs.begin(), configIDs.end(), 0);
+      std::sort(configIDs.begin(), configIDs.end(), configLessThan);
+
+
       JSON::beginBind(file, "versions");
       JSON::beginArray(file);
 
       bool pastFirst = false;
-      for (auto Entry : Configs_) {
+      for (auto idx : configIDs) {
+        auto Entry = Configs_[idx];
         if (pastFirst)
           JSON::comma(file);
         pastFirst |= true;
