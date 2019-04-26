@@ -30,11 +30,24 @@ namespace tuner {
 
   enum FeedbackKind {
     FB_None,
+    FB_Debug,
     FB_Total,
     FB_Total_IgnoreError,
     FB_Recent,
     FB_Recent_NP
   };
+
+  static std::string FeedbackName(FeedbackKind FK) {
+    switch (FK) {
+      case FB_None   : return "none";
+      case FB_Debug : return "debug";
+      case FB_Total  : return "total";
+      case FB_Total_IgnoreError : return "total_ignore_err";
+      case FB_Recent: return "recent";
+      case FB_Recent_NP: return "recent_np";
+      default: throw std::runtime_error("unknown feedback kind name");
+    }
+  }
 }
 
 namespace easy {

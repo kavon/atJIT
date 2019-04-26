@@ -201,14 +201,14 @@ class ATDriver {
 
       Info.FastExperiments += 1;
 
-      double currentBest = Best.getFeedback().avgMeasurement();
+      double currentBest = Best.getFeedback().expectedValue();
       const double INF = std::numeric_limits<double>::max();
       double othersBest = INF;
       size_t othersBestIdx;
 
       for (size_t i = 0; i < Others.size(); i++) {
         auto &Old = Others[i];
-        double oldTime = Old.getFeedback().avgMeasurement();
+        double oldTime = Old.getFeedback().expectedValue();
         if (oldTime < othersBest) {
           othersBest = oldTime;
           othersBestIdx = i;

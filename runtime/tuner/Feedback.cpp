@@ -1,20 +1,60 @@
 #include <tuner/Feedback.h>
+#include <loguru.hpp>
+
+#include <chrono>
+#include <cmath>
 
 namespace tuner {
 
+template <typename Duration = std::chrono::nanoseconds>
+int64_t elapsedTime(Feedback::TimePoint Start, Feedback::TimePoint End) {
+  Duration elapsedDur = (End - Start);
+  return elapsedDur.count();
+}
 
-void calculate_parametric_statistics(
+void calculateParametricStatistics(
                                 std::vector<Feedback::TimePoint>& startBuf,
                                 std::vector<Feedback::TimePoint>& endBuf,
                                 size_t sampleSz,
-                                double& average,
-                                double& sampleVariance) {
+                                double& sampleAvg,
+                                double& sampleVariance,
+                                double& sampleErr
+                                ) {
 
-  throw std::runtime_error("implement calculate_parametric_statistics");
+  CHECK_F(sampleSz > 0, "calculating statistics when there is no data.");
+
+  { // compute sample average
+    int64_t totalTime = 0;
+    for (size_t i = 0; i < sampleSz; i++) {
+      int64_t obsTime = elapsedTime(startBuf[i], endBuf[i]);
+
+      DCHECK_F(obsTime > 0, "saw bogus sample time!");
+      DCHECK_F(std::numeric_limits<int64_t>::max() - totalTime > obsTime,
+                        "overflow. use a different time unit!");
+
+      totalTime += obsTime;
+    }
+    sampleAvg = ((double) totalTime) / sampleSz;
+  }
+
+  { // compute sample variance and standard error of the mean
+    if (sampleSz == 1) {
+      sampleVariance = 0;
+      sampleErr = 0;
+    } else {
+      int64_t sumSqDiff = 0;
+      for (size_t i = 0; i < sampleSz; i++) {
+        sumSqDiff += std::pow(elapsedTime(startBuf[i], endBuf[i]) - sampleAvg, 2);
+      }
+      sampleVariance = ((double) sumSqDiff) / (sampleSz - 1);
+      sampleErr = std::sqrt(sampleVariance) / std::sqrt(sampleSz);
+    }
+  }
 }
 
 
-std::shared_ptr<Feedback> createFeedback(FeedbackKind requested, std::optional<FeedbackKind> preferred) {
+std::shared_ptr<Feedback> createFeedback(FeedbackKind requested,
+                                        std::optional<FeedbackKind> preferred) {
   switch (requested) {
     case FB_None:
       if (preferred)

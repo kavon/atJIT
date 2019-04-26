@@ -46,7 +46,7 @@ namespace tuner {
     }
 
     double getCost(GenResult const& R) const {
-      return R.second->avgMeasurement();
+      return R.second->expectedValue();
     }
 
     // corresponds to T(t)

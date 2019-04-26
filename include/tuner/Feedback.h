@@ -23,19 +23,24 @@ namespace tuner {
 /////////////// BASE CLASS ///////////////
 
 class Feedback {
+protected:
+  FeedbackKind FBK;
 public:
   using TimePoint = std::chrono::time_point<std::chrono::steady_clock>;
 
+  Feedback(FeedbackKind fk) : FBK(fk) {}
   virtual ~Feedback() = default;
   virtual TimePoint startMeasurement() = 0;
   virtual void endMeasurement(TimePoint) = 0;
 
-  virtual bool betterThan(Feedback& Other) {
+  // TODO: we should override the parent and perform a
+  // statistical test of significance (e.g., chapter 8 of Mandel).
+  bool betterThan(Feedback& Other) {
     // lower times are better, where `this` is selfish
     // and says its better with an equivalent measure.
 
-    double mine = this->avgMeasurement();
-    double theirs = Other.avgMeasurement();
+    double mine = this->expectedValue();
+    double theirs = Other.expectedValue();
 
     return mine <= theirs;
   }
@@ -43,7 +48,7 @@ public:
   virtual bool goodQuality() { return false; }
 
   // Consult goodQuality to determine if this value is useful.
-  virtual double avgMeasurement() {
+  virtual double expectedValue() {
     return std::numeric_limits<double>::max();
   }
 
@@ -60,12 +65,13 @@ public:
 
 /////////////// UTILITY FUNCTIONS ///////////////
 
-void calculate_parametric_statistics(
+void calculateParametricStatistics(
                                 std::vector<Feedback::TimePoint>& startBuf,
                                 std::vector<Feedback::TimePoint>& endBuf,
                                 size_t sampleSz,
                                 double& average,
-                                double& sampleVariance
+                                double& variance,
+                                double& stdErr
                               );
 
 
@@ -76,7 +82,7 @@ class NoOpFeedback : public Feedback {
 private:
   TimePoint dummy;
 public:
-  NoOpFeedback() : dummy(std::chrono::steady_clock::now()) { }
+  NoOpFeedback() : Feedback(FB_None), dummy(std::chrono::steady_clock::now()) { }
   TimePoint startMeasurement() override { return dummy; }
   void endMeasurement(TimePoint t) override { }
 
@@ -87,6 +93,7 @@ public:
 
 // does not compute an average, etc. nice for debugging.
 class DebuggingFB : public Feedback {
+  DebuggingFB() : Feedback(FB_Debug) {}
   TimePoint startMeasurement() override {
     return std::chrono::steady_clock::now();
   }
@@ -118,7 +125,7 @@ protected:
   size_t bufSz;
 
 public:
-  RecentFeedbackBuffer(size_t n = 10) : bufSz(n), startBuf(n), endBuf(n) { }
+  RecentFeedbackBuffer(FeedbackKind fk, size_t n = 10) : Feedback(fk), bufSz(n), startBuf(n), endBuf(n) { }
 
   ~RecentFeedbackBuffer() { }
 
@@ -161,8 +168,6 @@ public:
     return deployedTime;
   }
 
-  virtual void dump(std::ostream &os) = 0;
-
 };
 
 
@@ -170,10 +175,12 @@ public:
 class RecentExecutionTime : public RecentFeedbackBuffer {
 private:
   size_t lastCalc = 0;
+  double errPctThreshold; // set once.
 
   size_t sampleSize;
   double average;
-  double sampleVariance;
+  double variance;
+  double stdErr;
 
   // TODO: this might need to become a public member of the base class.
   void updateStats() {
@@ -189,16 +196,26 @@ private:
     bufLock.unlock();
 
     // perform calculations without lock held
-    calculate_parametric_statistics(startBufCopy, endBufCopy, sampleSize, average, sampleVariance);
+    calculateParametricStatistics(startBufCopy, endBufCopy, sampleSize, average, variance, stdErr);
   }
 
 public:
 
-  RecentExecutionTime() : RecentFeedbackBuffer(64) {}
+  RecentExecutionTime(double errBound = DEFAULT_STD_ERR_PCT)
+      : RecentFeedbackBuffer(FB_Recent, 32),
+        errPctThreshold(errBound) {}
 
-  virtual bool goodQuality() override { return false; }
+  virtual bool goodQuality() override {
+    if (lastCalc != observations)
+      updateStats();
 
-  virtual double avgMeasurement() override {
+    size_t dataPoints = lastCalc;
+    double stdErrPct = 100.0 * (stdErr / average);
+
+    return dataPoints > DEFAULT_MIN_TRIALS && stdErrPct <= errPctThreshold;
+  }
+
+  virtual double expectedValue() override {
     if (lastCalc == observations)
       return average;
 
@@ -206,12 +223,23 @@ public:
     return average;
   }
 
-  virtual bool betterThan(Feedback& Other) override { return false; }
-
   virtual void dump(std::ostream &os) override {
+    double currentAvg = expectedValue();
+    uint64_t dataPoints = observations;
+
     JSON::beginObject(os);
 
-    JSON::output(os, "feedback_kind", "recent_execution");
+    JSON::output(os, "kind", FeedbackName(FBK));
+    JSON::output(os, "sample_size", sampleSize);
+    JSON::output(os, "total_measurements", dataPoints, dataPoints != 0);
+
+    if (dataPoints != 0) {
+      JSON::output(os, "unit", "nano");
+      JSON::output(os, "time", currentAvg);
+      JSON::output(os, "variance", variance);
+      JSON::output(os, "std_error_pct", 100.0 * (stdErr / currentAvg));
+      JSON::output(os, "std_error", stdErr, false);
+    }
 
     JSON::endObject(os);
   }
@@ -242,7 +270,11 @@ public:
   // a value >= 0 says:  return if you have at least 2 observations, where
   //                     the precent std err of the mean is <= the value.
   TotalExecutionTime(double errPctBound = DEFAULT_STD_ERR_PCT)
-      : errBound(errPctBound) {}
+      : RecentFeedbackBuffer(FB_Total),
+        errBound(errPctBound) {
+        if (errPctBound < 0)
+          FBK = FB_Total_IgnoreError;
+      }
 
 
   TimePoint startMeasurement() override {
@@ -323,7 +355,7 @@ public:
    return ans;
   }
 
-  double avgMeasurement() override {
+  double expectedValue() override {
     ////////////////////////////////////////////////////////////////////
     // START the critical section
     protecc.lock();
@@ -345,6 +377,7 @@ public:
 
     JSON::beginObject(os);
 
+    JSON::output(os, "kind", FeedbackName(FBK));
     JSON::output(os, "measurements", dataPoints, dataPoints != 0);
 
     if (dataPoints != 0) {

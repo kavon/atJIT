@@ -151,7 +151,7 @@ namespace tuner {
 
         exportConfig(*KC, configOut, i, ncol, colToKnob);
 
-        double time = FB->avgMeasurement();
+        double time = FB->expectedValue();
 
         if (time == std::numeric_limits<double>::max())
           ABORT_F("Bayes Tuner -- training on unevaluated code fragment!");

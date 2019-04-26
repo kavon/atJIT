@@ -12,7 +12,7 @@
 
 // "HUNK" * 100 = percent
 #define BEST_SWAP_MARGIN_HUNK   0.01
-#define BEST_SWAP_ENABLE        false
+#define BEST_SWAP_ENABLE        true
 
 // GROWTH_RATE * 100 = percent
 #define EXPERIMENT_DEPLOY_GROWTH_RATE     0.2
