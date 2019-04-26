@@ -208,7 +208,7 @@ public:
 
   virtual bool betterThan(Feedback& Other) override { return false; }
 
-  virtual void dump(std::ostream &os) {
+  virtual void dump(std::ostream &os) override {
     JSON::beginObject(os);
 
     JSON::output(os, "feedback_kind", "recent_execution");
