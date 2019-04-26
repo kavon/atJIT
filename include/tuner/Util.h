@@ -10,8 +10,6 @@
 #define DEFAULT_STD_ERR_PCT     10.0
 #define COMPILE_JOB_BAILOUT_MS  120'000
 
-// "HUNK" * 100 = percent
-#define BEST_SWAP_MARGIN_HUNK   0.01
 #define BEST_SWAP_ENABLE        true
 
 // GROWTH_RATE * 100 = percent

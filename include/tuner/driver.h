@@ -201,35 +201,30 @@ class ATDriver {
 
       Info.FastExperiments += 1;
 
-      double currentBest = Best.getFeedback().expectedValue();
-      const double INF = std::numeric_limits<double>::max();
-      double othersBest = INF;
-      size_t othersBestIdx;
+      auto &bestFB = Best.getFeedback();
+      size_t othersBestIdx = ~0;
 
       for (size_t i = 0; i < Others.size(); i++) {
         auto &Old = Others[i];
-        double oldTime = Old.getFeedback().expectedValue();
-        if (oldTime < othersBest) {
-          othersBest = oldTime;
+        auto &oldFB = Old.getFeedback();
+        if (oldFB.betterThan(bestFB)){
           othersBestIdx = i;
         }
       }
 
-      if (othersBest != INF) {
-        double diff = currentBest - othersBest;
-        if (diff >= (currentBest * BEST_SWAP_MARGIN_HUNK)) {
+      if (othersBestIdx != ~0) {
           // Swap out the current best for one of the others.
-          Info.BestSwaps += 1;
+        Info.BestSwaps += 1;
 #ifndef NDEBUG  ///////////////
-          std::cout << "best = " << currentBest
-                    << ", othersBest[" << othersBestIdx << "] = " << othersBest
-                    << ". swapping" << std::endl;
+        std::cout << "best = " << bestFB.expectedValue()
+                  << ", othersBest[" << othersBestIdx << "] = "
+                  << Others[othersBestIdx].getFeedback().expectedValue()
+                  << ". swapping" << std::endl;
 #endif ////////////////////////
-          auto OldBest = std::move(Best);
-          Best = std::move(Others[othersBestIdx]);
-          Best.getFeedback().resetDeployedTime();
-          Others[othersBestIdx] = std::move(OldBest);
-        }
+        auto OldBest = std::move(Best);
+        Best = std::move(Others[othersBestIdx]);
+        Best.getFeedback().resetDeployedTime();
+        Others[othersBestIdx] = std::move(OldBest);
       }
     } // end of check others for best
 
