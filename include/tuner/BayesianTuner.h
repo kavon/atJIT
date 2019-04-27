@@ -151,6 +151,7 @@ namespace tuner {
 
         exportConfig(*KC, configOut, i, ncol, colToKnob);
 
+        FB->updateStats();
         double time = FB->expectedValue();
 
         if (time == std::numeric_limits<double>::max())

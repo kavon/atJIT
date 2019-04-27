@@ -30,8 +30,6 @@ public:
 
   Feedback(FeedbackKind fk) : FBK(fk) {}
   virtual ~Feedback() = default;
-  virtual TimePoint startMeasurement() = 0;
-  virtual void endMeasurement(TimePoint) = 0;
 
   // TODO: we should override the parent and perform a
   // statistical test of significance (e.g., chapter 8 of Mandel).
@@ -39,26 +37,34 @@ public:
     // lower times are better, where `this` is selfish
     // and says its better with an equivalent measure.
 
+    this->updateStats();
+    Other.updateStats();
+
     double mine = this->expectedValue();
     double theirs = Other.expectedValue();
 
     return mine <= theirs;
   }
 
-  virtual bool goodQuality() { return false; }
-
-  // Consult goodQuality to determine if this value is useful.
-  virtual double expectedValue() {
-    return std::numeric_limits<double>::max();
-  }
-
-  virtual void dump(std::ostream &os) = 0;
+  virtual TimePoint startMeasurement() = 0;
+  virtual void endMeasurement(TimePoint) = 0;
 
   // default handlers for the event that the underlying object we're collecting
   // feedback for has seen a "new deployment" underwhich feedback
   // will be recorded, and accessing that value.
-  virtual void resetDeployedTime() {};
-  virtual uint64_t getDeployedTime() { return ~0ULL; }
+  virtual void resetDeployedTime() = 0;
+  virtual uint64_t getDeployedTime() = 0;
+
+  virtual void updateStats() = 0;
+
+  // returns true if the statistics are of good quality.
+  virtual bool goodQuality() const = 0;
+  // Consult goodQuality to determine if these values are useful.
+  virtual double expectedValue() const = 0;
+  virtual double variance() const = 0;
+  virtual size_t sampleSize() const = 0;
+
+  virtual void dump(std::ostream &os) = 0;
 };
 
 
@@ -78,11 +84,32 @@ void calculateParametricStatistics(
 
 /////////////// DERIVED CLASSES ///////////////
 
-class NoOpFeedback : public Feedback {
+class NoOpBase : public Feedback {
+public:
+  NoOpBase(FeedbackKind FBK) : Feedback(FBK) {}
+  virtual void updateStats() override {}
+
+  // returns true if the statistics are of good quality.
+  virtual bool goodQuality() const override { return false; }
+  // Consult goodQuality to determine if these values are useful.
+  virtual double expectedValue() const override {
+    return std::numeric_limits<double>::max();
+  }
+  virtual double variance() const override { return 0; }
+  virtual size_t sampleSize() const override { return 0; }
+
+  // default handlers for the event that the underlying object we're collecting
+  // feedback for has seen a "new deployment" underwhich feedback
+  // will be recorded, and accessing that value.
+  virtual void resetDeployedTime() override {};
+  virtual uint64_t getDeployedTime() override { return ~0ULL; }
+};
+
+class NoOpFeedback : public NoOpBase {
 private:
   TimePoint dummy;
 public:
-  NoOpFeedback() : Feedback(FB_None), dummy(std::chrono::steady_clock::now()) { }
+  NoOpFeedback() : NoOpBase(FB_None), dummy(std::chrono::steady_clock::now()) { }
   TimePoint startMeasurement() override { return dummy; }
   void endMeasurement(TimePoint t) override { }
 
@@ -92,8 +119,8 @@ public:
 
 
 // does not compute an average, etc. nice for debugging.
-class DebuggingFB : public Feedback {
-  DebuggingFB() : Feedback(FB_Debug) {}
+class DebuggingFB : public NoOpBase {
+  DebuggingFB() : NoOpBase(FB_Debug) {}
   TimePoint startMeasurement() override {
     return std::chrono::steady_clock::now();
   }
@@ -177,27 +204,10 @@ private:
   size_t lastCalc = 0;
   double errPctThreshold; // set once.
 
-  size_t sampleSize = 0;
+  size_t sampleSz = 0;
   double average = std::numeric_limits<double>::max();
-  double variance = 0;
+  double sampleVariance = 0;
   double stdErr = 0;
-
-  // TODO: this might need to become a public member of the base class.
-  void updateStats() {
-    // new observations have come in since this method
-    // was last called, so we recalulate things.
-
-    bufLock.lock();
-    lastCalc = observations;
-    sampleSize = std::min(bufSz, lastCalc);
-
-    std::vector<TimePoint> startBufCopy(startBuf);
-    std::vector<TimePoint> endBufCopy(endBuf);
-    bufLock.unlock();
-
-    // perform calculations without lock held
-    calculateParametricStatistics(startBufCopy, endBufCopy, sampleSize, average, variance, stdErr);
-  }
 
 public:
 
@@ -205,40 +215,52 @@ public:
       : RecentFeedbackBuffer(FB_Recent, 32),
         errPctThreshold(errBound) {}
 
-  virtual bool goodQuality() override {
-    if (lastCalc != observations)
-      updateStats();
+  virtual void updateStats() override {
+    if (lastCalc == observations)
+      return;
 
+
+    // new observations have come in since this method
+    // was last called, so we recalulate things.
+    bufLock.lock();
+    lastCalc = observations;
+    sampleSz = std::min(bufSz, lastCalc);
+
+    std::vector<TimePoint> startBufCopy(startBuf);
+    std::vector<TimePoint> endBufCopy(endBuf);
+    bufLock.unlock();
+
+    // perform calculations without lock held
+    calculateParametricStatistics(startBufCopy, endBufCopy, sampleSz, average, sampleVariance, stdErr);
+  }
+
+  virtual bool goodQuality() const override {
     size_t dataPoints = lastCalc;
     double stdErrPct = 100.0 * (stdErr / average);
 
     return dataPoints > DEFAULT_MIN_TRIALS && stdErrPct <= errPctThreshold;
   }
 
-  virtual double expectedValue() override {
-    if (lastCalc != observations)
-      updateStats();
-
-    return average;
-  }
+  virtual double expectedValue() const override { return average; }
+  virtual double variance() const override { return sampleVariance; }
+  virtual size_t sampleSize() const override { return sampleSz; }
 
   virtual void dump(std::ostream &os) override {
-    if (lastCalc != observations)
-      updateStats();
+    updateStats();
 
     uint64_t dataPoints = observations;
 
     JSON::beginObject(os);
 
     JSON::output(os, "kind", FeedbackName(FBK));
-    JSON::output(os, "sample_size", sampleSize);
+    JSON::output(os, "sample_size", sampleSize());
     JSON::output(os, "total_measurements", dataPoints, dataPoints != 0);
 
     if (dataPoints != 0) {
       JSON::output(os, "unit", "nano");
-      JSON::output(os, "time", average);
-      JSON::output(os, "variance", variance);
-      JSON::output(os, "std_error_pct", 100.0 * (stdErr / average));
+      JSON::output(os, "time", expectedValue());
+      JSON::output(os, "variance", variance());
+      JSON::output(os, "std_error_pct", 100.0 * (stdErr / expectedValue()));
       JSON::output(os, "std_error", stdErr, false);
     }
 
@@ -263,6 +285,13 @@ private:
   double sumSqDiff = 0;
   double errBound = 0; // a precentage
   uint64_t dataPoints = 0;
+
+  // cached answers to be returned in the const versions of querying methods
+  bool ca_goodQuality = false;
+  double ca_mean = std::numeric_limits<double>::max();
+  double ca_variance = 0;
+  size_t ca_sampleSize = 0;
+
 
 public:
   //////////////////////////
@@ -342,36 +371,36 @@ public:
     return;
   } // end of endMeasurement
 
-  bool goodQuality() override {
+  void updateStats() override {
     ////////////////////////////////////////////////////////////////////
     // START the critical section
     protecc.lock();
 
-    bool ans = (dataPoints > DEFAULT_MIN_TRIALS && stdErrorPct <= errBound)
-               || ((dataPoints >= 1) && errBound < 0) ;
+    ca_goodQuality =
+          (dataPoints > DEFAULT_MIN_TRIALS && stdErrorPct <= errBound)
+               || ((dataPoints >= 1) && errBound < 0);
 
-   ////////////////////////////////////////////////////////////////////
-   // END of critical section
-   protecc.unlock();
-   return ans;
-  }
+    ca_mean = average;
 
-  double expectedValue() override {
-    ////////////////////////////////////////////////////////////////////
-    // START the critical section
-    protecc.lock();
+    ca_variance = sampleVariance;
 
-    double retVal = std::numeric_limits<double>::max();
-    if (dataPoints >= 1) {
-      retVal = average;
-    }
+    ca_sampleSize = dataPoints;
+
     ////////////////////////////////////////////////////////////////////
     // END of critical section
     protecc.unlock();
-    return retVal;
   }
 
+  bool goodQuality() const override { return ca_goodQuality; }
+  double expectedValue() const override { return ca_mean; }
+  double variance() const override { return ca_variance; }
+  size_t sampleSize() const override { return ca_sampleSize; }
+
+
   void dump (std::ostream &os) override {
+    // TODO: call updateStats and do not access other fields
+    // to avoid need for lock.
+    
     ////////////////////////////////////////////////////////////////////
     // START the critical section
     protecc.lock();

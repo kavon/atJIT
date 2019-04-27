@@ -46,6 +46,7 @@ namespace tuner {
     }
 
     double getCost(GenResult const& R) const {
+      R.second->updateStats();
       return R.second->expectedValue();
     }
 
