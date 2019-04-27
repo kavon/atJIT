@@ -42,6 +42,7 @@ namespace tuner {
     }
 
     bool missingCost(GenResult const& R) const {
+      R.second->updateStats();
       return R.second->goodQuality() == false;
     }
 

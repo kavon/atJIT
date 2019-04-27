@@ -139,17 +139,20 @@ class ATDriver {
     }
 
     // Check if the trial version is done.
-    if (!Trial.isEmpty() && Trial.getFeedback().goodQuality()) {
-      auto MaybeGood = std::move(Trial);
-      Trial = easy::FunctionWrapperBase(); // erase the trial field
+    if (!Trial.isEmpty()) {
+        Trial.getFeedback().updateStats();
+        if (Trial.getFeedback().goodQuality()) {
+          auto MaybeGood = std::move(Trial);
+          Trial = easy::FunctionWrapperBase(); // erase the trial field
 
-      // Check to see which is better
-      if (Best.isEmpty() || MaybeGood.getFeedback()
-                            .betterThan(
-                            Best.getFeedback())) {
-        Best = std::move(MaybeGood);
-      } else {
-        Others.push_back(std::move(MaybeGood));
+          // Check to see which is better
+          if (Best.isEmpty() || MaybeGood.getFeedback()
+                                .betterThan(
+                                Best.getFeedback())) {
+            Best = std::move(MaybeGood);
+          } else {
+            Others.push_back(std::move(MaybeGood));
+          }
       }
     }
 
