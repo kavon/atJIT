@@ -48,7 +48,17 @@ class ATDriver {
   std::unordered_map<Key, Entry> DriverState_;
   std::optional<std::string> dumpStats; // std::filesystem not available in GCC 7
 
+  public:
 
+  ATDriver() : dumpStats(std::nullopt) { }
+  ATDriver(std::string outFile) : dumpStats(outFile) { }
+
+  ~ATDriver() {}
+
+  void exportStats() {
+    if (dumpStats)
+      exportStats(dumpStats.value());
+  }
 
   void exportStats(std::string out) {
     std::ofstream file;
@@ -87,16 +97,6 @@ class ATDriver {
     JSON::comma(file);
 
     file.close();
-  }
-
-  public:
-
-  ATDriver() : dumpStats(std::nullopt) { }
-  ATDriver(std::string outFile) : dumpStats(outFile) { }
-
-  ~ATDriver() {
-    if (dumpStats)
-      exportStats(dumpStats.value());
   }
 
   template<class T, class ... Args>
