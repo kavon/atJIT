@@ -31,20 +31,9 @@ public:
   Feedback(FeedbackKind fk) : FBK(fk) {}
   virtual ~Feedback() = default;
 
-  // TODO: we should override the parent and perform a
-  // statistical test of significance (e.g., chapter 8 of Mandel).
-  bool betterThan(Feedback& Other) {
-    // lower times are better, where `this` is selfish
-    // and says its better with an equivalent measure.
-
-    this->updateStats();
-    Other.updateStats();
-
-    double mine = this->expectedValue();
-    double theirs = Other.expectedValue();
-
-    return mine <= theirs;
-  }
+  // returns true iff this feedback object's expected value
+  // is lower than the given feedback, according to statistical inference.
+  bool betterThan(Feedback& Other);
 
   virtual TimePoint startMeasurement() = 0;
   virtual void endMeasurement(TimePoint) = 0;
@@ -400,7 +389,7 @@ public:
   void dump (std::ostream &os) override {
     // TODO: call updateStats and do not access other fields
     // to avoid need for lock.
-    
+
     ////////////////////////////////////////////////////////////////////
     // START the critical section
     protecc.lock();

@@ -12,6 +12,66 @@ int64_t elapsedTime(Feedback::TimePoint Start, Feedback::TimePoint End) {
   return elapsedDur.count();
 }
 
+// NOTE: This implementation assumes that the sample
+// data in each Feedback object is normally distributed.
+bool Feedback::betterThan(Feedback& Other) {
+  this->updateStats();
+  Other.updateStats();
+
+  /*
+    We perform a two-sample t test aka Welch's unequal variances t-test.
+    More details:
+      1. https://en.wikipedia.org/wiki/Welch%27s_t-test
+      2. Section 10.2 of Devore & Berk's
+          "Modern Mathematical Statistics with Applications"
+
+    Null Hypothesis:
+      o_mean - my_mean <= delta
+
+    Alternative Hypothesis 1:
+      o_mean - my_mean > delta
+            i.e. my mean is at least 'delta' lower than theirs, for
+                 delta >= 0.
+
+    Reject null hypothesis with confidence level 100(1-alpha)% if:
+      test_statistic >= t_{alpha, degrees of freedom}
+
+  */
+
+  double my_mean = this->expectedValue();
+  double my_var = this->variance();
+  size_t my_sz = this->sampleSize();
+  double my_scaledVar = my_var / my_sz;
+
+  double o_mean = Other.expectedValue();
+  double o_var = Other.expectedValue();
+  size_t o_sz = Other.expectedValue();
+  double o_scaledVar = o_var / o_sz;
+
+  const double DELTA = 0.02 * o_mean; // delta is defined as a % of their mean.
+
+  double test_statistic = (o_mean - my_mean - DELTA) /
+                          std::sqrt(o_scaledVar + my_scaledVar);
+
+  // degrees of freedom
+  double df = std::trunc( // round down
+                std::pow(o_scaledVar + my_scaledVar, 2) /
+                    ( (std::pow(o_scaledVar, 2) / (o_sz - 1))
+                    + (std::pow(my_scaledVar, 2) / (my_sz - 1))
+                  ));
+
+  DLOG_F(INFO, "delta = %.3f, ts = %.3f, df = %.1f", DELTA, test_statistic, df);
+
+  // TODO: determine the _correct_ critical values
+  // for a given confidence level to determine
+  // whether to reject null hyp.
+
+  // hardcode alpha = 0.05, df = 6
+  const double THRESH = 1.943;
+
+  return test_statistic >= THRESH;
+}
+
 void calculateBasicStatistics(
                                 std::vector<Feedback::TimePoint>& startBuf,
                                 std::vector<Feedback::TimePoint>& endBuf,
