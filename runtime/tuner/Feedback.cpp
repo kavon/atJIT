@@ -12,7 +12,7 @@ int64_t elapsedTime(Feedback::TimePoint Start, Feedback::TimePoint End) {
   return elapsedDur.count();
 }
 
-void calculateParametricStatistics(
+void calculateBasicStatistics(
                                 std::vector<Feedback::TimePoint>& startBuf,
                                 std::vector<Feedback::TimePoint>& endBuf,
                                 size_t sampleSz,

@@ -71,7 +71,7 @@ public:
 
 /////////////// UTILITY FUNCTIONS ///////////////
 
-void calculateParametricStatistics(
+void calculateBasicStatistics(
                                 std::vector<Feedback::TimePoint>& startBuf,
                                 std::vector<Feedback::TimePoint>& endBuf,
                                 size_t sampleSz,
@@ -231,7 +231,7 @@ public:
     bufLock.unlock();
 
     // perform calculations without lock held
-    calculateParametricStatistics(startBufCopy, endBufCopy, sampleSz, average, sampleVariance, stdErr);
+    calculateBasicStatistics(startBufCopy, endBufCopy, sampleSz, average, sampleVariance, stdErr);
   }
 
   virtual bool goodQuality() const override {
