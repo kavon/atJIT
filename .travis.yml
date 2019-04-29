@@ -22,6 +22,7 @@ addons:
             - libdispatch0
             - libdispatch-dev
             - valgrind
+            - python3-demjson   # provides jsonlint
 
 before_install:
     - pip install --user --upgrade pip

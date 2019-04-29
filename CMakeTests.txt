@@ -1,6 +1,7 @@
 find_python_module(lit REQUIRED)
 
 include(Valgrind)
+include(Jsonlint)
 
 find_program(TIME_EXE time)
 
