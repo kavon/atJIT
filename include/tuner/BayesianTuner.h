@@ -172,16 +172,12 @@ namespace tuner {
       // First, we need to retrain a new model.
       ///////
 
-#ifndef NDEBUG
-      std::cout << "Bayesian Tuner is making predictions...\n";
-#endif
+      DLOG_F(INFO, "Bayesian Tuner is making predictions...");
 
       updateDataset();
 
-#ifndef NDEBUG
-        std::cout << trainingRows << " training observations, "
-                  << validateRows << " observations held out.\n";
-#endif
+      DLOG_S(INFO) << trainingRows << " training observations, "
+                << validateRows << " observations held out.";
 
       // must be an array. not sure why.
       DMatrixHandle train[1];
@@ -228,17 +224,15 @@ namespace tuner {
         for (size_t i = 0; i < validateRows; i++) {
           double actual = testResult[i];
           double guess = predict[i];
-#ifndef NDEBUG
-          std::cout << "actual = " << actual
-                    << ", guess = " << guess << "\n";
-#endif
+
+          DLOG_S(INFO) << "actual = " << actual
+                    << ", guess = " << guess;
+
           err += std::pow(actual - guess, 2) / validateRows;
         }
         err = std::sqrt(err);
 
-#ifndef NDEBUG
-        std::cout << "RMSE = " << err << "\n\n";
-#endif
+        DLOG_S(INFO) << "RMSE = " << err << "\n\n";
 
         // is this model better than we've seen before?
         if (err <= bestErr || bestModel == NULL) {
@@ -259,9 +253,7 @@ namespace tuner {
 
         } else if (i - bestIter < MaxLearnPastBest_) {
           // we're willing to go beyond the minima so-far.
-#ifndef NDEBUG
-          std::cout << "going beyond best-seen\n";
-#endif
+          DLOG_S(INFO) << "going beyond best-seen";
         } else {
           // stop training, since it's not any getting better
           break;
@@ -272,9 +264,7 @@ namespace tuner {
       // load the best model
       assert(bestModel != NULL);
 
-#ifndef NDEBUG
-        std::cout << "Using model with error: " << bestErr << "\n";
-#endif
+      DLOG_S(INFO) << "Using model with error: " << bestErr;
 
       BoosterHandle bestBooster;
       XGBoosterCreate(NULL, 0, &bestBooster);
@@ -348,9 +338,9 @@ namespace tuner {
 
       std::multiset<SetKey, lessThan> Best;
       for (uint32_t i = 0; i < out_len; i++) {
-#ifndef NDEBUG
-        std::cout << "prediction[" << i << "]=" << out[i] << std::endl;
-#endif
+
+        DLOG_S(INFO) << "prediction[" << i << "]=" << out[i];
+
         auto Cur = std::make_pair(i, out[i]);
 
         if (Best.size() < BatchSz_) {
@@ -368,10 +358,8 @@ namespace tuner {
 
       for (auto Entry : Best) {
         auto Chosen = Entry.first;
-#ifndef NDEBUG
-        std::cout << "chose config " << Chosen
-                  << " with estimated time " << Entry.second << std::endl;
-#endif
+        DLOG_S(INFO) << "chose config " << Chosen
+                  << " with estimated time " << Entry.second;
         Predictions_.push_back(Test[Chosen]);
       }
 

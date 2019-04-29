@@ -1,6 +1,8 @@
 #include <tuple>
 #include <iostream>
 
+#include <loguru.hpp>
+
 #include <tuner/optimizer.h>
 
 #include <easy/runtime/Context.h>
@@ -135,16 +137,12 @@ namespace tuner {
   Optimizer::~Optimizer() {
     // first we need to make sure no concurrent compiles are still running
     if (recompileActive_) {
-#ifndef NDEBUG
-      std::cerr << "\nNOTE: optimizer's destructor is waiting for compile threads to finish.\n";
-#endif
+      DLOG_S(INFO) << "optimizer's destructor is waiting for compile threads to finish.";
 
       while (recompileActive_)
         sleep_for(1);
 
-#ifndef NDEBUG
-      std::cerr << "NOTE: compile threads flushed.\n";
-#endif
+      DLOG_S(INFO) << "NOTE: compile threads flushed.\n";
     }
 
     delete Tuner_;
@@ -162,9 +160,7 @@ namespace tuner {
     if (InitializedSelf_)
       return;
 
-#ifndef NDEBUG
-    std::cout << "initializing optimizer\n";
-#endif
+    DLOG_S(INFO) << "initializing optimizer\n";
 
 #ifdef POLLY_KNOBS
   std::call_once(haveInitPollyPasses_, [] {
@@ -393,7 +389,7 @@ namespace tuner {
 #ifndef NDEBUG
     auto End = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
-    std::cout << ">> reoptimize request finished in " << elapsed.count() << " ms\n";
+    LOG_S(INFO) << ">> reoptimize request finished in " << elapsed.count() << " ms\n";
 #endif
 
     assert(R.RetVal.has_value() && "that's wrong");
@@ -430,8 +426,8 @@ namespace tuner {
     Tuner_->applyConfig(*TunerConf, *M);
 
 #ifndef NDEBUG
-    std::cout << "@@ optimize job starting using this config:\n";
-    dumpConfig(std::cout, Tuner_->getKnobSet(), *TunerConf);
+    LOG_S(INFO) << "@@ optimize job starting using this config:";
+    dumpConfig(std::cerr, Tuner_->getKnobSet(), *TunerConf);
 
     Tuner_->dump();
 #endif
@@ -453,7 +449,7 @@ namespace tuner {
 #ifndef NDEBUG
     auto End = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
-    std::cout << "@@ optimize job finished in " << elapsed.count() << " ms\n";
+    LOG_S(INFO) << "@@ optimize job finished in " << elapsed.count() << " ms";
 #endif
 
     // ask the tuner if we're able to, and *should* try
@@ -505,7 +501,7 @@ namespace tuner {
 #ifndef NDEBUG
     auto End = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
-    std::cout << "$$ codegen job finished in " << elapsed.count() << " ms\n";
+    LOG_S(INFO) << "$$ codegen job finished in " << elapsed.count() << " ms";
 #endif
 
     // am I the end of the chain?

@@ -20,6 +20,8 @@
 #include <llvm/Support/FileSystem.h>
 #include <llvm/IR/LegacyPassManager.h>
 
+#include <loguru.hpp>
+
 
 using namespace easy;
 
@@ -70,15 +72,11 @@ void Function::WriteOptimizedToFile(llvm::Module const &M, std::string const& Fi
   if(Error)
     throw CouldNotOpenFile(Error.message());
 
-#ifndef NDEBUG
-  std::cout << "dumping to file...\n";
-#endif
+  DLOG_S(INFO) << "dumping to file...";
 
   Out << M;
 
-#ifndef NDEBUG
-  std::cout << "done\n";
-#endif
+  DLOG_S(INFO) << "done";
 }
 
 std::unique_ptr<Function>

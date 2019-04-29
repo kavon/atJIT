@@ -5,6 +5,8 @@
 #include <fstream>
 #include <iostream>
 
+#include <loguru.hpp>
+
 #include <easy/jit.h>
 #include <unordered_map>
 
@@ -216,12 +218,10 @@ class ATDriver {
       if (othersBestIdx != ~0) {
           // Swap out the current best for one of the others.
         Info.BestSwaps += 1;
-#ifndef NDEBUG  ///////////////
-        std::cout << "best = " << bestFB.expectedValue()
+        DLOG_S(INFO) << "best = " << bestFB.expectedValue()
                   << ", othersBest[" << othersBestIdx << "] = "
                   << Others[othersBestIdx].getFeedback().expectedValue()
                   << ". swapping" << std::endl;
-#endif ////////////////////////
         auto OldBest = std::move(Best);
         Best = std::move(Others[othersBestIdx]);
         Best.getFeedback().resetDeployedTime();

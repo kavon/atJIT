@@ -58,6 +58,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic -Werror=return-type -Wno-unused-parameter")
 
+# enable logging with streams with loguru
+add_definitions(-DLOGURU_WITH_STREAMS=1)
+
 # NOTE: -O2 and -O3 cause the plugin to segfault _only_ on Travis CI with LLVM 6.
 # it happens when the bitcode register pass tries to construct a Twine, so
 # there's no straight-forward fix.

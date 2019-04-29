@@ -127,12 +127,12 @@ namespace tuner {
 
     virtual void dump() {
       auto best = bestSeen();
-      std::cout << "\n---------- best config ----------\n";
+      std::cerr << "\n---------- best config ----------\n";
 
       if (best.has_value())
-        dumpConfigInstance(std::cout, KS_, best.value());
+        dumpConfigInstance(std::cerr, KS_, best.value());
       else
-        std::cout << "<no configs generated yet>\n\n";
+        std::cerr << "<no configs generated yet>\n\n";
     }
 
     void dumpStats(std::ostream &file) const {
