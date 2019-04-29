@@ -10,13 +10,14 @@ notifications:
 addons:
     apt:
         sources:
-            - llvm-toolchain-xenial-8
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-trusty-6.0
 
         packages:
             - libstdc++-8-dev
-            - llvm-8.0-dev
-            - llvm-8.0-tools
-            - clang-8.0
+            - llvm-6.0-dev
+            - llvm-6.0-tools
+            - clang-6.0
             - libopencv-dev
             - libdispatch0
             - libdispatch-dev
@@ -36,5 +37,5 @@ script:
   - ./xgboost/get.sh
   - mkdir _build && cd _build
   - ../benchmark/setup.sh
-  - cmake -DLLVM_DIR=/usr/lib/llvm-8.0/cmake -DPOLLY_KNOBS=OFF -DCMAKE_BUILD_TYPE=${BUILD_KIND} -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DEASY_JIT_EXAMPLE=ON -DBENCHMARK=0 -DBENCHMARK_DIR=`pwd`/benchmark/install -DCMAKE_INSTALL_PREFIX=`pwd`/../install .. -G "Unix Makefiles"
+  - cmake -DLLVM_DIR=/usr/lib/llvm-6.0/cmake -DPOLLY_KNOBS=OFF -DCMAKE_BUILD_TYPE=${BUILD_KIND} -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DEASY_JIT_EXAMPLE=ON -DBENCHMARK=0 -DBENCHMARK_DIR=`pwd`/benchmark/install -DCMAKE_INSTALL_PREFIX=`pwd`/../install .. -G "Unix Makefiles"
   - make -j 3 && make install && make check
