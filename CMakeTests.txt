@@ -1,7 +1,6 @@
 find_python_module(lit REQUIRED)
 
 include(Valgrind)
-include(Jsonlint)
 
 find_program(TIME_EXE time)
 
@@ -9,8 +8,9 @@ set(ALL_TESTS tests/)
 
 # it is not possible to use add_dependencies on the install target, since it's
 # not a "real" target: https://cmake.org/cmake/help/v3.5/command/add_dependencies.html
+# NOTE: if you want to shuffle the tests, add --shuffle
 add_custom_target(check
-                  COMMAND ${PYTHON_EXEC} -m lit.main ${ALL_TESTS} -v --time-tests -j 4 --shuffle
+                  COMMAND ${PYTHON_EXEC} -m lit.main ${ALL_TESTS} -v --time-tests -j 4
                   COMMENT "running regression test suite..."
                   USES_TERMINAL
                   )

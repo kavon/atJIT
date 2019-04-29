@@ -35,7 +35,7 @@ common_flags =  "-g -Xclang -disable-O0-optnone "
 
 config.substitutions.append(('%atjitc', "@CMAKE_ARCHIVE_OUTPUT_DIRECTORY@/atjitc"))
 config.substitutions.append(('%valgrind', "@VALGRIND_EXE@"))
-config.substitutions.append(('%jsonlint', "@JSONLINT_EXE@"))
+config.substitutions.append(('%jsonlint', "ruby -e 'require \"json\"; JSON.parse(STDIN.read)'"))
 config.substitutions.append(('%time', "@TIME_EXE@ -p -o"))
 config.substitutions.append(('%compareTimes', config.test_exec_root + "/compare.sh"))
 

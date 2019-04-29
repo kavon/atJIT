@@ -1,6 +1,6 @@
 // RUN: %atjitc   %s -o %t
 // RUN: %t > %t.json
-// RUN: %jsonlint %t.json
+// RUN: %jsonlint < %t.json
 
 #include <tuner/driver.h>
 #include <tuner/param.h>
