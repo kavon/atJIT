@@ -514,7 +514,7 @@ namespace tuner {
   }
 
 
-  void Optimizer::dumpStats(std::ofstream &file) const {
+  void Optimizer::dumpStats(std::ostream &file) const {
 
     JSON::output(file, "name", std::get<0>(GMap_));
     JSON::output(file, "tuner_kind", TunerName(Cxt_->getTunerKind()));

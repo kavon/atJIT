@@ -3,6 +3,7 @@
 #include <ctime>
 #include <cstdlib>
 #include <fstream>
+#include <iostream>
 
 #include <easy/jit.h>
 #include <unordered_map>
@@ -46,25 +47,27 @@ class ATDriver {
 
   protected:
   std::unordered_map<Key, Entry> DriverState_;
-  std::optional<std::string> dumpStats; // std::filesystem not available in GCC 7
 
   public:
-
-  ATDriver() : dumpStats(std::nullopt) { }
-  ATDriver(std::string outFile) : dumpStats(outFile) { }
-
+  ATDriver() {}
   ~ATDriver() {}
 
   void exportStats() {
-    if (dumpStats)
-      exportStats(dumpStats.value());
+    exportStats(std::cout);
   }
 
+  // std::filesystem not available in GCC 7
   void exportStats(std::string out) {
     std::ofstream file;
-    // open in append mode
-    file.open(out, std::ios::out | std::ios::ate | std::ios::app);
+    // if the file already exists, we try to find a new file name for the data.
+    // TODO
+    file.open(out, std::ios::out | std::ios::trunc);
 
+    exportStats(file);
+    file.close();
+  }
+
+  void exportStats(std::ostream& file) {
     // formatting preferences
     file << std::setprecision(10);
 
@@ -92,11 +95,6 @@ class ATDriver {
       JSON::endObject(file);
     }
     JSON::endArray(file);
-
-    // optimistically assume more arrays will be appended:
-    JSON::comma(file);
-
-    file.close();
   }
 
   template<class T, class ... Args>

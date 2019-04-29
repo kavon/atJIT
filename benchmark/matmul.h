@@ -139,7 +139,7 @@ static void TUNING_matmul(benchmark::State& state) {
 
 
   for (auto _ : state) {
-    tuner::ATDriver AT("./TUNING_matmul.json");
+    tuner::ATDriver AT;
     auto Tuner = easy::options::tuner_kind(TK);
 
     for (int i = 0; i < ITERS; i++) {

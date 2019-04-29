@@ -140,7 +140,7 @@ public:
 
   bool isNoopTuner() const { return isNoopTuner_; }
 
-  void dumpStats(std::ofstream &) const;
+  void dumpStats(std::ostream &) const;
 
 }; // end class
 

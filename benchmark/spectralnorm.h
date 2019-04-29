@@ -79,7 +79,7 @@ static void TUNING_spectralnorm(benchmark::State& state) {
   tuner::AutoTuner TK = static_cast<tuner::AutoTuner>(state.range(2));
 
   for (auto _ : state) {
-    tuner::ATDriver AT("./TUNING_spectralnorm.json");
+    tuner::ATDriver AT;
     auto Tuner = easy::options::tuner_kind(TK);
 
     for (int i = 0; i < ITERS; i++) {

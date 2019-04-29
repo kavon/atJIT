@@ -100,7 +100,7 @@ static void TUNING_qsort(benchmark::State& state) {
 
 
   for (auto _ : state) {
-    tuner::ATDriver AT("./TUNING_qsort.json");
+    tuner::ATDriver AT;
     auto Tuner = easy::options::tuner_kind(TK);
     auto Range = IntRange(ISORT_MIN_CUTOFF, ISORT_MAX_CUTOFF, ISORT_IDEAL_CUTOFF);
 
