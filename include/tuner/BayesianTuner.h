@@ -58,7 +58,7 @@ namespace tuner {
     // cfg -- dense matrix where each row represents a knob configuration,
     //        and each column represents a knob. these are the measured inputs
     //        to our black-box function we're trying to model. the order of
-    //        the rows corresponds to the order in Configs
+    //        the rows corresponds to the order in Configs_
     //
     // result -- an array of length trainingRows containing training labels.
     //           result[i] is the observed output of configuration cfg[i].
@@ -108,11 +108,8 @@ namespace tuner {
         return;
       SinceLastTraining_ = 0;
 
-      std::lock_guard<std::mutex> guard(getConfigLock());
-      auto Configs = getConfigs();
-
       // reconstruct held-out set and training set
-      const uint64_t numConfigs = Configs.size();
+      const uint64_t numConfigs = Configs_.size();
       validateRows = std::max(1, (int) std::round(HeldoutRatio_ * numConfigs));
       trainingRows = numConfigs - validateRows;
 
@@ -133,7 +130,7 @@ namespace tuner {
         throw std::bad_alloc();
 
       // shuffle the data
-      std::random_shuffle(Configs.begin(), Configs.end());
+      std::random_shuffle(Configs_.begin(), Configs_.end());
 
       // the first few will be part of the held-out set, and the
       // rest go to the training set.
@@ -148,7 +145,7 @@ namespace tuner {
           i = 0;
         }
 
-        auto Entry = Configs[count];
+        auto Entry = Configs_[count];
         auto KC = Entry.first;
         auto FB = Entry.second;
 
@@ -379,15 +376,15 @@ namespace tuner {
     }
 
 
-    GenResult saveConfig(KnobConfig KC) {
+    GenResult& saveConfig(KnobConfig KC) {
       auto Conf = std::make_shared<KnobConfig>(KC);
       auto FB = createFeedback(Cxt_->getFeedbackKind(), PREFERRED_FEEDBACK);
 
       // keep track of this config.
-      // keep track of this config.
-      auto Pair = std::make_pair(Conf, FB);
-      addConfig(Pair);
-      return Pair;
+      Configs_.push_back({Conf, FB});
+      SinceLastTraining_++;
+
+      return Configs_.back();
     }
 
   ///////////////// PUBLIC //////////////////
@@ -439,21 +436,17 @@ namespace tuner {
       return aotLimiter && Predictions_.size() > 0;
     }
 
-    GenResult getNextConfig() override {
+    GenResult& getNextConfig() override {
       // SURF
-      size_t numConfig;
-      {
-        std::lock_guard<std::mutex> guard(getConfigLock());
-        numConfig = getConfigs().size();
-      }
+      size_t numConfg = Configs_.size();
 
-      if (numConfig < BatchSz_) {
+      if (numConfg < BatchSz_) {
         // we're still at Step 2, trying to establish a prior
         // so we sample completely randomly
 
         // NOTE: I think it's useful to always include the default config
         // in the first batch.
-        if (numConfig == 0)
+        if (numConfg == 0)
           return saveConfig(genDefaultConfig(KS_));
 
         return saveConfig(genRandomConfig(KS_, Gen_));

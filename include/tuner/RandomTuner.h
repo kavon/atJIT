@@ -25,14 +25,11 @@ namespace tuner {
     // should end up freeing them.
     ~RandomTuner() {}
 
-    GenResult getNextConfig() override {
+    GenResult& getNextConfig() override {
       KnobConfig KC;
 
-      std::lock_guard<std::mutex> guard(getConfigLock());
-      auto Configs = getConfigs();
-
       // if this is the first requested config, we generate the default config.
-      if (Configs.empty())
+      if (Configs_.empty())
         KC = genDefaultConfig(KS_);
       else
         KC = genRandomConfig(KS_, Gen_);
@@ -41,8 +38,8 @@ namespace tuner {
       auto FB = createFeedback(Cxt_->getFeedbackKind(), PREFERRED_FEEDBACK);
 
       // keep track of this config.
-      Configs.push_back({Conf, FB});
-      return Configs.back();
+      Configs_.push_back({Conf, FB});
+      return Configs_.back();
     }
 
     // we always know the next config, so we
