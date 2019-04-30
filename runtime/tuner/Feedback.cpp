@@ -44,8 +44,8 @@ bool Feedback::betterThan(Feedback& Other) {
   double my_scaledVar = my_var / my_sz;
 
   double o_mean = Other.expectedValue();
-  double o_var = Other.expectedValue();
-  size_t o_sz = Other.expectedValue();
+  double o_var = Other.variance();
+  size_t o_sz = Other.sampleSize();
   double o_scaledVar = o_var / o_sz;
 
   const double DELTA = 0.02 * o_mean; // delta is defined as a % of their mean.
