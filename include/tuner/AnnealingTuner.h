@@ -37,8 +37,9 @@ namespace tuner {
       auto FB = createFeedback(Cxt_->getFeedbackKind(), PREFERRED_FEEDBACK);
 
       // keep track of this config.
-      Configs_.push_back({Conf, FB});
-      return Configs_.back();
+      auto Pair = std::make_pair(Conf, FB);
+      addConfig(Pair);
+      return Pair;
     }
 
     bool missingCost(GenResult const& R) const {
@@ -134,7 +135,7 @@ namespace tuner {
       return false;
     }
 
-    GenResult& getNextConfig() override {
+    GenResult getNextConfig() override {
       // ensure we have a cost for the currentState
       if (missingCost(currentState))
         return currentState;

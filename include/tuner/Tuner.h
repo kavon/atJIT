@@ -66,15 +66,35 @@ namespace tuner {
     }
   } resultGEQ;
 
-  class Tuner {
-  protected:
+  struct {
+    bool operator()(GenResult const &A, GenResult const &B) const
+    {  // A < B if A is better than B
+        return A.second->betterThan(*B.second);
+    }
+  } resultLT;
 
-    KnobSet KS_;
+  class Tuner {
+  private:
+    std::mutex configLock;
     std::vector<GenResult> Configs_;
+
+  protected:
+    KnobSet KS_;
 
   public:
 
     Tuner(KnobSet KS) : KS_(KS) {}
+
+    void addConfig(GenResult R) {
+      std::lock_guard<std::mutex> guard(configLock);
+      getConfigs().push_back(R);
+    }
+
+    // must be holding the lock
+    std::vector<GenResult>& getConfigs() {
+      return Configs_;
+    }
+    std::mutex& getConfigLock() { return configLock; }
 
     // ensures derived destructors are called
     virtual ~Tuner() = default;
@@ -82,7 +102,7 @@ namespace tuner {
     // this method should not mutate the value of any Knobs,
     // it _may_ mutate the state of the Tuner.
     // NOTE: NOT THREAD SAFE.
-    virtual GenResult& getNextConfig () = 0;
+    virtual GenResult getNextConfig () = 0;
 
     // a method to query whether the tuner
     // should produce a new config, given no
@@ -109,11 +129,12 @@ namespace tuner {
       applyToKnobs(ModifyModule, KS_);
     }
 
-    // NOTE: NOT THREAD SAFE
-    std::optional<GenResult> bestSeen() const {
+    std::optional<GenResult> bestSeen() {
       std::optional<GenResult> best = std::nullopt;
 
-      for (auto Entry : Configs_) {
+      std::lock_guard<std::mutex> guard(getConfigLock());
+      auto Configs = getConfigs();
+      for (auto Entry : Configs) {
         if (best.has_value() == false || resultGEQ(best.value(), Entry))
           best = Entry;
       }
@@ -135,32 +156,18 @@ namespace tuner {
         std::cerr << "<no configs generated yet>\n\n";
     }
 
-    void dumpStats(std::ostream &file) const {
-      // sort configs by least expected value first.
-      // since we cannot mutate the Configs_ vector,
-      // we sort a vector of indexes into that vector instead.
+    void dumpStats(std::ostream &file) {
+      // sort the configs before dumping
+      std::lock_guard<std::mutex> guard(getConfigLock());
+      auto Configs = getConfigs();
 
-      // comparator function object with const ref to configs.
-      struct S {
-        const std::vector<GenResult>& MyConfigs;
-        S(const std::vector<GenResult>& C) : MyConfigs(C) {}
-        bool operator()(size_t a, size_t b) const
-        {
-            return !resultGEQ(MyConfigs[a], MyConfigs[b]);
-        }
-      } configLessThan(Configs_);
-
-      std::vector<size_t> configIDs(Configs_.size());
-      std::iota(configIDs.begin(), configIDs.end(), 0);
-      std::sort(configIDs.begin(), configIDs.end(), configLessThan);
-
+      std::sort(Configs.begin(), Configs.end(), resultLT);
 
       JSON::beginBind(file, "versions");
       JSON::beginArray(file);
 
       bool pastFirst = false;
-      for (auto idx : configIDs) {
-        auto Entry = Configs_[idx];
+      for (auto Entry : Configs) {
         if (pastFirst)
           JSON::comma(file);
         pastFirst |= true;
@@ -183,7 +190,7 @@ namespace tuner {
                       std::make_shared<NoOpFeedback>() };
     }
 
-    GenResult& getNextConfig () override {
+    GenResult getNextConfig () override {
       return NoOpConfig_;
     }
 
