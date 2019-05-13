@@ -8,5 +8,5 @@ config.test_source_root = "@CMAKE_CURRENT_SOURCE_DIR@/doc"
 config.test_exec_root = "@CMAKE_CURRENT_BINARY_DIR@/tests/doc"
 
 # for the documentation example
-if "@EASY_JIT_EXAMPLE@" in ["1", "ON"]:
+if "@ATJIT_EXAMPLE@" in ["1", "ON"]:
   config.available_features.add('example')

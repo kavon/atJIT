@@ -1,0 +1,65 @@
+# cache key for a ref on each job means that this job will check the cache for
+# a directory image keyed on that thing, and if it exists, it will load that before
+# executing the script. then it will save the image back under the same key when the job
+# succeeds. so we copy-paste it all over
+
+stages:
+  - prereqs
+  - build
+  - test
+
+# obtain / check for dependencies
+deps:
+  stage: prereqs
+  script:
+    # check for required apt packages
+    - dpkg-query -W libstdc++-8-dev libopencv-dev libdispatch0 libdispatch-dev valgrind
+    # check for required pip packages
+    - python -c "import lit"
+    # build other prereqs
+    - ./xgboost/get.sh
+    - mkdir build install
+    - cd build
+    - ../benchmark/setup.sh
+  cache:
+      key: "$CI_PIPELINE_ID"
+      paths:
+          - xgboost/root/lib
+          - xgboost/root/include
+          - xgboost/root/rabit/include
+          - xgboost/root/dmlc-core/include
+          - build
+          - install
+
+
+# template for building and testing atjit
+.atjit_test:
+    stage: build
+    script:
+        - cd build
+        - cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=${ATJIT_BUILD_TYPE} -DBENCHMARK=ON -DBENCHMARK_DIR=`pwd`/benchmark/install -DATJIT_EXAMPLE=ON -DCMAKE_INSTALL_PREFIX=../install -DPOLLY_KNOBS=OFF ..
+        - make -j 4
+        - make install
+        - make check
+    dependencies:
+      - deps
+    cache:
+        key: "$CI_PIPELINE_ID"
+        paths:
+            - xgboost/root/lib
+            - xgboost/root/include
+            - xgboost/root/rabit/include
+            - xgboost/root/dmlc-core/include
+            - build
+            - install
+        policy: pull  # don't push changes to the cache from this job
+
+atjit_release:
+  variables:
+    ATJIT_BUILD_TYPE: "Release"
+  extends: .atjit_test
+
+atjit_debug:
+  variables:
+    ATJIT_BUILD_TYPE: "Debug"
+  extends: .atjit_test

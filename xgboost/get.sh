@@ -16,4 +16,5 @@ git clone -b 'v0.72' --single-branch --depth 1 --recursive https://github.com/dm
 
 pushd $ROOT
 
-./build.sh
+# ./build.sh
+make -j 4

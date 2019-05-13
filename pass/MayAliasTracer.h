@@ -24,7 +24,7 @@ namespace easy {
       llvm::SmallPtrSet<llvm::Value*, 32> VStored;
       mayAliasWithLoadedValues(V, VLoaded, VStored);
     }
-    auto count(llvm::GlobalObject& GO) const { return GOs_.count(&GO);}
+    unsigned count(llvm::GlobalObject& GO) const { return GOs_.count(&GO);}
   };
 
 }

@@ -78,7 +78,7 @@ namespace easy {
       return true;
     }
 
-    static auto compilerInterface(Module &M) {
+    static SmallVector<std::reference_wrapper<Function>, 4> compilerInterface(Module &M) {
       SmallVector<std::reference_wrapper<Function>, 4> Funs;
       std::copy_if(M.begin(), M.end(), std::back_inserter(Funs),
                    [](Function &F) {return F.getSection() == CI_SECTION;});

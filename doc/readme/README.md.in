@@ -1,7 +1,7 @@
 atJIT: A just-in-time autotuning compiler for C++
 ==========================================
 
-[![Build Status](https://travis-ci.org/kavon/atJIT.svg?branch=master)](https://travis-ci.org/kavon/atJIT)
+[![pipeline status](https://gitlab.com/kavon1/atJIT/badges/master/pipeline.svg)](https://gitlab.com/kavon1/atJIT/commits/master)
 
 About
 -----
@@ -26,7 +26,7 @@ Then, do the following:
 
 ### Step 1
 
-Install a compatible version of [clang](http://clang.llvm.org/) and [LLVM](http://llvm.org/).
+Install a compatible version of [Clang](http://clang.llvm.org/) and [LLVM](http://llvm.org/) **version 8 or newer**.
 You have two options for this:
 
 #### Option 1 — Polly Knobs *(recommended)*
@@ -39,32 +39,39 @@ mkdir llvm
 ./get-llvm-with-polly.sh ./llvm
 ```
 
+Where the first argument is an empty directory for building LLVM.
 The location of this custom-built LLVM will be `./llvm/install`
 
 
 
 #### Option 2 — Vanilla
 
-You can also use plain-old LLVM + Clang version 6 or newer. To do this on Ubuntu 18.04,
-you can install using APT:
+##### Obtaining Pre-built LLVM
 
-```bash
-sudo apt update
-sudo apt install llvm-6.0-dev llvm-6.0-tools clang-6.0
-```
+There is currently an issue with the version of Clang 8.x on LLVM's nightly
+APT repository, and the pre-built version of LLVM 8 on the download page
+lacks RTTI support.
+Thus, for Ubuntu you'll want to build LLVM from source as described next.
 
-For versions of Debian or Ubuntu that do not have version 6 available in the
-default APT repositories, you can first add the appropriate APT repository
-[from this list](http://apt.llvm.org/).
+##### Building LLVM
 
-In order to use a LLVM + Clang 6 that was built from source, you will need to
-configure the build of LLVM with special CMake options (e.g., we require RTTI).
+In order to use a LLVM + Clang with atJIT that was built from source, you will
+need to configure the build of LLVM with special CMake options (e.g., we require RTTI).
 We have collected these options in the `./cmake/LLVM.cmake` file, which can
 be added to your usual
-invocation of CMake when building LLVM with the `-C` flag like so:
+invocation of CMake when building LLVM with the `-C` flag.
+The full set of steps to build LLVM 8 from source as quickly as possible are
+shown here for Ubuntu:
 
 ```bash
-cmake -C <path-to-atJit-root>/cmake/LLVM.cmake  .. other arguments ..
+sudo apt install ninja-build  # ninja is faster than make
+mkdir llvm8
+cd llvm8
+git clone --branch llvmorg-8.0.0 https://github.com/llvm/llvm-project.git src
+mkdir build install
+cd build
+cmake -C <path-to-atJIT>/cmake/LLVM.cmake -G "Ninja" -DCMAKE_INSTALL_PREFIX=../install -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD="native" -DLLVM_USE_LINKER=gold -DLLVM_ENABLE_PROJECTS="clang" ../src/llvm
+ninja install
 ```
 
 ### Step 2
@@ -92,7 +99,7 @@ Starting from the root of the project, the general build steps are:
 ```bash
 mkdir build install
 cd build
-cmake -DCMAKE_INSTALL_PREFIX=../install -DPOLLY_KNOBS=<ON/OFF>..
+cmake -DCMAKE_INSTALL_PREFIX=../install -DPOLLY_KNOBS=<ON/OFF> ..
 cmake --build . --target install
 ```
 
@@ -117,7 +124,7 @@ For example, for **Polly Knobs**, you could use this flag:
 ```
 
 To build the examples, install the [opencv](https://opencv.org/) library,
-and add the flags ```-DEASY_JIT_EXAMPLE=1``` to the cmake command.
+and add the flags ```-DATJIT_EXAMPLE=1``` to the cmake command.
 
 To enable **benchmarking**, first install the [Google Benchmark](https://github.com/google/benchmark) framework.
 You can do this by running `../benchmark/setup.sh` from the `build` directory, which will install
