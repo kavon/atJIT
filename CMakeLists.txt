@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 
 option(LLVM_ENABLE_PLUGINS "Generate build targets for LLVM plugins." ON)
 option(FORCE_COLORED_OUTPUT "Always produce ANSI-colored output (GNU/Clang only)." TRUE)
-option(POLLY_KNOBS "Enable the use of Polly knobs" ON)
+option(POLLY_KNOBS "Enable the use of Polly knobs" OFF)
 
 
 if(NOT CMAKE_BUILD_TYPE)

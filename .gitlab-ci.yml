@@ -37,7 +37,7 @@ deps:
     stage: build
     script:
         - cd build
-        - cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=${ATJIT_BUILD_TYPE} -DBENCHMARK=ON -DBENCHMARK_DIR=`pwd`/benchmark/install -DATJIT_EXAMPLE=ON -DCMAKE_INSTALL_PREFIX=../install -DPOLLY_KNOBS=OFF ..
+        - cmake -G "Unix Makefiles" ${CUSTOM_LLVM} -DCMAKE_BUILD_TYPE=${ATJIT_BUILD_TYPE} -DBENCHMARK=ON -DBENCHMARK_DIR=`pwd`/benchmark/install -DATJIT_EXAMPLE=ON -DCMAKE_INSTALL_PREFIX=../install -DPOLLY_KNOBS=OFF ..
         - make -j 4
         - make install
         - make check
@@ -57,9 +57,15 @@ deps:
 atjit_release:
   variables:
     ATJIT_BUILD_TYPE: "Release"
+    CUSTOM_LLVM: ""
   extends: .atjit_test
 
 atjit_debug:
   variables:
     ATJIT_BUILD_TYPE: "Debug"
+    CUSTOM_LLVM: ""
   extends: .atjit_test
+
+# TODO: implement method to build and test ./get-llvm.sh script.
+# I can't recall how to use gitlab's caching stuff to save state between
+# stages. Ideally we would just move to Docker to simplify this.

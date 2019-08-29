@@ -24,6 +24,8 @@ else
   BUILD_CMD="make install -j${NUM_CPUS}"
 fi
 
+echo "WARNING: this script is deprecated. Please consider using vanilla LLVM."
+
 
 cd $1
 

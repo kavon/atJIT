@@ -29,22 +29,7 @@ Then, do the following:
 Install a compatible version of [Clang](http://clang.llvm.org/) and [LLVM](http://llvm.org/) **version 8 or newer**.
 You have two options for this:
 
-#### Option 1 — Polly Knobs *(recommended)*
-
-In order for the tuner to make use of powerful loop transformations via [Polly](https://polly.llvm.org/), you'll need to download and build an out-of-tree version of LLVM + Clang + Polly.
-We have automated this process with a script, which you can use in the following way:
-
-```bash
-mkdir llvm
-./get-llvm-with-polly.sh ./llvm
-```
-
-Where the first argument is an empty directory for building LLVM.
-The location of this custom-built LLVM will be `./llvm/install`
-
-
-
-#### Option 2 — Vanilla
+#### Option 1 — Vanilla
 
 ##### Obtaining Pre-built LLVM
 
@@ -55,24 +40,22 @@ Thus, for Ubuntu you'll want to build LLVM from source as described next.
 
 ##### Building LLVM
 
-In order to use a LLVM + Clang with atJIT that was built from source, you will
-need to configure the build of LLVM with special CMake options (e.g., we require RTTI).
-We have collected these options in the `./cmake/LLVM.cmake` file, which can
-be added to your usual
-invocation of CMake when building LLVM with the `-C` flag.
-The full set of steps to build LLVM 8 from source as quickly as possible are
-shown here for Ubuntu:
+We have automated this process with a script, which you can use in the following way:
 
 ```bash
-sudo apt install ninja-build  # ninja is faster than make
-mkdir llvm8
-cd llvm8
-git clone --branch llvmorg-8.0.0 https://github.com/llvm/llvm-project.git src
-mkdir build install
-cd build
-cmake -C <path-to-atJIT>/cmake/LLVM.cmake -G "Ninja" -DCMAKE_INSTALL_PREFIX=../install -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD="native" -DLLVM_USE_LINKER=gold -DLLVM_ENABLE_PROJECTS="clang" ../src/llvm
-ninja install
+mkdir llvm
+./get-llvm.sh ./llvm
 ```
+
+Where the first argument is an empty directory for building LLVM.
+The location of this LLVM installation will be `./llvm/install`
+
+#### Option 2 — Polly Knobs *(depreciated)*
+
+In order for the tuner to make use of powerful loop transformations via [Polly](https://polly.llvm.org/), you'll need to download and build an out-of-tree version of LLVM + Clang + Polly.
+Unfortunately, the maintenance of this out-of-tree version has not been kept up.
+If you would still like to try, you can follow the same instructions as in
+Option 1, but replace `./get-llvm.sh` with `./get-llvm-with-polly.sh`.
 
 ### Step 2
 Install [Grand Central Dispatch](https://apple.github.io/swift-corelibs-libdispatch/), which on
@@ -103,10 +86,10 @@ cmake -DCMAKE_INSTALL_PREFIX=../install -DPOLLY_KNOBS=<ON/OFF> ..
 cmake --build . --target install
 ```
 
-Where the argument for `POLLY_KNOBS` is set to `OFF` if and only if you are
-using the Vanilla, non-Polly LLVM.
+By default, `POLLY_KNOBS` is set to `OFF`.
+If you were successful in building LLVM with Polly as described in
+the Polly Knobs section above, then you will want `POLLY_KNOBS` set to `ON`.
 
-By default, `POLLY_KNOBS` is set to `ON`. If you followed the **Polly Knobs** instructions above, jump to the Build Options section below for more information.
 
 Once this completes, you can jump to the usage section. For special builds of
 atJIT, see below.
@@ -115,9 +98,9 @@ atJIT, see below.
 
 #### Build Options
 
-If you are using a custom-built LLVM that is not installed system-wide, or followed the **Polly Knobs** instructions, you'll need to add `-DLLVM_ROOT=<absolute-path-to-LLVM-install>` to the first CMake command above.
+If you are using a custom-built LLVM that is not installed system-wide, you'll need to add `-DLLVM_ROOT=<absolute-path-to-LLVM-install>` to the first CMake command above.
 
-For example, for **Polly Knobs**, you could use this flag:
+For example you could use this flag:
 
 ```bash
 -DLLVM_ROOT=`pwd`/../llvm/install
