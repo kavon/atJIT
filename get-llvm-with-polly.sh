@@ -40,20 +40,20 @@ fi
 # PULL LLVM
 git clone --branch pragma --single-branch https://github.com/Meinersbur/llvm.git src
 cd ./src
-git reset --hard bb7d03ce5b3ce38e4de3b784961428957d73ea03
+git reset --hard 87877c50435bba433b7fa261574b7e3c4372ea5a
 
 cd ./tools
 
 ## PULL CLANG
 git clone --branch pragma --single-branch https://github.com/Meinersbur/clang.git
 cd ./clang
-git reset --hard 001a843fb3bc7ab567eb605322df07471c1a4583
+git reset --hard 2c565d6149be499a22ae3089eae37b0a07057b15
 cd ..
 
 # PULL POLLY
 git clone --branch pragma --single-branch https://github.com/Meinersbur/polly.git
 cd ./polly
-git reset --hard ca3e663094d773988a3916b8f1b2585bd351240b
+git reset --hard 0abadf4cea38d9f6cf2236588e551ebfdcb80590
 cd ..
 
 cd ../..
