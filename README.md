@@ -48,7 +48,11 @@ mkdir llvm
 ```
 
 Where the first argument is an empty directory for building LLVM.
-The location of this LLVM installation will be `./llvm/install`
+The location of this LLVM installation will be `./llvm/install`.
+
+If you are building for an architecture other than `x86` (e.g. `AArch64`), set the variable `LLVM_TARGETS_TO_BUILD` to your preferred architecture.
+
+If you could like to be able compile using additional tools (e.g. OpenMP), add them to the variable `LLVM_ENABLE_PROJECTS`, separated by `;` (e.g. `-DLLVM_ENABLE_PROJECTS="clang;openmp"`).
 
 #### Option 2 — Polly Knobs *(depreciated)*
 
@@ -64,6 +68,8 @@ Ubuntu amounts to running:
 ```bash
 sudo apt install libdispatch0 libdispatch-dev
 ```
+
+It is also quick to build yourself.
 
 ### Step 3
 
